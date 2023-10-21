@@ -4,10 +4,10 @@ import os
 counties = ['King', 'Pierce', 'Snohomish', 'Spokane', 'Clark']
 school_districts = [
     ['Seattle Public Schools', 'Bellevue School District', 'Kent School District'],
-    ['Tacoma Public Schools', 'Puyallup School Distric', 'Bethel School Distric'],
-    ['Everett Public Schools', 'Mukilteo School Distric', 'Edmonds School Distric'],
-    ['Spokane Public Schools', 'Central Valley School Distric', 'Mead School Distric'],
-    ['Vancouver Public Schools', 'Evergreen School Distric', 'Battle Ground Public Schools']
+    ['Tacoma Public Schools', 'Puyallup School District', 'Bethel School District'],
+    ['Everett Public Schools', 'Mukilteo School District', 'Edmonds School District'],
+    ['Spokane Public Schools', 'Central Valley School District', 'Mead School District'],
+    ['Vancouver Public Schools', 'Evergreen School District', 'Battle Ground Public Schools']
 ]
 
 # Define the base directory
