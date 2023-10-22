@@ -1,93 +1,122 @@
 import os
-### to use this, input a list of the folders you want to create
-###change the next_level to what is past the list
-### example: state -> county -> school disctrict -> school -> teachers
-###choose the right location to create
-### after creating, the list of next level needs to be populated
-
 
 # List of folder names you want to create
 folder_names = [
-    "Adams County",
-    "Asotin County",
-    "Benton County",
-    "Chelan County",
-    "Clallam County",
-    "Clark County",
-    "Columbia County",
-    "Cowlitz County",
-    "Douglas County",
-    "Ferry County",
-    "Franklin County",
-    "Garfield County",
-    "Grant County",
-    "Grays Harbor County",
-    "Island County",
-    "Jefferson County",
-    "King County",
-    "Kitsap County",
-    "Kittitas County",
-    "Klickitat County",
-    "Lewis County",
-    "Lincoln County",
-    "Mason County",
-    "Okanogan County",
-    "Pacific County",
-    "Pend Oreille County",
-    "Pierce County",
-    "San Juan County",
-    "Skagit County",
-    "Skamania County",
-    "Snohomish County",
-    "Spokane County",
-    "Stevens County",
-    "Thurston County",
-    "Wahkiakum County",
-    "Walla Walla County",
-    "Whatcom County",
-    "Whitman County",
-    "Yakima County"
+    "Katrina Boyd",
+    "Sierra Breidenbach",
+    "Jessica Chadwick",
+    "Karen Coins",
+    "Michael Constantine",
+    "Nancy Cote",
+    "Clif Davis",
+    "Stephanie Dormaier",
+    "Lisa Dunlop",
+    "Grace Fragomeni",
+    "Wendy Gilbert",
+    "Danielle Griffis",
+    "Courtney Haase",
+    "Lori Koellen, RN",
+    "Gail Madsen",
+    "Tommi Melcher",
+    "Marilyn Musselwhite",
+    "Jamie Myers",
+    "Julie Pielop",
+    "Amanda (Mandi) Potter",
+    "Terri Remendowski",
+    "Tammy Simmons",
+    "Cheryl Spilker",
+    "Lacey Swegle",
+    "Nancy Warnecke",
+    "Angela Williams"
 ]
 
-
 # Directory location where you want to create the folders
-base_directory = "states/Washington"
-next_level = 'School Districts'
-# HTML content template
-html_content = """<!DOCTYPE html>
-<html>
-<head>
-    <title>Hometown Heroes - Support Teachers</title>
-    <link rel="stylesheet" type="text/css" href="\style.css">
-</head>
-<body>
-    <header>
-        <h1>Find a Teacher</h1>
-    </header>
-
-    <nav>
-        <ul>
-            <li><a href="\index.html">Home</a></li>
-            <li><a href="\about.html">About</a></li>
-            <li><a href="\contact.html">Contact</a></li>
-            <!-- Add links to other pages here -->
-        </ul>
-    </nav>
-    <main>
-        <h1>{list}</h1>
-        <ul>
-            <li><a href="temp/index.html">temp</a></li>
-        </ul>
-    </main>
-</body>
-</html>
-"""
-
-
+base_directory = "states/Washington/Spokane County/Medical Lake/Hallet Elementary"
+next_level = 'None'
 
 # Ensure the base directory exists
 if not os.path.exists(base_directory):
     os.mkdir(base_directory)
+
+if next_level != 'None':
+    # HTML content template
+    html_content = """<!DOCTYPE html>
+    <html>
+    <head>
+        <title>Hometown Heroes - Support Teachers</title>
+        <link rel="stylesheet" type="text/css" href="\style.css">
+    </head>
+    <body>
+        <header>
+            <h1>Find a Teacher</h1>
+        </header>
+
+        <nav>
+            <ul>
+                <li><a href="\index.html">Home</a></li>
+                <li><a href="\about.html">About</a></li>
+                <li><a href="\contact.html">Contact</a></li>
+                <!-- Add links to other pages here -->
+            </ul>
+        </nav>
+        <main>
+            <h1>{list}</h1>
+            <ul>
+                {list2}
+            </ul>
+        </main>
+    </body>
+    </html>
+    """
+else:
+    html_content = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teacher Profile - Hometown Heroes</title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>Teacher Profile</h1>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="about.html">About</a></li>
+            <li><a href="contact.html">Contact</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <section class="profile">
+            <div class="teacher-info">
+                <img src="teacher-profile-pic.jpg" alt="Teacher Profile Picture">
+                <h2>Teacher Name</h2>
+                <p>School: School Name</p>
+                <p>Location: City, State</p>
+            </div>
+
+            <div class="wishlist">
+                <h2>Amazon Wishlist</h2>
+                <p>Here is my Amazon wishlist where you can help support my classroom:</p>
+                <a href="amazon-wishlist-link" class="btn" target="_blank">View Wishlist</a>
+            </div>
+        </section>
+
+        <section class="about-me">
+            <h2>About Me</h2>
+            <p>Share a personal message, your teaching philosophy, and classroom needs here. Tell potential supporters about your goals and the impact their help can make.</p>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2023 Hometown Heroes</p>
+    </footer>
+</body>
+</html>
+    """
 
 # Create folders in the chosen directory location and generate HTML files
 for folder_name in folder_names:
@@ -107,3 +136,21 @@ for folder_name in folder_names:
         print(f"Created HTML file: {html_filename}")
     else:
         print(f"Folder already exists: {folder_path}")
+
+
+if next_level != 'Counties':
+    base_html_filename = os.path.join(base_directory, "index.html")
+
+    # Read the existing content of the file
+    with open(base_html_filename, "r") as base_html_file:
+        existing_content = base_html_file.read()
+
+    # Replace the {list2} placeholder with ul_content
+    ul_content = "\n\t\t\t".join([f'<li><a href="{item}/index.html">{item}</a></li>' for item in folder_names])
+    updated_content = existing_content.replace("{list2}", ul_content)
+
+    # Write the updated content back to the file
+    with open(base_html_filename, "w") as base_html_file:
+        base_html_file.write(updated_content)
+
+    print(f"Updated base HTML file: {base_html_filename}")
