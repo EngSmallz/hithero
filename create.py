@@ -8,14 +8,14 @@ school = input("Enter school: ")
 name = input("Enter name: ")
 
 # Define the base directory where the user profiles will be created
-base_directory = "user_profiles"
+base_directory = "states\\" + state + "\\" + county + "\\" 
 
 # Create directory structure if it doesn't exist
 if not os.path.exists(base_directory):
     os.makedirs(base_directory)
 
 # Create the folder structure for the user profile
-user_profile_path = os.path.join(base_directory, state, county, school_district, school, name)
+user_profile_path = os.path.join(base_directory, school_district, school, name)
 os.makedirs(user_profile_path, exist_ok=True)
 
 # Create the teacher's HTML file
@@ -26,7 +26,7 @@ html_template = """<!DOCTYPE html>
 <html>
 <head>
     <title>Teacher Profile - Hometown Heroes</title>
-    <link rel="stylesheet" type="text/css" href="style.css">
+    <link rel="stylesheet" type="text/css" href="/style.css">
 </head>
 <body>
     <header>
@@ -70,19 +70,9 @@ html_template = """<!DOCTYPE html>
 </html>
 """
 
-# # Replace the placeholders in the HTML template with actual values
-# html_content = html_template.format(
-#     teacher_image_url="teacher_image.jpg",
-#     teacher_name=name,
-#     school_name=school,
-#     city_state=f"{county}, {state}",
-#     amazon_wishlist_link="https://www.amazon.com/wishlist/your-wishlist-link",
-#     about_me_text="This is a brief description of the teacher."
-# )
-
 # Write the HTML content to the teacher's HTML file
 with open(teacher_page_filename, "w") as html_file:
-    html_file.write(html_content)
+    html_file.write(html_template)
 
 print(f"User profile created at: {user_profile_path}")
 print(f"Teacher's page created at: {teacher_page_filename}")
