@@ -1,4 +1,5 @@
 import os
+###this function will taske the inputs and create a directory to the new teacher and populate their page
 
 # Get user input
 state = input("Enter state: ")
@@ -62,12 +63,14 @@ html_template = """<!DOCTYPE html>
             <p>{about_me_text}</p>
         </section>
     </main>
+    <button id="edit-button">Edit</button>
 
     <footer>
         <p>&copy; {teacher_name}'s Profile - 2023 Hometown Heroes</p>
     </footer>
 </body>
 </html>
+
 """
 
 # Write the HTML content to the teacher's HTML file

@@ -47,3 +47,8 @@ footer {
     text-align: center;
     padding: 10px;
 }
+
+input,
+textarea {
+    display: none;
+}
