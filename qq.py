@@ -4,7 +4,7 @@ import os
 def replace_slash_with_backslash(file_path):
     with open(file_path, 'r') as file:
         content = file.read()
-    content = content.replace('\\', '/')
+    content = content.replace('', '/a')
     with open(file_path, 'w') as file:
         file.write(content)
 
