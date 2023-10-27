@@ -28,7 +28,7 @@ def print_directory_structure(path, indent=0):
                         # Generate the list items for directories not already present
                         list_items = []
                         for folder_name in folder_list:
-                            folder_link = os.path.join(folder_name, 'index.html')
+                            folder_link = os.path.join(folder_name, 'index.html').replace(os.path.sep, '/')
                             # Check if the folder_link is already present in the HTML content
                             if folder_link not in index_html_content:
                                 list_item = f'<li><a href="{folder_link}">{folder_name}</a></li>'
