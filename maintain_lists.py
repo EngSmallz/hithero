@@ -1,4 +1,13 @@
 import os
+###The provided Python code is designed to update the index.html files in a directory structure up
+#  to 4 levels deep. It recursively traverses through subdirectories, identifies existing index.html
+#  files, and adds links to other subdirectories within them. If a subdirectory's index.html file lacks
+#  links to certain subdirectories, this code updates the file with those links, ensuring a consistent
+#  and interconnected structure within the directory. This code is particularly useful for maintaining
+#  web page navigation in a hierarchical folder structure.
+
+
+
 
 def update_index_html(directory_path, depth=0):
     if depth == 4:

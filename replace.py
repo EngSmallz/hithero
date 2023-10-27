@@ -1,6 +1,6 @@
 import os
 
-# Function to replace / with \ in a file
+# Function to replace items within index files
 def replace_slash_with_backslash(file_path):
     with open(file_path, 'r') as file:
         content = file.read()
