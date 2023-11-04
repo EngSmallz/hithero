@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hometown Heroes - Support Teachers</title>
+    <link rel="stylesheet" type="text/css" href="/static/css/style.css">
+</head>
+<body>
+    <header>
+        <h1>Contact Us</h1>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="/pages/homepage.html">Home</a></li>
+            <li><a href="/pages/about.html">About</a></li>
+            <li><a href="/pages/contact.html">Contact</a></li>
+            <!-- Add links to other pages here -->
+        </ul>
+    </nav>
+
+    <main>
+        <section class="contact-info">
+            <h2>Contact Information</h2>
+            <p>If you have any questions, feedback, or need assistance, please feel free to reach out to us:</p>
+            <ul>
+                <li>Email: hometown.heroes.main@gmail.com</li>
+                <li>Phone: (555) 123-4567</li>
+            </ul>
+        </section>
+
+        <section class="contact-form">
+            <h2>Contact Form</h2>
+            <p>You can also send us a message using the contact form below:</p>
+            
+            <form action="submit_contact_form.php" method="post">
+                <label for="name">Name:</label>
+                <input type="text" id="name" name="name" required>
+                
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required>
+                
+                <label for="message">Message:</label>
+                <textarea id="message" name="message" rows="5" required></textarea>
+                
+                <button type="submit" class="btn">Submit</button>
+            </form>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2023 Hometown Heroes</p>
+    </footer>
+</body>
+</html>

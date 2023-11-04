@@ -1,15 +1,9 @@
-from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi import FastAPI, HTTPException, Request, Form
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
-from sqlalchemy import create_engine, Column, Integer, String
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
 import pyodbc
-import logging
 
 app = FastAPI()
-
-# Define SQLAlchemy models
-Base = declarative_base() 
 
 # Define your AAD ODBC connection string
 connection_string = (
@@ -21,63 +15,63 @@ connection_string = (
     'Encrypt=yes;'
     'TrustServerCertificate=no;'
     'Connection Timeout=30;'
-
 )
 
- 
 try:
     # Define the ODBC connection
     connection = pyodbc.connect(connection_string)
 except pyodbc.Error as e:
     raise Exception(f"Error connecting to the database: {str(e)}")
 
-# Define a Pydantic model for user registration
-class UserCreate(BaseModel):
-    first_name: str
-    last_name: str
-    email: str
-    phone_number: str
-    role: str
+# ...
 
 @app.post("/register/")
-async def register_user(user_data: UserCreate, request: Request):
-    try:
-        print("Registration initiated.")
-        data = await request.json()
-        user_data = UserCreate(**data)
+async def register_user(first_name: str = Form(...), last_name: str = Form(...), email: str = Form(...), phone_number: str = Form(...), role: str = Form(...)):
+    # Connect to the database
+    cursor = connection.cursor()
 
-        cursor = connection.cursor()
+    # Check if a user with the provided email already exists in registered_users
+    print("Checking for user in registered users.")
+    cursor.execute("SELECT id FROM registered_users WHERE CAST(email AS nvarchar) = ?", email)
+    existing_user = cursor.fetchone()
 
-        # Check if a user with the provided email already exists in registered_users
-        print("Checking for user in registered users.")
-        cursor.execute("SELECT id FROM registered_users WHERE CAST(email AS nvarchar) = ?", user_data.email)
-        existing_user = cursor.fetchone()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="User with this email already exists")
 
+    # Check if a user with the provided email already exists in new_users
+    print("Checking in new users.")
+    cursor.execute("SELECT id FROM new_users WHERE CAST(email AS nvarchar) = ?", email)
+    existing_user = cursor.fetchone()
 
-        if existing_user:
-            raise HTTPException(status_code=400, detail="User with this email already exists")
+    if existing_user:
+        raise HTTPException(status_code=400, detail="User with this email is already in the registration queue")
 
-        # Check if a user with the provided email already exists in new_users
-        print("Checking in new users.")
-        cursor.execute("SELECT id FROM new_users WHERE CAST(email AS nvarchar) = ?", user_data.email)
-        existing_user = cursor.fetchone()
+    # Insert the new user into the "new_users" table
+    insert_query = "INSERT INTO new_users (first_name, last_name, email, phone_number, role) VALUES (?, ?, CAST(? AS NVARCHAR), ?, ?)"
+    cursor.execute(insert_query, (first_name, last_name, email, phone_number, role))
+    connection.commit()
 
-
-        if existing_user:
-            raise HTTPException(status_code=400, detail="User with this email is already in the registration queue")
-
-        # Insert the new user into the "new_users" table, excluding the 'id' column
-        print("Placing user in the new table.")
-        cursor.execute("INSERT INTO new_users (first_name, last_name, email, phone_number, role) VALUES (?, ?, ?, ?, ?)",
-                    user_data.first_name, user_data.last_name, user_data.email, user_data.phone_number, user_data.role)
-        connection.commit()
+    cursor.close()
+    return {"message": "User registered successfully"}
 
 
-        cursor.close()
-        return {"message": "User registered successfully"}
-    except pyodbc.Error as e:
-        raise HTTPException(status_code=500, detail=f"Registration error.: {str(e)}")
+@app.post("/login/")
+async def login_user(email: str = Form(...), password: str = Form(...)):
+    # Connect to the database
+    cursor = connection.cursor()
 
+    # Check if a user with the provided email and password exists in registered_users
+    cursor.execute("SELECT id FROM registered_users WHERE CAST(email AS NVARCHAR) = ? AND CAST(password AS NVARCHAR) = ?", email, password)
+    user = cursor.fetchone()
+
+    if user:
+        # User exists, you can return a success message or any user-specific data you need
+        return {"message": "Login successful"}
+
+    # User does not exist or password is incorrect, return an error
+    raise HTTPException(status_code=400, detail="Invalid email or password")
+
+    cursor.close()
 
 if __name__ == "__main__":
     import uvicorn
