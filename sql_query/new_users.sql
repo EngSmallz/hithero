@@ -1,0 +1,7 @@
+SELECT TOP (10) [id]
+      ,[first_name]
+      ,[last_name]
+      ,[email]
+      ,[phone_number]
+      ,[role]
+  FROM [dbo].[new_users]

@@ -1,0 +1,8 @@
+SELECT TOP (10) [id]
+      ,[first_name]
+      ,[last_name]
+      ,[state]
+      ,[county]
+      ,[district]
+      ,[school]
+  FROM [dbo].[teacher_list]

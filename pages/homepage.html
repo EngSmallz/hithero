@@ -37,8 +37,8 @@
 
         <section>
             <h2>Are You a Teacher?</h2>
-            <p>If you're an educator in need of support, create your profile.</p>
-            <a href="/pages/register.html" class="btn">Sign Up</a>
+            <p>If you're an educator in need of support, register to create your profile.</p>
+            <a href="/pages/register.html" class="btn">Register</a>
         </section>
 
         <section>
@@ -51,5 +51,44 @@
         <p>&copy; 2023 Hometown Heroes</p>
     </footer>
 
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const randomButton = document.getElementById("randomButton");
+            const randomTeacherInfo = document.getElementById("randomTeacherInfo");
+    
+            randomButton.addEventListener("click", async function () {
+                try {
+                    const response = await fetch("http://127.0.0.1:8000/random_teacher/", {
+                        method: "GET",
+                    });
+    
+                    if (response.ok) {
+                        const data = await response.json();
+                        const teacherName = `${data.first_name} ${data.last_name}`;
+                        
+                        // Construct the URL
+                        const teacherNameSlug = teacherName.replace(/\s/g, " ");
+                        const url = `http://127.0.0.1:5500/pages/states/${data.state}/${data.county}/${data.district}/${data.school}/${teacherNameSlug}/index.html`;
+    
+                        // Create a link element and set the URL
+                        const link = document.createElement("a");
+                        link.href = url;
+                        link.textContent = "View Teacher Profile";
+                        link.target = "_blank"; // Open link in a new tab/window
+    
+                        // Append the link to the teacher info div
+                        randomTeacherInfo.innerHTML = `<h3>${teacherName}</h3>`;
+                        randomTeacherInfo.appendChild(link);
+                    } else {
+                        randomTeacherInfo.innerHTML = "Unable to fetch random teacher information.";
+                    }
+                } catch (error) {
+                    randomTeacherInfo.innerHTML = "An error occurred while fetching random teacher information.";
+                }
+            });
+        });
+    </script>
+    
+    
 </body>
 </html>
