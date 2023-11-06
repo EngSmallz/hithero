@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Request, Form, Depends, Body
+from fastapi import FastAPI, HTTPException, Request, Form, Depends, Body, APIRouter
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 import pyodbc, string, secrets, random
@@ -35,6 +35,51 @@ app.add_middleware(
 # Add the SessionMiddleware
 app.add_middleware(SessionMiddleware, secret_key="gobblegobble")
 
+auth_router = APIRouter()
+
+#########functions############
+def get_current_user(request: Request):
+    return request.session.get("user_id", None)
+
+def get_current_role(request: Request):
+    return request.session.get("user_role", None)
+
+# Function to retrieve state, county, district, and school from the database based on user ID
+def get_data_from_database(user_id, level):
+    try:
+        # Connect to the database
+        connection = pyodbc.connect(connection_string)
+        cursor = connection.cursor()
+
+        if level == 'teacher':
+            cursor.execute("SELECT state, county, district, school, id FROM registered_users WHERE CAST(email AS NVARCHAR) = ?", user_id)
+            data = cursor.fetchone()
+            if data:
+                state, county, district, school, regUserID = data
+                return state, county, district, school, regUserID
+        elif level == 'school':
+            cursor.execute("SELECT state, county, district, school FROM registered_users WHERE CAST(email AS NVARCHAR) = ?", user_id)
+            data = cursor.fetchone()
+            if data:
+                state, county, district, school = data
+                return state, county, district, school, None
+        elif level == 'district':
+            cursor.execute("SELECT state, county, district FROM registered_users WHERE CAST(email AS NVARCHAR) = ?", user_id)
+            data = cursor.fetchone()
+            if data:
+                state, county, district = data
+                return state, county, district, None, None
+        
+        connection.close()
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    
+        
+
+    return None, None, None, None
+
+#######apis#######
 @app.post("/register/")
 async def register_user(first_name: str = Form(...), last_name: str = Form(...), email: str = Form(...), phone_number: str = Form(...), role: str = Form(...)):
     # Connect to the database
@@ -89,6 +134,16 @@ async def login_user(request: Request, email: str = Form(...), password: str = F
         print(message)
         return JSONResponse(content={"message": message}, status_code=400)
 
+@app.post("/logout/")
+async def logout_user(request: Request):
+    # Clear user session data to log out
+    if "user_id" in request.session:
+        del request.session["user_id"]
+    if "user_role" in request.session:
+        del request.session["user_role"]
+
+    return JSONResponse(content={"message": "Logged out successfully"})
+
 # Endpoint to move a user from new_users to registered_users
 @app.post("/move_user/{user_email}")
 async def move_user(user_email: str):
@@ -136,18 +191,40 @@ async def update_user_fields(email: str, state: str, county: str, district: str,
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/create_teacher_item/")
-async def create_teacher_item(first_name: str, last_name: str, state: str, county: str, district: str, school: str):
-    # Connect to the database
-    cursor = connection.cursor()
+async def create_teacher_item(first_name: str, last_name: str, state: str, county: str, district: str, school: str, role: str = Depends(get_current_role), email: str = Depends(get_current_user)):
+    if role != None:
+        # Connect to the database
+        cursor = connection.cursor()
 
-    # Insert the new item into the "teacher_list" table
-    insert_query = "INSERT INTO teacher_list (first_name, last_name, state, county, district, school) " \
-                   "VALUES (?, ?, ?, ?, ?, ?)"
-    cursor.execute(insert_query, (first_name, last_name, state, county, district, school))
-    connection.commit()
+        # Insert the new item into the "teacher_list" table
+        insert_query = "INSERT INTO teacher_list (first_name, last_name, state, county, district, school) " \
+                    "VALUES (?, ?, ?, ?, ?, ?)"
+        cursor.execute(insert_query, (first_name, last_name, state, county, district, school))
 
-    cursor.close()
-    return {"message": f"Teacher created successfully"}
+
+
+        # Link registered user to the teacher with the highest ID
+        if role == 'teacher':
+            # Get the maximum ID from the teacher_list table
+            cursor.execute("SELECT MAX(id) FROM teacher_list")
+            max_teacher_id = cursor.fetchone()[0]  # Get the maximum ID
+
+            # Next, get the ID of the registered user based on their email
+            cursor.execute("SELECT id FROM registered_users WHERE CAST(email AS NVARCHAR) = ?", email)
+            reg_user_id = cursor.fetchone()
+
+            if max_teacher_id and reg_user_id:
+                # Link the registered user to the teacher with the highest ID
+                update_query = "UPDATE teacher_list SET regUserID = ? WHERE id = ?"
+                cursor.execute(update_query, (reg_user_id[0], max_teacher_id))
+
+        connection.commit()
+
+        cursor.close()
+        return {"message": f"Teacher created successfully"}
+    else:
+        raise HTTPException(status_code=404, detail="No user logged in.")
+    
 
 @app.get("/random_teacher/")
 async def get_random_teacher():
@@ -177,14 +254,35 @@ async def get_random_teacher():
     else:
         raise HTTPException(status_code=404, detail="No teachers found in the database")
 
-def get_current_user(request: Request):
-    return request.session.get("user_id", None)
-
 @app.get("/profile/")
-async def get_user_profile(username: str = Depends(get_current_user)):
-    return JSONResponse(content={"message": f"Welcome, {username}"})
+async def get_user_profile(username: str = Depends(get_current_user), role: str = Depends(get_current_role)):
+    if username != None:
+        return JSONResponse(content={"message": f"{username} {role}"})
+    else:
+        raise HTTPException(status_code=404, detail="No user logged in.")
 
+# Route to get user information based on role
+@app.get("/get_user_info/")
+async def get_user_info(username: str = Depends(get_current_user), role: str = Depends(get_current_role)):
+    if username[0]:  # Check if user is logged in
+        if role == "teacher":
+            state, county, district, school, regUserID = get_data_from_database(username, 'teacher')
+        elif role == "principal":
+            state, county, district, school, regUserID = get_data_from_database(username, 'school')
+        elif role == "superintendent":
+            state, county, district, school, regUserID = get_data_from_database(username, 'district')
+        user_info = {
+            "state": state,
+            "county": county,
+            "district": district,
+            "school": school == None,
+            "regUserID": regUserID == None
+        }
 
+        return JSONResponse(content=user_info)
+        return JSONResponse(state)
+    else:
+        raise HTTPException(status_code=404, detail="No user logged in.")
 
 if __name__ == "__main__":
     import uvicorn

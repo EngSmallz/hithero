@@ -1,0 +1,160 @@
++-- hithero/
+  -- .gitignore
+  -- app.py
+  -- directory_tree.txt
+  +-- pages/
+    -- about.html
+    -- auth.html
+    -- contact.html
+    -- homepage.html
+    -- login.html
+    -- register.html
+    +-- states/
+      -- index.html
+      +-- Alabama/
+        -- index.html
+      +-- Alaska/
+        -- index.html
+      +-- Arizona/
+        -- index.html
+      +-- Arkansas/
+        -- index.html
+      +-- California/
+        -- index.html
+      +-- Colorado/
+        -- index.html
+      +-- Connecticut/
+        -- index.html
+      +-- Delaware/
+        -- index.html
+      +-- District of Columbia/
+        -- index.html
+      +-- Florida/
+        -- index.html
+      +-- Georgia/
+        -- index.html
+      +-- Hawaii/
+        -- index.html
+      +-- Idaho/
+        -- index.html
+      +-- Illinois/
+        -- index.html
+      +-- Indiana/
+        -- index.html
+      +-- Iowa/
+        -- index.html
+      +-- Kansas/
+        -- index.html
+      +-- Kentucky/
+        -- index.html
+      +-- Louisiana/
+        -- index.html
+      +-- Maine/
+        -- index.html
+      +-- Maryland/
+        -- index.html
+      +-- Massachusetts/
+        -- index.html
+      +-- Michigan/
+        -- index.html
+      +-- Minnesota/
+        -- index.html
+      +-- Mississippi/
+        -- index.html
+      +-- Missouri/
+        -- index.html
+      +-- Montana/
+        -- index.html
+      +-- Nebraska/
+        -- index.html
+      +-- Nevada/
+        -- index.html
+      +-- New Hampshire/
+        -- index.html
+      +-- New Jersey/
+        -- index.html
+      +-- New Mexico/
+        -- index.html
+      +-- New York/
+        -- index.html
+      +-- North Carolina/
+        -- index.html
+      +-- North Dakota/
+        -- index.html
+      +-- Ohio/
+        -- index.html
+      +-- Oklahoma/
+        -- index.html
+      +-- Oregon/
+        -- index.html
+      +-- Pennsylvania/
+        -- index.html
+      +-- Rhode Island/
+        -- index.html
+      +-- South Carolina/
+        -- index.html
+      +-- South Dakota/
+        -- index.html
+      +-- Tennessee/
+        -- index.html
+      +-- Texas/
+        -- index.html
+      +-- Utah/
+        -- index.html
+      +-- Vermont/
+        -- index.html
+      +-- Virginia/
+        -- index.html
+      +-- Washington/
+        -- index.html
+        +-- Skagit/
+          -- index.html
+          +-- Concrete/
+            -- index.html
+            +-- Concrete Elementary/
+              -- index.html
+              +-- Becca Brundage/
+                -- edit_teacher.html
+                -- teacher-profile-pic.jpg
+                -- teacher.html
+        +-- Spokane/
+          -- index.html
+          +-- Medical Lake/
+            -- index.html
+            +-- Hallet Elementary/
+              -- index.html
+              +-- Cheryl Spilker/
+                -- edit_teacher.html
+                -- teacher-profile-pic.jpg
+                -- teacher.html
+      +-- West Virginia/
+        -- index.html
+      +-- Wisconsin/
+        -- index.html
+      +-- Wyoming/
+        -- index.html
+  +-- programs/
+    -- directory_tree.py
+    -- maintain_lists.py
+    -- populate_index.py
+    -- replace.py
+    -- teacher_directory.py
+  +-- requirements/
+    -- requirements.txt
+  +-- sql_query/
+    -- new_users.sql
+    -- registered_users.sql
+    -- teacher_list.sql
+  +-- static/
+    +-- css/
+      -- style.css
+    +-- images/
+      -- grape.jpg
+      -- peanut.jpg
+  +-- templates/
+    -- edit_teacher.html
+    -- index.html
+    -- state_index.html
+    -- teacher.html
+  +-- __pycache__/
+    -- app.cpython-312.pyc
