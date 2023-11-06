@@ -3,6 +3,8 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 import pyodbc, string, secrets, random
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
+
 
 app = FastAPI()
 
@@ -12,7 +14,7 @@ connection_string = (
     'Server=tcp:hithero.database.windows.net,1433;'
     'Database=hithero_login;'
     'Uid=hithero_admin;' #temp to change file
-    'Pwd=;' #insert pass and delete before push
+    'Pwd=MedL&ke15;' #insert pass and delete before push
     'Encrypt=yes;'
     'TrustServerCertificate=no;'
     'Connection Timeout=30;'
@@ -30,6 +32,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# Add the SessionMiddleware
+app.add_middleware(SessionMiddleware, secret_key="gobblegobble")
 
 @app.post("/register/")
 async def register_user(first_name: str = Form(...), last_name: str = Form(...), email: str = Form(...), phone_number: str = Form(...), role: str = Form(...)):
@@ -60,22 +64,25 @@ async def register_user(first_name: str = Form(...), last_name: str = Form(...),
     cursor.close()
     return {"message": "User registered successfully"}
 
-
-
 @app.post("/login/")
-async def login_user(email: str = Form(...), password: str = Form(...)):
+async def login_user(request: Request, email: str = Form(...), password: str = Form(...)):
     # Connect to the database (You should replace this with your actual database connection logic)
     cursor = connection.cursor()
 
     # Check if a user with the provided email and password exists in registered_users
-    cursor.execute("SELECT id FROM registered_users WHERE CAST(email AS NVARCHAR) = ? AND CAST(password AS NVARCHAR) = ?", (email, password))
+    cursor.execute("SELECT id, role FROM registered_users WHERE CAST(email AS NVARCHAR) = ? AND CAST(password AS NVARCHAR) = ?", (email, password))
     user = cursor.fetchone()
 
     cursor.close()  # Close the cursor after the query is executed
 
     if user:
-        message = "Login successful"
+        message = "Login successful as " + user.role
         print(message)
+
+         # Set user session data
+        request.session["user_id"] = email
+        request.session["user_role"] = user.role
+
         return JSONResponse(content={"message": message})
     else:
         message = "Invalid email or password"
@@ -136,11 +143,11 @@ async def create_teacher_item(first_name: str, last_name: str, state: str, count
     # Insert the new item into the "teacher_list" table
     insert_query = "INSERT INTO teacher_list (first_name, last_name, state, county, district, school) " \
                    "VALUES (?, ?, ?, ?, ?, ?)"
-    cursor.execute(insert_query, (item.first_name, item.last_name, item.state, item.county, item.district, item.school))
+    cursor.execute(insert_query, (first_name, last_name, state, county, district, school))
     connection.commit()
 
     cursor.close()
-    return item  # Return the created item
+    return {"message": f"Teacher created successfully"}
 
 @app.get("/random_teacher/")
 async def get_random_teacher():
@@ -169,6 +176,15 @@ async def get_random_teacher():
 
     else:
         raise HTTPException(status_code=404, detail="No teachers found in the database")
+
+def get_current_user(request: Request):
+    return request.session.get("user_id", None)
+
+@app.get("/profile/")
+async def get_user_profile(username: str = Depends(get_current_user)):
+    return JSONResponse(content={"message": f"Welcome, {username}"})
+
+
 
 if __name__ == "__main__":
     import uvicorn

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Teacher Profile - Hometown Heroes</title>
+    <link rel="stylesheet" type="text/css" href="/static/css/style.css">
+</head>
+<body>
+    <header>
+        <h1>Edit Teacher Profile</h1>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="/pages/homepage.html">Home</a></li>
+            <li><a href="/pages/about.html">About</a></li>
+            <li><a href="/pages/contact.html">Contact</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <form action="/update_teacher_page/" method="post">
+            <section class="profile" id="profile-section">
+                <div class="teacher-info" id="teacher-info">
+                    <img src="teacher-profile-pic.jpg" alt="Teacher Profile Picture">
+                    <h2>Edit Teacher Name: <input type="text" name="teacher-name" id="teacher-name" value="Teacher Name"></h2>
+                    <p>Edit School Name: <input type="text" name="school-name" id="school-name" value="School Name"></p>
+                    <p>Edit Location: <input type="text" name="location" id="location" value="City, State"></p>
+                </div>
+        
+                <div class="wishlist" id="wishlist-section">
+                    <h2>Amazon Wishlist</h2>
+                    <p>Edit Amazon Wishlist Link: <input type="text" name="wishlist-link" id="wishlist-link" value="amazon-wishlist-link"></p>
+                </div>
+            </section>
+        
+            <section class="about-me" id="about-me-section">
+                <h2>About Me</h2>
+                <p>Edit About Me: <textarea name="about-me" id="about-me" rows="4" cols="50">Share a personal message, your teaching philosophy, and classroom needs here. Tell potential supporters about your goals and the impact their help can make.</textarea>
+                </p>
+            </section>
+            <input type="submit" value="Save Changes">
+        </form>
+    </main>
+
+    
+    <footer>
+        <p>&copy; 2023 Hometown Heroes</p>
+    </footer>
+</body>
+</html>

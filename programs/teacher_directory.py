@@ -20,9 +20,18 @@ user_profile_path = os.path.join(base_directory, county, school_district, school
 os.makedirs(user_profile_path, exist_ok=True)
 
 # Specify the source file and destination directory
-firstname, lastname = name.split()  # Split the full name into first and last name
 source_file = "templates/teacher.html"
-new_file_name = f"index.html"
+new_file_name = f"teacher.html"
+
+# Combine the destination directory and the new file name
+destination_path = os.path.join(user_profile_path, new_file_name)
+
+# Use shutil.copy to copy the file to the new location and rename it
+shutil.copy(source_file, destination_path)
+
+# Specify the source file and destination directory
+source_file = "templates/edit_teacher.html"
+new_file_name = f"edit_teacher.html"
 
 # Combine the destination directory and the new file name
 destination_path = os.path.join(user_profile_path, new_file_name)

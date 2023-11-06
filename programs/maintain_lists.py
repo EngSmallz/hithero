@@ -25,7 +25,11 @@ def update_index_html(directory_path, depth=0):
 
                 list_items = []
                 for folder_name in folder_list:
-                    folder_link = os.path.join(folder_name, 'index.html').replace(os.path.sep, '/')
+                    if(depth == 3):
+                        folder_link = os.path.join(folder_name, 'teacher.html').replace(os.path.sep, '/')
+                    else:
+                        folder_link = os.path.join(folder_name, 'index.html').replace(os.path.sep, '/')
+
                     if folder_link not in index_html_content:
                         list_item = f'<li><a href="{folder_link}">{folder_name}</a></li>'
                         list_items.append(list_item)
