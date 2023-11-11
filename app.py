@@ -3,10 +3,26 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 import pyodbc, string, secrets, random
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+import os
+from starlette.applications import Starlette
 from starlette.middleware.sessions import SessionMiddleware
 
-
 app = FastAPI()
+
+# Configure the session middleware
+app.add_middleware(SessionMiddleware, secret_key="your_secret_key")
+# Determine the path to the directory containing the static pages
+pages_directory = os.path.join(os.path.dirname(__file__), "pages")
+
+# Mount the 'pages' directory to be served at '/pages'
+app.mount("/pages", StaticFiles(directory=pages_directory), name="pages")
+
+# Determine the path to the directory containing the static pages
+pages_directory = os.path.join(os.path.dirname(__file__), "static")
+
+# Mount the 'pages' directory to be served at '/pages'
+app.mount("/static", StaticFiles(directory=pages_directory), name="static")
 
 # Define your AAD ODBC connection string
 connection_string = (
@@ -26,23 +42,23 @@ try:
 except pyodbc.Error as e:
     raise Exception(f"Error connecting to the database: {str(e)}")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://127.0.0.1:5500"],  # Replace with your website's URL
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-# Add the SessionMiddleware
-app.add_middleware(SessionMiddleware, secret_key="gobblegobble")
-
-auth_router = APIRouter()
 
 #########functions############
-def get_current_user(request: Request):
+def get_current_id(request: Request):
     return request.session.get("user_id", None)
 
 def get_current_role(request: Request):
     return request.session.get("user_role", None)
+
+def get_current_user(request: Request):
+    return request.session.get("user_name", None)
+
+def get_email_password():
+    connection = pyodbc.connect(connection_string)
+    cursor = connection.cursor()
+    cursor.execute("SELECT password FROM hitheroEmail WHERE CAST(email AS NVARCHAR) = ?", 'hometown.heroes.main@gmail.com')
+    data = cursor.fetchone()
+    return data
 
 # Function to retrieve state, county, district, and school from the database based on user ID
 def get_data_from_database(user_id, level):
@@ -125,8 +141,9 @@ async def login_user(request: Request, email: str = Form(...), password: str = F
         print(message)
 
          # Set user session data
-        request.session["user_id"] = email
+        request.session["user_name"] = email
         request.session["user_role"] = user.role
+        request.session["user_id"] = user.id
 
         return JSONResponse(content={"message": message})
     else:
@@ -139,8 +156,8 @@ async def logout_user(request: Request):
     # Clear user session data to log out
     if "user_id" in request.session:
         del request.session["user_id"]
-    if "user_role" in request.session:
         del request.session["user_role"]
+        del request.session["user_name"]
 
     return JSONResponse(content={"message": "Logged out successfully"})
 
@@ -255,9 +272,15 @@ async def get_random_teacher():
         raise HTTPException(status_code=404, detail="No teachers found in the database")
 
 @app.get("/profile/")
-async def get_user_profile(username: str = Depends(get_current_user), role: str = Depends(get_current_role)):
+async def get_user_profile(username: str = Depends(get_current_user), role: str = Depends(get_current_role), id: str = Depends(get_current_id)):
     if username != None:
-        return JSONResponse(content={"message": f"{username} {role}"})
+        user_info = {
+            "user_id": username,
+            "user_role": role,
+            "user_name": id
+        }
+
+        return JSONResponse(content=user_info)
     else:
         raise HTTPException(status_code=404, detail="No user logged in.")
 
@@ -271,18 +294,49 @@ async def get_user_info(username: str = Depends(get_current_user), role: str = D
             state, county, district, school, regUserID = get_data_from_database(username, 'school')
         elif role == "superintendent":
             state, county, district, school, regUserID = get_data_from_database(username, 'district')
+        elif role == 'admin':
+            return JSONResponse(content="User is admin")
         user_info = {
             "state": state,
             "county": county,
             "district": district,
-            "school": school == None,
-            "regUserID": regUserID == None
+            "school": school,
+            "regUserID": regUserID
         }
 
         return JSONResponse(content=user_info)
-        return JSONResponse(state)
     else:
         raise HTTPException(status_code=404, detail="No user logged in.")
+
+@app.route('/')
+def index():
+    return render_template('/pages/homepage.html')
+
+@app.route('/send_email', methods=['POST'])
+def send_email():
+    sender_email = 'hometown.heroes.main@gmail.com'  # Your email address
+    password = Depends(get_email_password)  # Your email password
+    recipient_email = 'hometown.heroes.main@gmail.com'  # Your email address
+
+    sender_name = request.form['name']
+    sender_address = request.form['email']
+    subject = "Contact Us Form Submission"
+    message = f"Name: {sender_name}\nEmail: {sender_address}"
+
+    msg = MIMEText(message)
+    msg['Subject'] = subject
+    msg['From'] = sender_email
+    msg['To'] = recipient_email
+
+    try:
+        server = smtplib.SMTP('smtp.gmail.com', 587)  # Use the SMTP server of your email provider
+        server.starttls()
+        server.login(sender_email, password)
+        server.sendmail(sender_email, recipient_email, msg.as_string())
+        server.quit()
+        return 'Email sent successfully!'
+    except Exception as e:
+        return str(e)
 
 if __name__ == "__main__":
     import uvicorn

@@ -24,7 +24,6 @@
             <p>If you have any questions, feedback, or need assistance, please feel free to reach out to us:</p>
             <ul>
                 <li>Email: hometown.heroes.main@gmail.com</li>
-                <li>Phone: (555) 123-4567</li>
             </ul>
         </section>
 
@@ -32,18 +31,46 @@
             <h2>Contact Form</h2>
             <p>You can also send us a message using the contact form below:</p>
             
-            <form action="submit_contact_form.php" method="post">
-                <label for="name">Name:</label>
-                <input type="text" id="name" name="name" required>
-                
-                <label for="email">Email:</label>
-                <input type="email" id="email" name="email" required>
-                
-                <label for="message">Message:</label>
-                <textarea id="message" name="message" rows="5" required></textarea>
-                
-                <button type="submit" class="btn">Submit</button>
+            <form id="contactForm" method="post">
+                <label for="name">Name:</label><br>
+                <input type="text" id="name" name="name"><br><br>
+                <label for="email">Email:</label><br>
+                <input type="email" id="email" name="email"><br><br>
+                <input type="submit" value="Submit">
             </form>
+        
+            <div id="response"></div>
+        
+            <script>
+                document.getElementById('contactForm').addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    var name = document.getElementById('name').value;
+                    var email = document.getElementById('email').value;
+                    
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('POST', '/send_email', true);
+                    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                    
+                    xhr.onreadystatechange = function() {
+                        if (xhr.readyState === XMLHttpRequest.DONE) {
+                            var responseDiv = document.getElementById('response');
+                            if (xhr.status === 200) {
+                                var response = JSON.parse(xhr.responseText);
+                                if (response.status === 'success') {
+                                    responseDiv.innerHTML = 'Email sent successfully!';
+                                } else {
+                                    responseDiv.innerHTML = 'Error: ' + response.message;
+                                }
+                            } else {
+                                responseDiv.innerHTML = 'Error: Failed to send email';
+                            }
+                        }
+                    };
+                    
+                    xhr.send('name=' + encodeURIComponent(name) + '&email=' + encodeURIComponent(email));
+                });
+            </script>
         </section>
     </main>
 

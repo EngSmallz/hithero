@@ -40,29 +40,18 @@
     </main>
 
     <a href="edit_teacher.html" class="btn" id="editButton" style="display: none;">Edit</a>
+
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            const editButton = document.getElementById("editButton");
-    
-            // Make an AJAX request to check the user's permissions
-            fetch("/check_edit_permission", {
-                method: "GET",
-            })
+        // Fetch data from the API
+        fetch('/profile/')
             .then(response => response.json())
             .then(data => {
-                if (data.hasEditPermission) {
-                    // User has permission, so display the "Edit" button
-                    editButton.style.display = "block";
-                } else {
-                    // User does not have permission, so keep the "Edit" button hidden
-                    editButton.style.display = "none";
+                if (data.user_role === 'admin') {
+                    // If the user is an admin, show the edit button
+                    document.getElementById('editButton').style.display = 'block';
                 }
             })
-            .catch(error => {
-                console.error("An error occurred while checking permissions:", error);
-                editButton.style.display = "none"; // Hide the button on error
-            });
-        });
+            .catch(error => console.error('Error:', error));
     </script>
     
 
