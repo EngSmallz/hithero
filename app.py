@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 import os
 from starlette.applications import Starlette
 from starlette.middleware.sessions import SessionMiddleware
+from email.mime.text import MIMEText
 
 app = FastAPI()
 
@@ -138,7 +139,6 @@ async def login_user(request: Request, email: str = Form(...), password: str = F
 
     if user:
         message = "Login successful as " + user.role
-        print(message)
 
          # Set user session data
         request.session["user_name"] = email
@@ -148,7 +148,6 @@ async def login_user(request: Request, email: str = Form(...), password: str = F
         return JSONResponse(content={"message": message})
     else:
         message = "Invalid email or password"
-        print(message)
         return JSONResponse(content={"message": message}, status_code=400)
 
 @app.post("/logout/")
@@ -312,31 +311,34 @@ async def get_user_info(username: str = Depends(get_current_user), role: str = D
 def index():
     return render_template('/pages/homepage.html')
 
-@app.route('/send_email', methods=['POST'])
-def send_email():
+@app.post('/contact_us/')
+async def contact_us(name: str = Form(...), email: str = Form(...), subject: str = Form(...), message: str = Form(...)):
     sender_email = 'hometown.heroes.main@gmail.com'  # Your email address
     password = Depends(get_email_password)  # Your email password
     recipient_email = 'hometown.heroes.main@gmail.com'  # Your email address
 
-    sender_name = request.form['name']
-    sender_address = request.form['email']
-    subject = "Contact Us Form Submission"
-    message = f"Name: {sender_name}\nEmail: {sender_address}"
+    subject = f"Contact Us Form Submission: {subject}"
+    email_message = f"Name: {name}\nEmail: {email}\nMessage: {message}"
 
-    msg = MIMEText(message)
+    msg = MIMEText(email_message)
     msg['Subject'] = subject
     msg['From'] = sender_email
     msg['To'] = recipient_email
-
     try:
+        print('try')
         server = smtplib.SMTP('smtp.gmail.com', 587)  # Use the SMTP server of your email provider
+        print('try 2')
         server.starttls()
+        print("login")
         server.login(sender_email, password)
         server.sendmail(sender_email, recipient_email, msg.as_string())
         server.quit()
-        return 'Email sent successfully!'
+        message = 'Email sent successfully!'
+        print(message)
+        return JSONResponse(content={"message": message})
     except Exception as e:
-        return str(e)
+        message = f"Error: {str(e)}"
+        return JSONResponse(content={"message": message}, status_code=400)
 
 if __name__ == "__main__":
     import uvicorn
