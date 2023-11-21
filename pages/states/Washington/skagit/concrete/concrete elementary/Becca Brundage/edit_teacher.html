@@ -42,6 +42,18 @@
         </form>
     </main>
 
+    <script>
+        // Fetch data from the API
+        fetch('/profile/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.user_role !== 'admin') {
+                    // If the user is not an admin, redirect to the 403 page
+                    window.location.href = '/403.html';
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    </script>
     
     <footer>
         <p>&copy; 2023 Hometown Heroes</p>

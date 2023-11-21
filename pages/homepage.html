@@ -15,6 +15,7 @@
             <li><a href="/pages/homepage.html">Home</a></li>
             <li><a href="/pages/about.html">About</a></li>
             <li><a href="/pages/contact.html">Contact</a></li>
+
             <!-- Add links to other pages here -->
         </ul>
     </nav>
@@ -68,7 +69,7 @@
                         
                         // Construct the URL
                         const teacherNameSlug = teacherName.replace(/\s/g, " ");
-                        const url = `http://127.0.0.1:5500/pages/states/${data.state}/${data.county}/${data.district}/${data.school}/${teacherNameSlug}/teacher.html`;
+                        const url = `http://127.0.0.1:8000/pages/states/${data.state}/${data.county}/${data.district}/${data.school}/${teacherNameSlug}/teacher.html`;
     
                         // Create a link element and set the URL
                         const link = document.createElement("a");

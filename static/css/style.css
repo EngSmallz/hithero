@@ -26,26 +26,32 @@ nav ul li {
 
 nav a {
     text-decoration: none;
-    color: #333;
+    color: #fff; /* Change the color of the navigation links */
 }
 
-main {
-    margin: 20px;
-    padding: 20px;
-}
-
-section {
-    background-color: #fff;
-    border: 1px solid #ddd;
-    padding: 20px;
-    margin-bottom: 20px;
-}
-
-footer {
+/* Updated styling for the navigation bar */
+nav {
     background-color: #333;
-    color: #fff;
+    overflow: hidden;
+}
+
+nav ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+nav li {
+    float: left;
+}
+
+nav a {
+    display: block;
+    color: white;
     text-align: center;
-    padding: 10px;
+    padding: 14px 16px;
+    text-decoration: none;
 }
 
 /* Apply general styling to all input fields */
@@ -95,3 +101,4 @@ input,
 textarea {
     display: block; /* Set 'display' to 'block' to make them visible */
 }
+

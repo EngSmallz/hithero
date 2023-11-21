@@ -1,18 +1,25 @@
 from fastapi import FastAPI, HTTPException, Request, Form, Depends, Body, APIRouter
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel
-import pyodbc, string, secrets, random
+import pyodbc
+import string
+import secrets
+import smtplib
+import logging
+import os
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-import os
 from starlette.applications import Starlette
 from starlette.middleware.sessions import SessionMiddleware
 from email.mime.text import MIMEText
 
 app = FastAPI()
 
+logger = logging.getLogger(__name__)
+
 # Configure the session middleware
 app.add_middleware(SessionMiddleware, secret_key="your_secret_key")
+
 # Determine the path to the directory containing the static pages
 pages_directory = os.path.join(os.path.dirname(__file__), "pages")
 
@@ -20,18 +27,18 @@ pages_directory = os.path.join(os.path.dirname(__file__), "pages")
 app.mount("/pages", StaticFiles(directory=pages_directory), name="pages")
 
 # Determine the path to the directory containing the static pages
-pages_directory = os.path.join(os.path.dirname(__file__), "static")
+static_directory = os.path.join(os.path.dirname(__file__), "static")
 
 # Mount the 'pages' directory to be served at '/pages'
-app.mount("/static", StaticFiles(directory=pages_directory), name="static")
+app.mount("/static", StaticFiles(directory=static_directory), name="static")
 
 # Define your AAD ODBC connection string
 connection_string = (
     'Driver={ODBC Driver 18 for SQL Server};'
     'Server=tcp:hithero.database.windows.net,1433;'
     'Database=hithero_login;'
-    'Uid=hithero_admin;' #temp to change file
-    'Pwd=;' #insert pass and delete before push
+    'Uid=hithero_admin;'
+    'Pwd=MedL&ke15;'
     'Encrypt=yes;'
     'TrustServerCertificate=no;'
     'Connection Timeout=30;'
@@ -59,42 +66,8 @@ def get_email_password():
     cursor = connection.cursor()
     cursor.execute("SELECT password FROM hitheroEmail WHERE CAST(email AS NVARCHAR) = ?", 'hometown.heroes.main@gmail.com')
     data = cursor.fetchone()
-    return data
-
-# Function to retrieve state, county, district, and school from the database based on user ID
-def get_data_from_database(user_id, level):
-    try:
-        # Connect to the database
-        connection = pyodbc.connect(connection_string)
-        cursor = connection.cursor()
-
-        if level == 'teacher':
-            cursor.execute("SELECT state, county, district, school, id FROM registered_users WHERE CAST(email AS NVARCHAR) = ?", user_id)
-            data = cursor.fetchone()
-            if data:
-                state, county, district, school, regUserID = data
-                return state, county, district, school, regUserID
-        elif level == 'school':
-            cursor.execute("SELECT state, county, district, school FROM registered_users WHERE CAST(email AS NVARCHAR) = ?", user_id)
-            data = cursor.fetchone()
-            if data:
-                state, county, district, school = data
-                return state, county, district, school, None
-        elif level == 'district':
-            cursor.execute("SELECT state, county, district FROM registered_users WHERE CAST(email AS NVARCHAR) = ?", user_id)
-            data = cursor.fetchone()
-            if data:
-                state, county, district = data
-                return state, county, district, None, None
-        
-        connection.close()
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
-    
-        
-
-    return None, None, None, None
+    password = data[0]
+    return password
 
 #######apis#######
 @app.post("/register/")
@@ -157,8 +130,8 @@ async def logout_user(request: Request):
         del request.session["user_id"]
         del request.session["user_role"]
         del request.session["user_name"]
-
-    return JSONResponse(content={"message": "Logged out successfully"})
+    # Redirect to the homepage or another page after logout
+    return RedirectResponse(url="/", status_code=303)
 
 # Endpoint to move a user from new_users to registered_users
 @app.post("/move_user/{user_email}")
@@ -208,7 +181,7 @@ async def update_user_fields(email: str, state: str, county: str, district: str,
 
 @app.post("/create_teacher_item/")
 async def create_teacher_item(first_name: str, last_name: str, state: str, county: str, district: str, school: str, role: str = Depends(get_current_role), email: str = Depends(get_current_user)):
-    if role != None:
+    if role:
         # Connect to the database
         cursor = connection.cursor()
 
@@ -216,8 +189,6 @@ async def create_teacher_item(first_name: str, last_name: str, state: str, count
         insert_query = "INSERT INTO teacher_list (first_name, last_name, state, county, district, school) " \
                     "VALUES (?, ?, ?, ?, ?, ?)"
         cursor.execute(insert_query, (first_name, last_name, state, county, district, school))
-
-
 
         # Link registered user to the teacher with the highest ID
         if role == 'teacher':
@@ -240,12 +211,10 @@ async def create_teacher_item(first_name: str, last_name: str, state: str, count
         return {"message": f"Teacher created successfully"}
     else:
         raise HTTPException(status_code=404, detail="No user logged in.")
-    
 
 @app.get("/random_teacher/")
 async def get_random_teacher():
     # Connect to the database
-    connection = pyodbc.connect(connection_string)
     cursor = connection.cursor()
 
     # Query the database to retrieve a random teacher
@@ -253,7 +222,6 @@ async def get_random_teacher():
     random_teacher = cursor.fetchone()
 
     cursor.close()
-    connection.close()
 
     if random_teacher:
         data = {
@@ -272,50 +240,21 @@ async def get_random_teacher():
 
 @app.get("/profile/")
 async def get_user_profile(username: str = Depends(get_current_user), role: str = Depends(get_current_role), id: str = Depends(get_current_id)):
-    if username != None:
+    if username:
         user_info = {
             "user_id": username,
             "user_role": role,
             "user_name": id
         }
-
         return JSONResponse(content=user_info)
     else:
         raise HTTPException(status_code=404, detail="No user logged in.")
-
-# Route to get user information based on role
-@app.get("/get_user_info/")
-async def get_user_info(username: str = Depends(get_current_user), role: str = Depends(get_current_role)):
-    if username[0]:  # Check if user is logged in
-        if role == "teacher":
-            state, county, district, school, regUserID = get_data_from_database(username, 'teacher')
-        elif role == "principal":
-            state, county, district, school, regUserID = get_data_from_database(username, 'school')
-        elif role == "superintendent":
-            state, county, district, school, regUserID = get_data_from_database(username, 'district')
-        elif role == 'admin':
-            return JSONResponse(content="User is admin")
-        user_info = {
-            "state": state,
-            "county": county,
-            "district": district,
-            "school": school,
-            "regUserID": regUserID
-        }
-
-        return JSONResponse(content=user_info)
-    else:
-        raise HTTPException(status_code=404, detail="No user logged in.")
-
-@app.route('/')
-def index():
-    return render_template('/pages/homepage.html')
 
 @app.post('/contact_us/')
-async def contact_us(name: str = Form(...), email: str = Form(...), subject: str = Form(...), message: str = Form(...)):
+def contact_us(name: str = Form(...), email: str = Form(...), subject: str = Form(...), message: str = Form(...)):
     sender_email = 'hometown.heroes.main@gmail.com'  # Your email address
-    password = Depends(get_email_password)  # Your email password
-    recipient_email = 'hometown.heroes.main@gmail.com'  # Your email address
+    password_data = get_email_password()  # Your email password
+    recipient_email = 'hometown.heroes.contactUs@gmail.com'  # Your email address
 
     subject = f"Contact Us Form Submission: {subject}"
     email_message = f"Name: {name}\nEmail: {email}\nMessage: {message}"
@@ -324,21 +263,44 @@ async def contact_us(name: str = Form(...), email: str = Form(...), subject: str
     msg['Subject'] = subject
     msg['From'] = sender_email
     msg['To'] = recipient_email
+
     try:
-        print('try')
         server = smtplib.SMTP('smtp.gmail.com', 587)  # Use the SMTP server of your email provider
-        print('try 2')
         server.starttls()
-        print("login")
-        server.login(sender_email, password)
+        server.login(sender_email, password_data)
         server.sendmail(sender_email, recipient_email, msg.as_string())
         server.quit()
         message = 'Email sent successfully!'
-        print(message)
         return JSONResponse(content={"message": message})
+    except smtplib.SMTPAuthenticationError as e:
+        logger.error(f"SMTP Authentication Error: {str(e)}")
+        message = "Error: Authentication failed. Check your email credentials."
+        return JSONResponse(content={"message": message}, status_code=400)
     except Exception as e:
+        logger.error(f"Email sending failed: {str(e)}")
         message = f"Error: {str(e)}"
         return JSONResponse(content={"message": message}, status_code=400)
+
+#homepage get
+@app.get("/")
+def read_root():
+    return RedirectResponse("/pages/homepage.html")
+
+# Custom 404 error handler
+@app.exception_handler(404)
+async def not_found(request: Request, exc: HTTPException):
+    # Load the custom 404 HTML page
+    with open(os.path.join(pages_directory, "404.html"), "r", encoding="utf-8") as file:
+        content = file.read()
+    return HTMLResponse(content=content, status_code=404)
+
+# Custom 403 error handler
+@app.exception_handler(403)
+async def forbidden(request: Request, exc: HTTPException):
+    # Load the content of the "403.html" file
+    with open(os.path.join(pages_directory, "403.html"), "r", encoding="utf-8") as file:
+        content = file.read()
+    return HTMLResponse(content=content, status_code=403)
 
 if __name__ == "__main__":
     import uvicorn
