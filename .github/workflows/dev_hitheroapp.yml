@@ -66,4 +66,4 @@ jobs:
         with:
           app-name: 'hitheroApp'
           slot-name: 'Production'
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_FD66D60456BF49C380CBCC3038057E87 }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_A595075C3B8C49A7B376C0C6C33AE3AE }}
