@@ -4,7 +4,7 @@ def create_directory_tree(root_dir, output_file):
     with open(output_file, 'w') as file:
         for root, dirs, files in os.walk(root_dir):
             if 'venv' in dirs:
-                dirs.remove('venv')  # Skip the venv directory
+                dirs.remove('.venv')  # Skip the venv directory
             if '.git' in dirs:
                 dirs.remove('.git')
             level = root.replace(root_dir, '').count(os.sep)
