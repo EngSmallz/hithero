@@ -24,7 +24,7 @@
         <section> 
             <h2>Find a Teacher to Support</h2>
             <p>Explore teachers from across America and make a difference in their classroom.</p>
-            <a href="/pages/states/index.html" class="btn">Find Teachers</a>
+            <a href="/pages/state_index.html" class="btn">Find Teachers</a>
         </section>
 
         <section>
@@ -56,28 +56,18 @@
         document.addEventListener("DOMContentLoaded", function () {
             const randomButton = document.getElementById("randomButton");
             const randomTeacherInfo = document.getElementById("randomTeacherInfo");
-    
             randomButton.addEventListener("click", async function () {
                 try {
                     const response = await fetch("/random_teacher/", {
                         method: "GET",
                     });
-    
                     if (response.ok) {
                         const data = await response.json();
-                        const teacherName = `${data.first_name} ${data.last_name}`;
-                        
-                        // Construct the URL
-                        const teacherNameSlug = teacherName.replace(/\s/g, " ");
-                        const url = `http://127.0.0.1:8000/pages/states/${data.state}/${data.county}/${data.district}/${data.school}/${teacherNameSlug}/teacher.html`;
-    
-                        // Create a link element and set the URL
+                        const teacherName = `${data.name}`;
+                        const url = `http://127.0.0.1:8000/pages/teacher.html`;
                         const link = document.createElement("a");
                         link.href = url;
                         link.textContent = "View Teacher Profile";
-                        link.target = "_blank"; // Open link in a new tab/window
-    
-                        // Append the link to the teacher info div
                         randomTeacherInfo.innerHTML = `<h3>${teacherName}</h3>`;
                         randomTeacherInfo.appendChild(link);
                     } else {

@@ -18,6 +18,7 @@
         </ul>
     </nav>
 
+
     <main>
         <section class="login-form">
             <h2>Log In to Your Account</h2>
@@ -28,21 +29,20 @@
                 <label for="password">Password:</label>
                 <input type="password" id="password" name="password" required>
 
-                <p><input type='submit' value='Login'/></p>
+                <p><input type='button' value='Login' id='login-button'/></p>
             </form>
-            <div id="login-message"></div>
         </section>
 
         <p>Don't have an account? <a href="/pages/register.html">Register</a></p>
     </main>
-    
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             const loginForm = document.getElementById("login-form");
+
+            const loginButton = document.getElementById("login-button");
             const loginMessage = document.getElementById("login-message");
         
-            loginForm.addEventListener("submit", async function (event) {
-                event.preventDefault();
+            loginButton.addEventListener("click", async function () {
                 const formData = new FormData(loginForm);
         
                 try {
@@ -53,16 +53,17 @@
         
                     if (response.ok) {
                         const data = await response.json();
-                        loginMessage.textContent = data.message;
+                        alert(data.message); // Use alert for success
+                        window.location.href = '/pages/homepage.html';
                     } else {
-                        loginMessage.textContent = "Login unsuccessful";
+                        alert("Login unsuccessful"); // Use alert for failure
                     }
                 } catch (error) {
-                    loginMessage.textContent = "An error occurred";
+                    alert("An error occurred"); // Use alert for error
                 }
             });
         });
-        </script>
+    </script>
     <footer>
         <p>&copy; 2023 Hometown Heroes</p>
     </footer>

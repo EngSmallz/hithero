@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hometown Heroes - Support Teachers</title>
+    <link rel="Stylesheet" type="Text/css" href="/static/css/style.css">
+</head>
+<body>
+    <header>
+        <h1>Find a Teacher</h1>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="/pages/homepage.html">Home</a></li>
+            <li><a href="/pages/about.html">About</a></li>
+            <li><a href="/pages/contact.html">Contact</a></li>
+            <!-- Add links to other pages here -->
+        </ul>
+    </nav>
+    <main>
+        <h1 id="schoolHeader">List of Schools</h1>
+        <ul id="schoolList"></ul>
+        
+    </main>
+    <script>
+        async function storeSchool(school) {
+            try {
+                const response = await fetch(`/store_cookie/school/${school}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+                const data = await response.json();
+                console.log(data);
+                window.location.href = '/pages/teacher_index.html';
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+        
+        fetch(`/get_cookie/district`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.cookie) {
+                // Change the header name to include the cookie string
+                const schoolHeader = document.getElementById('schoolHeader');
+                schoolHeader.textContent = `List of Schools in ${data.cookie}`;
+
+                fetch('/get_index_list/district')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data) {
+                            // Create a list for each item in the data
+                            const schoolList = document.getElementById('schoolList');
+                            data.forEach(school => {
+                                const listItem = document.createElement('li');
+                                const button = document.createElement('button');
+                                button.textContent = school;
+                                button.onclick = () => storeSchool(school);
+                                listItem.appendChild(button);
+                                schoolList.appendChild(listItem);
+                            });
+                        } else {
+                            console.error('404 Error: List error');
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+            } else {
+                console.error('404 Error: district cookie not found');
+                // window.location.href = '/pages/404.html';
+            }
+        })
+        .catch(error => console.error('Error:', error));
+
+    </script>
+</body>
+</html>

@@ -22,11 +22,8 @@
         
         <h2>User Registration</h2>
         <form id="registration-form" method="post" enctype="multipart/form-data">
-            <label for="first_name">First Name:</label>
-            <input type="text" id="first_name" name="first_name" required><br><br>
-
-            <label for="last_name">Last Name:</label>
-            <input type="text" id="last_name" name="last_name" required><br><br>
+            <label for="name">Name:</label>
+            <input type="text" id="name" name="name" required><br><br>
 
             <label for="email">Email:</label>
             <input type="email" id="email" name="email" required><br><br>
@@ -37,19 +34,14 @@
             <label for="role">Role:</label>
             <select id="role" name="role" required>
                 <option value="teacher">Teacher</option>
-                <option value="principal">Principal</option>
-                <option value="superintendent">Superintendent</option>
             </select><br>
 
             <p><input type="button" value="Register" id="register-button"></p>
         </form>
 
-        <div id="registration-message"></div>
-
         <script>
             document.addEventListener("DOMContentLoaded", function () {
                 const registrationForm = document.getElementById("registration-form");
-                const registrationMessage = document.getElementById("registration-message");
                 const registerButton = document.getElementById("register-button");
     
                 registerButton.addEventListener("click", async function () {
@@ -63,12 +55,12 @@
     
                         if (response.ok) {
                             const data = await response.json();
-                            registrationMessage.textContent = data.message;
+                            alert(data.message); // Use alert for success
                         } else {
-                            registrationMessage.textContent = "Registration unsuccessful";
+                            alert("Registration unsuccessful"); // Use alert for failure
                         }
                     } catch (error) {
-                        registrationMessage.textContent = "An error occurred";
+                        alert("An error occurred"); // Use alert for error
                     }
                 });
             });
