@@ -7,6 +7,7 @@ import secrets
 import smtplib
 import logging
 import os
+from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.applications import Starlette
@@ -14,35 +15,18 @@ from starlette.middleware.sessions import SessionMiddleware
 from email.mime.text import MIMEText
 
 app = FastAPI()
-
 logger = logging.getLogger(__name__)
+app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY"))
 
-# Configure the session middleware
-app.add_middleware(SessionMiddleware, secret_key="your_secret_key")
-
-# Determine the path to the directory containing the static pages
+# Determine the path to the directory
 pages_directory = os.path.join(os.path.dirname(__file__), "pages")
-
-# Mount the 'pages' directory to be served at '/pages'
 app.mount("/pages", StaticFiles(directory=pages_directory), name="pages")
-
-# Determine the path to the directory containing the static pages
 static_directory = os.path.join(os.path.dirname(__file__), "static")
-
-# Mount the 'pages' directory to be served at '/pages'
 app.mount("/static", StaticFiles(directory=static_directory), name="static")
+load_dotenv()
 
 # Define your AAD ODBC connection string
-connection_string = (
-    'Driver={ODBC Driver 18 for SQL Server};'
-    'Server=tcp:hithero.database.windows.net,1433;'
-    'Database=hithero_login;'
-    'Uid=;'
-    'Pwd=;'
-    'Encrypt=yes;'
-    'TrustServerCertificate=no;'
-    'Connection Timeout=30;'
-)
+connection_string = os.getenv("DATABASE_CONNECTION_STRING")
 
 try:
     # Define the ODBC connection
