@@ -1,12 +1,7 @@
-from fastapi import FastAPI, HTTPException, Request, Form, Depends, Body, APIRouter
+from fastapi import FastAPI, HTTPException, Request, Form, Depends, Body, APIRouter, File, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel
-import pyodbc
-import string
-import secrets
-import smtplib
-import logging
-import os
+import os, logging, smtplib, secrets, string, pyodbc
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -15,21 +10,19 @@ from starlette.middleware.sessions import SessionMiddleware
 from email.mime.text import MIMEText
 
 app = FastAPI()
+load_dotenv()
 logger = logging.getLogger(__name__)
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY"))
 
 # Determine the path to the directory
-pages_directory = os.path.join(os.path.dirname(__file__), "pages")
-app.mount("/pages", StaticFiles(directory=pages_directory), name="pages")
-static_directory = os.path.join(os.path.dirname(__file__), "static")
-app.mount("/static", StaticFiles(directory=static_directory), name="static")
-load_dotenv()
+app.mount("/pages", StaticFiles(directory="pages"), name="pages")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Define your AAD ODBC connection string
-connection_string = os.getenv("DATABASE_CONNECTION_STRING")
+connection_string = (f'Driver={os.getenv("DATABASE_DRIVER")};Server={os.getenv("DATABASE_SERVER")};Database={os.getenv("DATABASE_NAME")};Uid={os.getenv("DATABASE_UID")};Pwd={os.getenv("DATABASE_PASSWORD")};Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30;')
 
+# Define the ODBC connection
 try:
-    # Define the ODBC connection
     connection = pyodbc.connect(connection_string)
 except pyodbc.Error as e:
     raise Exception(f"Error connecting to the database: {str(e)}")
@@ -123,8 +116,8 @@ async def move_user(user_email: str):
     return {"message": "User moved from new_users to registered_users"}
 
 ##this api updates the registered_users blank fields. School can be none because superintendents dont have a specific school
-@app.put("/update/")
-async def update_user_fields(email: str, state: str, county: str, district: str, school: str = None):
+@app.put("/update_reg_user/")
+async def update_reg_user(email: str, state: str, county: str, district: str, school: str = None):
     query = (
         "UPDATE registered_users SET state = ?, county = ?, district = ?, school = ? "
         "WHERE CAST(email AS NVARCHAR) = ?"
@@ -181,7 +174,7 @@ async def get_random_teacher(request: Request):
         request.session["county"] = data["county"]
         request.session["district"] = data["district"]
         request.session["school"] = data["school"]
-        request.session["name"] = data["name"]
+        request.session["teacher"] = data["name"]
         return data
     else:
         raise HTTPException(status_code=404, detail="No teachers found in the database")
@@ -313,13 +306,14 @@ async def get_teacher_info(request: Request):
                     "county": county,
                     "district": district,
                     "school": school,
-                    "teacher": name,
+                    "name": name,
                     "wishlist_url": teacher_info[0],
                     "about_me": teacher_info[1],
                 }
                 return data
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+
 
 ###api used to update the logged in users teacher page, currently only admins can edit any page
 @app.post("/update_teacher_info/")
@@ -329,7 +323,7 @@ async def edit_teacher_info(request: Request, wishlist: str = Form(...), aboutMe
         county = get_index_cookie('county', request)
         district = get_index_cookie('district', request)
         school = get_index_cookie('school', request)
-        name = get_index_cookie('teacher', request)
+        name = get_index_cookie('name', request)
         cursor = connection.cursor()
         cursor.execute(
             "UPDATE teacher_list SET wishlist_url = ?, about_me = ? WHERE CAST(state AS nvarchar) = ? AND CAST(county AS nvarchar) = ? AND CAST(district AS nvarchar) = ? AND CAST(school AS nvarchar) = ? AND CAST(name AS nvarchar) = ?",
@@ -339,9 +333,7 @@ async def edit_teacher_info(request: Request, wishlist: str = Form(...), aboutMe
 
         return JSONResponse(content={"success": True}, status_code=200)
     else:
-        # User is not an admin, return an error
         raise HTTPException(status_code=403, detail="Permission denied. Only admins can edit teacher information.")
-
 
 if __name__ == "__main__":
     import uvicorn

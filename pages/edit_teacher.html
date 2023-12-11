@@ -6,14 +6,24 @@
     <title>Edit Teacher Profile - Hometown Heroes</title>
     <link rel="stylesheet" type="text/css" href="/static/css/style.css">
 </head>
+
 <body>
     <header>
         <h1>Edit Teacher Profile</h1>
     </header>
 
+    <nav>
+        <ul>
+            <li><a href="/pages/homepage.html">Home</a></li>
+            <li><a href="/pages/about.html">About</a></li>
+            <li><a href="/pages/contact.html">Contact</a></li>
+            <!-- Add links to other pages here -->
+        </ul>
+    </nav>
+
     <main>
         <section class="update-form">
-            <h2>Edit your info</h2>
+            <h2>Edit Your Info</h2>
             <form id="update-form" method="post" enctype="multipart/form-data">
                 <label for="wishlist">Amazon Wishlist:</label>
                 <input type="text" id="wishlist" name="wishlist" required>
@@ -21,7 +31,11 @@
                 <label for="aboutMe">About Me (max 250 characters):</label>
                 <textarea id="aboutMe" name="aboutMe" maxlength="250" required></textarea>
 
-                <p><input type="button" value="Update" id="update-button"></p>
+                <!-- Input field for image upload 
+                <label for="teacherImage">Upload Profile Picture (JPG only):</label>
+                <input type="file" id="teacherImage" name="teacherImage" accept=".jpg">-->
+
+                <p><input type="button" value="Submit" id="update-button"></p>
             </form>
         </section>
     </main>
@@ -55,7 +69,6 @@
         });
     </script>
     
-
     <footer>
         <p>&copy; 2023 Hometown Heroes</p>
     </footer>
