@@ -4,6 +4,20 @@
     <title>Hometown Heroes - Support Teachers</title>
     <link rel="Stylesheet" type="Text/css" href="/static/css/style.css">
 </head>
+<script>
+    function checkAuthentication() {
+        fetch('/profile/')
+            .then(response => {
+                if (response.ok) {
+                    document.getElementById('logoutButton').style.display = 'block';
+                } else {
+                    document.getElementById('logoutButton').style.display = 'none';
+                }
+            })
+            .catch(error => console.error('Error checking authentication:', error));
+    }
+    window.onload = checkAuthentication;
+</script>
 <body>
     <header>
         <h1>Find a Teacher</h1>
@@ -17,6 +31,8 @@
             <!-- Add links to other pages here -->
         </ul>
     </nav>
+        
+    <button id="logoutButton" style="display: none" onclick="logout()">Logout</button>
     <main>
         <h1>List of States</h1>
         <ul>

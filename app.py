@@ -232,14 +232,14 @@ def read_root():
 # Custom 404 error handler
 @app.exception_handler(404)
 async def not_found(request: Request, exc: HTTPException):
-    with open(os.path.join(pages_directory, "404.html"), "r", encoding="utf-8") as file:
+    with open(os.path.join("pages/", "404.html"), "r", encoding="utf-8") as file:
         content = file.read()
     return HTMLResponse(content=content, status_code=404)
 
 # Custom 403 error handler
 @app.exception_handler(403)
 async def forbidden(request: Request, exc: HTTPException):
-    with open(os.path.join(pages_directory, "403.html"), "r", encoding="utf-8") as file:
+    with open(os.path.join("pages/", "403.html"), "r", encoding="utf-8") as file:
         content = file.read()
     return HTMLResponse(content=content, status_code=403)
 
@@ -328,6 +328,26 @@ async def edit_teacher_info(request: Request, wishlist: str = Form(...), aboutMe
         cursor.execute(
             "UPDATE teacher_list SET wishlist_url = ?, about_me = ? WHERE CAST(state AS nvarchar) = ? AND CAST(county AS nvarchar) = ? AND CAST(district AS nvarchar) = ? AND CAST(school AS nvarchar) = ? AND CAST(name AS nvarchar) = ?",
             wishlist, aboutMe, state, county, district, school, name
+        )
+        connection.commit()
+
+        return JSONResponse(content={"success": True}, status_code=200)
+    else:
+        raise HTTPException(status_code=403, detail="Permission denied. Only admins can edit teacher information.")
+    
+###api used to update the logged in users teacher page image
+@app.post("/update_teacher_image/")
+async def edit_teacher_image(request: Request, role: str = Depends(get_current_role), image: str = Form(...)):
+    if role == 'admin':
+        state = get_index_cookie('state', request)
+        county = get_index_cookie('county', request)
+        district = get_index_cookie('district', request)
+        school = get_index_cookie('school', request)
+        name = get_index_cookie('name', request)
+        cursor = connection.cursor()
+        cursor.execute(
+            "UPDATE teacher_list SET teacher_image = ? WHERE CAST(state AS nvarchar) = ? AND CAST(county AS nvarchar) = ? AND CAST(district AS nvarchar) = ? AND CAST(school AS nvarchar) = ? AND CAST(name AS nvarchar) = ?",
+            image, state, county, district, school, name
         )
         connection.commit()
 

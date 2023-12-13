@@ -1,8 +1,7 @@
-/* CSS for styling your homepage */
 body {
     font-family: Arial, sans-serif;
     background-color: #c1d1c9;
-    margin: 0 auto; /* Add margin to the body */
+    margin: 0 auto;
     padding: 0;
     display: flex;
     flex-direction: column;
@@ -20,7 +19,10 @@ nav {
     background-color: #343534;
     color: #e4dcdc;
     overflow: hidden;
-    margin-bottom: 20px; /* Add margin at the bottom of the navigation bar */
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 nav ul {
@@ -42,6 +44,48 @@ nav a {
     text-decoration: none;
 }
 
+#logoutButton {
+    box-shadow: inset 0px 1px 0px 0px #cf866c;
+    background: linear-gradient(to bottom, #d0451b 5%, #bc3315 100%);
+    background-color: #d0451b;
+    border-radius: 3px;
+    border: 1px solid #942911;
+    cursor: pointer;
+    color: #ffffff;
+    font-family: Arial;
+    font-size: 13px;
+    padding: 6px 24px;
+    text-decoration: none;
+    text-shadow: 0px 1px 0px #854629;
+
+    /* Position the button on the right side */
+    position: fixed;
+    top: 10px; /* Adjust the distance from the top */
+    right: 10px; /* Adjust the distance from the right */
+    z-index: 999; /* Ensure the button is above other elements */
+}
+
+#mypageButton {
+    box-shadow: inset 0px 1px 0px 0px #6c73cf;
+    background: linear-gradient(to bottom, #1e1bd0 5%, #1815bc 100%);
+    background-color: #1b27d0;
+    border-radius: 3px;
+    border: 1px solid #111e94;
+    cursor: pointer;
+    color: #ffffff;
+    font-family: Arial;
+    font-size: 13px;
+    padding: 6px 24px;
+    text-decoration: none;
+    text-shadow: 0px 1px 0px #292b85;
+
+    /* Position the button on the right side */
+    position: fixed;
+    top: 60px; /* Adjust the distance from the top */
+    right: 10px; /* Adjust the distance from the right */
+    z-index: 999; /* Ensure the button is above other elements */
+}
+
 main {
     margin: 0 auto;
     max-width: 800px;
@@ -54,12 +98,12 @@ main h1 {
 main ul {
     list-style-type: none;
     padding: 0;
-    column-count: 3; /* Set the number of columns to 2 */
-    column-gap: 20px; /* Adjust the gap between columns */
+    column-count: 3;
+    column-gap: 20px;
 }
 
 main li {
-    margin: 10px 0; /* Add margin between each list item */
+    margin: 10px 0;
     text-align: center;
 }
 
@@ -69,11 +113,10 @@ label {
     font-weight: bold;
 }
 
-
 footer {
     background-color: #054e05;
     color: #e4dcdc;
     text-align: center;
     padding: 10px;
-    margin-top: auto; /* Push the footer to the bottom */
+    margin-top: auto;
 }
