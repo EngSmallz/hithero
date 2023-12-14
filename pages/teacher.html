@@ -20,6 +20,8 @@
     </nav>
     
     <button id="logoutButton" style="display: none" onclick="logout()">Logout</button>
+    <button id="mypageButton" style="display: none" onclick="mypage()">My Page</button>
+
     <main>
         <section class="profile" id="profile-section">
             <div class="teacher-info" id="teacher-info">
@@ -42,7 +44,9 @@
                 supporters about your goals and the impact their help can make.</p>
         </section>
 
-        <a href="edit_teacher.html" class="btn" id="editButton" style="display: none;">Edit</a>
+        <a href="edit_teacher.html" class="btn" id="editButton" style="display: none;">Edit Info</a>
+        
+        <a href="update_password.html" class="btn" id="passButton" style="display: none;">Update Password</a>
     </main>
 
     <script>
@@ -52,6 +56,8 @@
                 .then(profileData => {
                     if (profileData) {
                         document.getElementById('logoutButton').style.display = 'block';
+                        document.getElementById('passButton').style.display = 'block';
+                        document.getElementById('mypageButton').style.display = 'block';
                         if (profileData.user_role === 'admin') {
                             document.getElementById('editButton').style.display = 'block';
                         }
@@ -94,6 +100,26 @@
                 window.location.href = '/';
             } catch (error) {
                 console.error('Error:', error);
+            }
+        }
+
+        async function mypage() {
+            try {
+                const response = await fetch('/mypage/', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+                if (response.ok) {
+                    window.location.href = '/pages/teacher.html';
+                } else {
+                    console.error('Error:', response.status);
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                window.location.href = '/';
             }
         }
     </script>

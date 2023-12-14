@@ -115,43 +115,23 @@ async def move_user(user_email: str):
     cursor.close()
     return {"message": "User moved from new_users to registered_users"}
 
-##this api updates the registered_users blank fields. School can be none because superintendents dont have a specific school
-@app.put("/update_reg_user/")
-async def update_reg_user(email: str, state: str, county: str, district: str, school: str = None):
-    query = (
-        "UPDATE registered_users SET state = ?, county = ?, district = ?, school = ? "
-        "WHERE CAST(email AS NVARCHAR) = ?"
-    )
-    values = (state, county, district, school, email)
-    try:
-        with connection.cursor() as cursor:
-            cursor.execute(query, values)
-            connection.commit()
-        return {"message": f"User with email {email} fields updated successfully"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 ##this api allows a logged in user to create an item in the table teacher_list in the hithero database. 
 ##if the user is a teacher, the regUser value is set the the logged in users ID from registered_users
 @app.post("/create_teacher_item/")
-async def create_teacher_item(name: str, state: str, county: str, district: str, school: str, role: str = Depends(get_current_role), email: str = Depends(get_current_user)):
+async def create_teacher_item(name: str, state: str, county: str, district: str, school: str, email: str, role: str = Depends(get_current_role)):
     if role:
         cursor = connection.cursor()
-        insert_query = "INSERT INTO teacher_list (name, state, county, district, school) " \
-                    "VALUES (?, ?, ?, ?, ?, ?)"
-        cursor.execute(insert_query, (first_name, last_name, state, county, district, school))
-        if role == 'teacher':
-            cursor.execute("SELECT MAX(id) FROM teacher_list")
-            max_teacher_id = cursor.fetchone()[0]
-            cursor.execute("SELECT id FROM registered_users WHERE CAST(email AS NVARCHAR) = ?", email)
-            reg_user_id = cursor.fetchone()
-
-            if max_teacher_id and reg_user_id:
-                update_query = "UPDATE teacher_list SET regUserID = ? WHERE id = ?"
-                cursor.execute(update_query, (reg_user_id[0], max_teacher_id))
-        connection.commit()
-        cursor.close()
-        return {"message": f"Teacher created successfully"}
+        cursor.execute("SELECT id FROM registered_users WHERE CAST(email AS NVARCHAR) = ?", email)
+        link = cursor.fetchone()
+        if link:
+            insert_query = "INSERT INTO teacher_list (name, state, county, district, school, regUserID) " \
+                           "VALUES (?, ?, ?, ?, ?, ?)"
+            cursor.execute(insert_query, (name, state, county, district, school, link[0]))
+            connection.commit()
+            cursor.close()
+            return {"message": "Teacher created successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="User not found in registered_users")
     else:
         raise HTTPException(status_code=404, detail="No user logged in.")
 
@@ -354,6 +334,54 @@ async def edit_teacher_image(request: Request, role: str = Depends(get_current_r
         return JSONResponse(content={"success": True}, status_code=200)
     else:
         raise HTTPException(status_code=403, detail="Permission denied. Only admins can edit teacher information.")
+
+##api gets your page based on the id in reg_users and and regUserID in teacher_list
+@app.get("/mypage/")
+async def get_mypage(request: Request, id: int = Depends(get_current_id)):
+    cursor = connection.cursor()
+    cursor.execute("SELECT name, state, county, district, school FROM teacher_list WHERE regUserID = ?", id)
+    teacher_data = cursor.fetchone()
+    cursor.close()
+    if teacher_data:
+        name, state, county, district, school = teacher_data
+        request.session["state"] = state
+        request.session["county"] = county
+        request.session["district"] = district
+        request.session["school"] = school
+        request.session["teacher"] = name
+        return
+    else:
+        raise HTTPException(status_code=404, detail="You do not have a homepage")
+
+##api lets the logged in user update their password
+@app.post("/update_password/")
+async def get_mypage(request: Request, id: int = Depends(get_current_id), old_password: str = Form(...), new_password: str = Form(...), new_password_confirmed: str = Form(...)):
+    if new_password == new_password_confirmed:
+        cursor = connection.cursor()
+        cursor.execute("SELECT password FROM registered_users WHERE id = ?", id)
+        old_pass = cursor.fetchone()
+        if old_pass == old_password:
+            cursor.execute( "UPDATE registered_users SET password = ? WHERE  id = ?", password, id)
+            connection.commit()
+            cursor.close()
+            return
+        else:
+            cursor.close()
+            raise HTTPException(status_code=403, detail="Invalid old password")
+    else:
+        cursor.close()
+        raise HTTPException(status_code=403, detail="New passwords do not match.")
+
+#api to check if a user has role based access. more useable than/profile/ need to add teachers
+@app.get("/check_access_teacher/")
+async def check_access_teacher(request: Request, id: int = Depends(get_current_id), role: int = Depends(get_current_role)):
+    if role == teacher:
+        
+
+        print('do something temporay')
+
+    else:
+        return 
 
 if __name__ == "__main__":
     import uvicorn

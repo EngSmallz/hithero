@@ -10,6 +10,7 @@
             .then(response => {
                 if (response.ok) {
                     document.getElementById('logoutButton').style.display = 'block';
+                    document.getElementById('mypageButton').style.display = 'block';
                 } else {
                     document.getElementById('logoutButton').style.display = 'none';
                 }
@@ -33,6 +34,7 @@
     </nav>
         
     <button id="logoutButton" style="display: none" onclick="logout()">Logout</button>
+    <button id="mypageButton" style="display: none" onclick="mypage()">My Page</button>
     <main>
         <h1 id="countyHeader">List of Counties</h1>
         <ul id="countyList"></ul>
@@ -99,6 +101,26 @@
                 window.location.href = '/';
             } catch (error) {
                 console.error('Error:', error);
+            }
+        }
+
+        async function mypage() {
+            try {
+                const response = await fetch('/mypage/', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+                if (response.ok) {
+                    window.location.href = '/pages/teacher.html';
+                } else {
+                    console.error('Error:', response.status);
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                window.location.href = '/';
             }
         }
     </script>

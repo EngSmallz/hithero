@@ -4,12 +4,26 @@
     <title>Hometown Heroes - Support Teachers</title>
     <link rel="stylesheet" type="text/css" href="/static/css/style.css">
 </head>
-
+<script>
+    function checkAuthentication() {
+        fetch('/profile/')
+            .then(response => {
+                if (response.ok) {
+                    document.getElementById('logoutButton').style.display = 'block';
+                    document.getElementById('mypageButton').style.display = 'block';
+                }
+            })
+            .catch(error => console.error('Error checking authentication:', error));
+    }
+    window.onload = checkAuthentication;
+</script>
 <body>
     <header>
         <h1>Sign Up</h1>
     </header>
 
+    <button id="logoutButton" style="display: none" onclick="logout()">Logout</button>
+    <button id="mypageButton" style="display: none" onclick="mypage()">My Page</button>
     <nav>
         <ul>
             <li><a href="/pages/homepage.html">Home</a></li>
@@ -65,6 +79,41 @@
                     }
                 });
             });
+
+            
+            async function logout() {
+                try {
+                    const response = await fetch(`/logout/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                    });
+                    window.location.href = '/';
+                } catch (error) {
+                    console.error('Error:', error);
+                }
+            }
+
+            async function mypage() {
+            try {
+                const response = await fetch('/mypage/', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+                if (response.ok) {
+                    window.location.href = '/pages/teacher.html';
+                } else {
+                    console.error('Error:', response.status);
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                window.location.href = '/';
+            }
+        }
         </script>
 
         <p>Already have an account? <a href="/pages/login.html">Log in</a></p>
