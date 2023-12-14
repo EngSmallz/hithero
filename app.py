@@ -295,15 +295,15 @@ async def get_teacher_info(request: Request):
             raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 
-###api used to update the logged in users teacher page, currently only admins can edit any page
+###api used to update the logged in users teacher page
 @app.post("/update_teacher_info/")
 async def edit_teacher_info(request: Request, wishlist: str = Form(...), aboutMe: str = Form(...), role: str = Depends(get_current_role)):
-    if role == 'admin':
+    if role:
         state = get_index_cookie('state', request)
         county = get_index_cookie('county', request)
         district = get_index_cookie('district', request)
         school = get_index_cookie('school', request)
-        name = get_index_cookie('name', request)
+        name = get_index_cookie('teacher', request)
         cursor = connection.cursor()
         cursor.execute(
             "UPDATE teacher_list SET wishlist_url = ?, about_me = ? WHERE CAST(state AS nvarchar) = ? AND CAST(county AS nvarchar) = ? AND CAST(district AS nvarchar) = ? AND CAST(school AS nvarchar) = ? AND CAST(name AS nvarchar) = ?",
@@ -313,17 +313,17 @@ async def edit_teacher_info(request: Request, wishlist: str = Form(...), aboutMe
 
         return JSONResponse(content={"success": True}, status_code=200)
     else:
-        raise HTTPException(status_code=403, detail="Permission denied. Only admins can edit teacher information.")
+        raise HTTPException(status_code=403, detail="Permission denied.")
     
 ###api used to update the logged in users teacher page image
 @app.post("/update_teacher_image/")
 async def edit_teacher_image(request: Request, role: str = Depends(get_current_role), image: str = Form(...)):
-    if role == 'admin':
+    if role:
         state = get_index_cookie('state', request)
         county = get_index_cookie('county', request)
         district = get_index_cookie('district', request)
         school = get_index_cookie('school', request)
-        name = get_index_cookie('name', request)
+        name = get_index_cookie('teacher', request)
         cursor = connection.cursor()
         cursor.execute(
             "UPDATE teacher_list SET teacher_image = ? WHERE CAST(state AS nvarchar) = ? AND CAST(county AS nvarchar) = ? AND CAST(district AS nvarchar) = ? AND CAST(school AS nvarchar) = ? AND CAST(name AS nvarchar) = ?",
@@ -360,28 +360,36 @@ async def get_mypage(request: Request, id: int = Depends(get_current_id), old_pa
         cursor = connection.cursor()
         cursor.execute("SELECT password FROM registered_users WHERE id = ?", id)
         old_pass = cursor.fetchone()
-        if old_pass == old_password:
-            cursor.execute( "UPDATE registered_users SET password = ? WHERE  id = ?", password, id)
-            connection.commit()
-            cursor.close()
-            return
-        else:
-            cursor.close()
-            raise HTTPException(status_code=403, detail="Invalid old password")
+        if new_password == new_password_confirmed:
+            cursor = connection.cursor()
+            cursor.execute("SELECT password FROM registered_users WHERE id = ?", id)
+            old_pass = cursor.fetchone()
+            if old_pass and old_pass[0] == old_password:
+                cursor.execute("UPDATE registered_users SET password = ? WHERE id = ?", (new_password, id))
+                connection.commit()
+                cursor.close()
+                return {"status": "success", "message": "Password updated successfully"}
+            else:
+                cursor.close()
+                raise HTTPException(status_code=403, detail="Invalid old password")
     else:
-        cursor.close()
         raise HTTPException(status_code=403, detail="New passwords do not match.")
 
-#api to check if a user has role based access. more useable than/profile/ need to add teachers
+#api to check if a user has teacher based access
 @app.get("/check_access_teacher/")
 async def check_access_teacher(request: Request, id: int = Depends(get_current_id), role: int = Depends(get_current_role)):
-    if role == teacher:
-        
-
-        print('do something temporay')
-
-    else:
-        return 
+    if role == 'teacher':
+        state = get_index_cookie('state', request)
+        county = get_index_cookie('county', request)
+        district = get_index_cookie('district', request)
+        school = get_index_cookie('school', request)
+        name = get_index_cookie('teacher', request)
+        cursor = connection.cursor()
+        cursor.execute("SELECT regUserID FROM teacher_list WHERE CAST(state AS nvarchar) = ? AND CAST(county AS nvarchar) = ? AND CAST(district AS nvarchar) = ? AND CAST(school AS nvarchar) = ? AND CAST(name AS nvarchar) = ?", state, county, district, school, name)
+        teacher_data = cursor.fetchone()
+        if teacher_data and teacher_data[0] == id:
+            return {"status": "success", "message": "Access granted"}
+    raise HTTPException(status_code=403, detail="No access")
 
 if __name__ == "__main__":
     import uvicorn

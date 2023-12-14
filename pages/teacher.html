@@ -56,10 +56,22 @@
                 .then(profileData => {
                     if (profileData) {
                         document.getElementById('logoutButton').style.display = 'block';
-                        document.getElementById('passButton').style.display = 'block';
                         document.getElementById('mypageButton').style.display = 'block';
+
                         if (profileData.user_role === 'admin') {
                             document.getElementById('editButton').style.display = 'block';
+                            document.getElementById('passButton').style.display = 'block';
+                        }
+
+                        if (profileData.user_role === 'teacher') { 
+                            fetch('/check_access_teacher/')
+                                .then(response => {
+                                    if (response.ok) {
+                                        document.getElementById('editButton').style.display = 'block';
+                                        document.getElementById('passButton').style.display = 'block';
+                                    }
+                                })
+                                .catch(error => console.error('Error checking teacher role:', error));
                         }
                     } else {
                         document.getElementById('logoutButton').style.display = 'none';
