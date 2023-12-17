@@ -4,6 +4,19 @@
     <title>Hometown Heroes - Support Teachers</title>
     <link rel="stylesheet" type="text/css" href="/static/css/style.css">
 </head>
+<script>
+    function checkAuthentication() {
+        fetch('/profile/')
+            .then(response => {
+                if (response.ok) {
+                    document.getElementById('logoutButton').style.display = 'block';
+                    document.getElementById('mypageButton').style.display = 'block';
+                }
+            })
+            .catch(error => console.error('Error checking authentication:', error));
+    }
+    window.onload = checkAuthentication;
+</script>
 <body>
     <header>
         <h1>Welcome to Hometown Heroes</h1>
@@ -15,11 +28,11 @@
             <li><a href="/pages/homepage.html">Home</a></li>
             <li><a href="/pages/about.html">About</a></li>
             <li><a href="/pages/contact.html">Contact</a></li>
-
-            <!-- Add links to other pages here -->
         </ul>
     </nav>
 
+    <button id="logoutButton" style="display: none" onclick="logout()">Logout</button>
+    <button id="mypageButton" style="display: none" onclick="mypage()">My Page</button>
     <main>
         <section> 
             <h2>Find a Teacher to Support</h2>
@@ -32,7 +45,6 @@
             <p>Discover a teacher at random and make a positive impact on their classroom.</p>
             <button id="randomButton" class="btn">Find Random Teacher</button>
             <div id="randomTeacherInfo">
-                <!-- Teacher information will be displayed here -->
             </div>
         </section>
 
@@ -78,6 +90,40 @@
                 }
             });
         });
+        
+        async function logout() {
+            try {
+                const response = await fetch(`/logout/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+                window.location.href = '/';
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        async function mypage() {
+            try {
+                const response = await fetch('/mypage/', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+                if (response.ok) {
+                    window.location.href = '/pages/teacher.html';
+                } else {
+                    console.error('Error:', response.status);
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                window.location.href = '/';
+            }
+        }
     </script>
     
     

@@ -1,12 +1,7 @@
-from fastapi import FastAPI, HTTPException, Request, Form, Depends, Body, APIRouter
+from fastapi import FastAPI, HTTPException, Request, Form, Depends, Body, APIRouter, File, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel
-import pyodbc
-import string
-import secrets
-import smtplib
-import logging
-import os
+import os, logging, smtplib, secrets, string, pyodbc
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -15,21 +10,19 @@ from starlette.middleware.sessions import SessionMiddleware
 from email.mime.text import MIMEText
 
 app = FastAPI()
+load_dotenv()
 logger = logging.getLogger(__name__)
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY"))
 
 # Determine the path to the directory
-pages_directory = os.path.join(os.path.dirname(__file__), "pages")
-app.mount("/pages", StaticFiles(directory=pages_directory), name="pages")
-static_directory = os.path.join(os.path.dirname(__file__), "static")
-app.mount("/static", StaticFiles(directory=static_directory), name="static")
-load_dotenv()
+app.mount("/pages", StaticFiles(directory="pages"), name="pages")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Define your AAD ODBC connection string
-connection_string = os.getenv("DATABASE_CONNECTION_STRING")
+connection_string = (f'Driver={os.getenv("DATABASE_DRIVER")};Server={os.getenv("DATABASE_SERVER")};Database={os.getenv("DATABASE_NAME")};Uid={os.getenv("DATABASE_UID")};Pwd={os.getenv("DATABASE_PASSWORD")};Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30;')
 
+# Define the ODBC connection
 try:
-    # Define the ODBC connection
     connection = pyodbc.connect(connection_string)
 except pyodbc.Error as e:
     raise Exception(f"Error connecting to the database: {str(e)}")
@@ -122,43 +115,23 @@ async def move_user(user_email: str):
     cursor.close()
     return {"message": "User moved from new_users to registered_users"}
 
-##this api updates the registered_users blank fields. School can be none because superintendents dont have a specific school
-@app.put("/update/")
-async def update_user_fields(email: str, state: str, county: str, district: str, school: str = None):
-    query = (
-        "UPDATE registered_users SET state = ?, county = ?, district = ?, school = ? "
-        "WHERE CAST(email AS NVARCHAR) = ?"
-    )
-    values = (state, county, district, school, email)
-    try:
-        with connection.cursor() as cursor:
-            cursor.execute(query, values)
-            connection.commit()
-        return {"message": f"User with email {email} fields updated successfully"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 ##this api allows a logged in user to create an item in the table teacher_list in the hithero database. 
 ##if the user is a teacher, the regUser value is set the the logged in users ID from registered_users
 @app.post("/create_teacher_item/")
-async def create_teacher_item(name: str, state: str, county: str, district: str, school: str, role: str = Depends(get_current_role), email: str = Depends(get_current_user)):
+async def create_teacher_item(name: str, state: str, county: str, district: str, school: str, email: str, role: str = Depends(get_current_role)):
     if role:
         cursor = connection.cursor()
-        insert_query = "INSERT INTO teacher_list (name, state, county, district, school) " \
-                    "VALUES (?, ?, ?, ?, ?, ?)"
-        cursor.execute(insert_query, (first_name, last_name, state, county, district, school))
-        if role == 'teacher':
-            cursor.execute("SELECT MAX(id) FROM teacher_list")
-            max_teacher_id = cursor.fetchone()[0]
-            cursor.execute("SELECT id FROM registered_users WHERE CAST(email AS NVARCHAR) = ?", email)
-            reg_user_id = cursor.fetchone()
-
-            if max_teacher_id and reg_user_id:
-                update_query = "UPDATE teacher_list SET regUserID = ? WHERE id = ?"
-                cursor.execute(update_query, (reg_user_id[0], max_teacher_id))
-        connection.commit()
-        cursor.close()
-        return {"message": f"Teacher created successfully"}
+        cursor.execute("SELECT id FROM registered_users WHERE CAST(email AS NVARCHAR) = ?", email)
+        link = cursor.fetchone()
+        if link:
+            insert_query = "INSERT INTO teacher_list (name, state, county, district, school, regUserID) " \
+                           "VALUES (?, ?, ?, ?, ?, ?)"
+            cursor.execute(insert_query, (name, state, county, district, school, link[0]))
+            connection.commit()
+            cursor.close()
+            return {"message": "Teacher created successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="User not found in registered_users")
     else:
         raise HTTPException(status_code=404, detail="No user logged in.")
 
@@ -181,7 +154,7 @@ async def get_random_teacher(request: Request):
         request.session["county"] = data["county"]
         request.session["district"] = data["district"]
         request.session["school"] = data["school"]
-        request.session["name"] = data["name"]
+        request.session["teacher"] = data["name"]
         return data
     else:
         raise HTTPException(status_code=404, detail="No teachers found in the database")
@@ -239,14 +212,14 @@ def read_root():
 # Custom 404 error handler
 @app.exception_handler(404)
 async def not_found(request: Request, exc: HTTPException):
-    with open(os.path.join(pages_directory, "404.html"), "r", encoding="utf-8") as file:
+    with open(os.path.join("pages/", "404.html"), "r", encoding="utf-8") as file:
         content = file.read()
     return HTMLResponse(content=content, status_code=404)
 
 # Custom 403 error handler
 @app.exception_handler(403)
 async def forbidden(request: Request, exc: HTTPException):
-    with open(os.path.join(pages_directory, "403.html"), "r", encoding="utf-8") as file:
+    with open(os.path.join("pages/", "403.html"), "r", encoding="utf-8") as file:
         content = file.read()
     return HTMLResponse(content=content, status_code=403)
 
@@ -313,7 +286,7 @@ async def get_teacher_info(request: Request):
                     "county": county,
                     "district": district,
                     "school": school,
-                    "teacher": name,
+                    "name": name,
                     "wishlist_url": teacher_info[0],
                     "about_me": teacher_info[1],
                 }
@@ -321,10 +294,11 @@ async def get_teacher_info(request: Request):
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
-###api used to update the logged in users teacher page, currently only admins can edit any page
+
+###api used to update the logged in users teacher page
 @app.post("/update_teacher_info/")
 async def edit_teacher_info(request: Request, wishlist: str = Form(...), aboutMe: str = Form(...), role: str = Depends(get_current_role)):
-    if role == 'admin':
+    if role:
         state = get_index_cookie('state', request)
         county = get_index_cookie('county', request)
         district = get_index_cookie('district', request)
@@ -339,9 +313,83 @@ async def edit_teacher_info(request: Request, wishlist: str = Form(...), aboutMe
 
         return JSONResponse(content={"success": True}, status_code=200)
     else:
-        # User is not an admin, return an error
+        raise HTTPException(status_code=403, detail="Permission denied.")
+    
+###api used to update the logged in users teacher page image
+@app.post("/update_teacher_image/")
+async def edit_teacher_image(request: Request, role: str = Depends(get_current_role), image: str = Form(...)):
+    if role:
+        state = get_index_cookie('state', request)
+        county = get_index_cookie('county', request)
+        district = get_index_cookie('district', request)
+        school = get_index_cookie('school', request)
+        name = get_index_cookie('teacher', request)
+        cursor = connection.cursor()
+        cursor.execute(
+            "UPDATE teacher_list SET teacher_image = ? WHERE CAST(state AS nvarchar) = ? AND CAST(county AS nvarchar) = ? AND CAST(district AS nvarchar) = ? AND CAST(school AS nvarchar) = ? AND CAST(name AS nvarchar) = ?",
+            image, state, county, district, school, name
+        )
+        connection.commit()
+
+        return JSONResponse(content={"success": True}, status_code=200)
+    else:
         raise HTTPException(status_code=403, detail="Permission denied. Only admins can edit teacher information.")
 
+##api gets your page based on the id in reg_users and and regUserID in teacher_list
+@app.get("/mypage/")
+async def get_mypage(request: Request, id: int = Depends(get_current_id)):
+    cursor = connection.cursor()
+    cursor.execute("SELECT name, state, county, district, school FROM teacher_list WHERE regUserID = ?", id)
+    teacher_data = cursor.fetchone()
+    cursor.close()
+    if teacher_data:
+        name, state, county, district, school = teacher_data
+        request.session["state"] = state
+        request.session["county"] = county
+        request.session["district"] = district
+        request.session["school"] = school
+        request.session["teacher"] = name
+        return
+    else:
+        raise HTTPException(status_code=404, detail="You do not have a homepage")
+
+##api lets the logged in user update their password
+@app.post("/update_password/")
+async def get_mypage(request: Request, id: int = Depends(get_current_id), old_password: str = Form(...), new_password: str = Form(...), new_password_confirmed: str = Form(...)):
+    if new_password == new_password_confirmed:
+        cursor = connection.cursor()
+        cursor.execute("SELECT password FROM registered_users WHERE id = ?", id)
+        old_pass = cursor.fetchone()
+        if new_password == new_password_confirmed:
+            cursor = connection.cursor()
+            cursor.execute("SELECT password FROM registered_users WHERE id = ?", id)
+            old_pass = cursor.fetchone()
+            if old_pass and old_pass[0] == old_password:
+                cursor.execute("UPDATE registered_users SET password = ? WHERE id = ?", (new_password, id))
+                connection.commit()
+                cursor.close()
+                return {"status": "success", "message": "Password updated successfully"}
+            else:
+                cursor.close()
+                raise HTTPException(status_code=403, detail="Invalid old password")
+    else:
+        raise HTTPException(status_code=403, detail="New passwords do not match.")
+
+#api to check if a user has teacher based access
+@app.get("/check_access_teacher/")
+async def check_access_teacher(request: Request, id: int = Depends(get_current_id), role: int = Depends(get_current_role)):
+    if role == 'teacher':
+        state = get_index_cookie('state', request)
+        county = get_index_cookie('county', request)
+        district = get_index_cookie('district', request)
+        school = get_index_cookie('school', request)
+        name = get_index_cookie('teacher', request)
+        cursor = connection.cursor()
+        cursor.execute("SELECT regUserID FROM teacher_list WHERE CAST(state AS nvarchar) = ? AND CAST(county AS nvarchar) = ? AND CAST(district AS nvarchar) = ? AND CAST(school AS nvarchar) = ? AND CAST(name AS nvarchar) = ?", state, county, district, school, name)
+        teacher_data = cursor.fetchone()
+        if teacher_data and teacher_data[0] == id:
+            return {"status": "success", "message": "Access granted"}
+    raise HTTPException(status_code=403, detail="No access")
 
 if __name__ == "__main__":
     import uvicorn
