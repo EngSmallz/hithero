@@ -296,7 +296,7 @@ async def get_teacher_info(request: Request):
                     "name": name,
                     "wishlist_url": teacher_info[0],
                     "about_me": teacher_info[1],
-                    "image_data": teacher_info[2]
+                    #"image_data": teacher_info[2]
                 }
                 return data
         except Exception as e:
