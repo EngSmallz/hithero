@@ -49,6 +49,14 @@ def get_email_password():
 def get_index_cookie(index: str, request: Request):
     return request.session.get(index, None)
 
+def decode_image(hex_string):
+    try:
+        # Convert hex string to bytes
+        image_bytes = bytes.fromhex(hex_string)
+        return StreamingResponse(io.BytesIO(image_bytes), media_type="image/jpeg")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 
 
 #######apis#######
@@ -116,7 +124,6 @@ async def move_user(user_email: str):
     return {"message": "User moved from new_users to registered_users"}
 
 ##this api allows a logged in user to create an item in the table teacher_list in the hithero database. 
-##if the user is a teacher, the regUser value is set the the logged in users ID from registered_users
 @app.post("/create_teacher_item/")
 async def create_teacher_item(name: str, state: str, county: str, district: str, school: str, email: str, role: str = Depends(get_current_role)):
     if role:
@@ -278,7 +285,7 @@ async def get_teacher_info(request: Request):
             school = get_index_cookie('school', request)
             name = get_index_cookie('teacher', request)
             cursor = connection.cursor()
-            cursor.execute("SELECT wishlist_url, about_me FROM teacher_list WHERE CAST(state AS nvarchar) = ? AND CAST(county AS nvarchar) = ? AND  CAST(district AS nvarchar) = ? AND CAST(school AS nvarchar) = ? AND CAST(name AS nvarchar) = ?", state, county, district, school, name)
+            cursor.execute("SELECT wishlist_url, about_me, image_data FROM teacher_list WHERE CAST(state AS nvarchar) = ? AND CAST(county AS nvarchar) = ? AND  CAST(district AS nvarchar) = ? AND CAST(school AS nvarchar) = ? AND CAST(name AS nvarchar) = ?", state, county, district, school, name)
             teacher_info = cursor.fetchone()
             if teacher_info:
                 data = {
@@ -289,6 +296,7 @@ async def get_teacher_info(request: Request):
                     "name": name,
                     "wishlist_url": teacher_info[0],
                     "about_me": teacher_info[1],
+                    "image_data": teacher_info[2]
                 }
                 return data
         except Exception as e:
@@ -317,7 +325,7 @@ async def edit_teacher_info(request: Request, wishlist: str = Form(...), aboutMe
     
 ###api used to update the logged in users teacher page image
 @app.post("/update_teacher_image/")
-async def edit_teacher_image(request: Request, role: str = Depends(get_current_role), image: str = Form(...)):
+async def edit_teacher_image(request: Request,role: str = Depends(get_current_role),image: UploadFile = Form(...)):
     if role:
         state = get_index_cookie('state', request)
         county = get_index_cookie('county', request)
@@ -325,15 +333,20 @@ async def edit_teacher_image(request: Request, role: str = Depends(get_current_r
         school = get_index_cookie('school', request)
         name = get_index_cookie('teacher', request)
         cursor = connection.cursor()
-        cursor.execute(
-            "UPDATE teacher_list SET teacher_image = ? WHERE CAST(state AS nvarchar) = ? AND CAST(county AS nvarchar) = ? AND CAST(district AS nvarchar) = ? AND CAST(school AS nvarchar) = ? AND CAST(name AS nvarchar) = ?",
-            image, state, county, district, school, name
-        )
+        query = """
+            UPDATE teacher_list 
+            SET image_data = ?
+            WHERE CAST(state AS nvarchar) = ? 
+                AND CAST(county AS nvarchar) = ? 
+                AND CAST(district AS nvarchar) = ? 
+                AND CAST(school AS nvarchar) = ? 
+                AND CAST(name AS nvarchar) = ?
+        """
+        cursor.execute(query, (image.file.read(), state, county, district, school, name))
         connection.commit()
-
         return JSONResponse(content={"success": True}, status_code=200)
     else:
-        raise HTTPException(status_code=403, detail="Permission denied. Only admins can edit teacher information.")
+        raise HTTPException(status_code=403, detail="Permission denied.")
 
 ##api gets your page based on the id in reg_users and and regUserID in teacher_list
 @app.get("/mypage/")

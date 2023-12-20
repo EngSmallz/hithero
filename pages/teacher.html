@@ -29,6 +29,7 @@
                 <h2 id="teacher-name">Teacher Name</h2>
                 <p id="school-name">School: School Name</p>
                 <p id="location">Location: County, State</p>
+                <button id="updateImgBtn" style="display: none" onclick="updateImage()">Update Image</button>
             </div>
 
             <div class="wishlist" id="wishlist-section">
@@ -61,6 +62,7 @@
                         if (profileData.user_role === 'admin') {
                             document.getElementById('editButton').style.display = 'block';
                             document.getElementById('passButton').style.display = 'block';
+                            document.getElementById('updateImgBtn').style.display = 'block';
                         }
 
                         if (profileData.user_role === 'teacher') { 
@@ -69,6 +71,7 @@
                                     if (response.ok) {
                                         document.getElementById('editButton').style.display = 'block';
                                         document.getElementById('passButton').style.display = 'block';
+                                        document.getElementById('updateImgBtn').style.display = 'block';
                                     }
                                 })
                                 .catch(error => console.error('Error checking teacher role:', error));
@@ -91,8 +94,8 @@
                     document.getElementById('about-me').innerText = data.about_me;
                     const teacherImage = document.getElementById('teacher-image');
                     if (teacherImage) {
-                        if (data.teacher_image) {
-                            teacherImage.src = `data:image/jpeg;base64,${data.teacher_image}`;
+                        if (data.image_data) {
+                            teacherImage.src = `data:image/jpeg;base64,${base64_encode(data.image_data)}`;
                         }
                     }
                     const wishlistLink = document.getElementById('wishlistLink');
@@ -132,6 +135,40 @@
             } catch (error) {
                 console.error('Error:', error);
                 window.location.href = '/';
+            }
+        }
+
+        async function updateImage() {
+            try {
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.accept = 'image/jpeg';
+                fileInput.click();
+                fileInput.addEventListener('change', async (event) => {
+                    const selectedFile = event.target.files[0];
+                    if (selectedFile) {
+                        const formData = new FormData();
+                        formData.append('image', selectedFile);
+                        try {
+                            const response = await fetch('/update_teacher_image/', {
+                                method: 'POST',
+                                body: formData,
+                            });
+                            if (response.ok) {
+                                const teacherImage = document.getElementById('teacher-image');
+                                if (teacherImage) {
+                                    teacherImage.src = URL.createObjectURL(selectedFile);
+                                }
+                            } else {
+                                console.error('Error updating teacher image:', response.status);
+                            }
+                        } catch (error) {
+                            console.error('Error updating teacher image:', error);
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error opening file explorer:', error);
             }
         }
     </script>
