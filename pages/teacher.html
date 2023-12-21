@@ -155,10 +155,7 @@
                                 body: formData,
                             });
                             if (response.ok) {
-                                const teacherImage = document.getElementById('teacher-image');
-                                if (teacherImage) {
-                                    teacherImage.src = URL.createObjectURL(selectedFile);
-                                }
+                                location.reload();
                             } else {
                                 console.error('Error updating teacher image:', response.status);
                             }
