@@ -88,7 +88,7 @@
             .then(response => response.json())
             .then(data => {
                 if (data) {
-                    document.getElementById('location').innerText = `Location: ${data.county} County, ${data.state}`;
+                    document.getElementById('location').innerText = `Location: ${data.county}, ${data.state}`;
                     document.getElementById('teacher-name').innerText = data.name;
                     document.getElementById('school-name').innerText = `School: ${data.school}`;
                     document.getElementById('about-me').innerText = data.about_me;

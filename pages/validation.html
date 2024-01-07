@@ -47,7 +47,7 @@
                 data.new_users.forEach(user => {
                     const listItem = document.createElement("li");
                     const userInfoSpan = document.createElement("span");
-                    userInfoSpan.textContent = `${user.name} - ${user.email} - ${user.school}`;
+                    userInfoSpan.textContent = `${user.name} - ${user.email} - ${user.school} - ${user.phone_number}`;
                     const validateButton = document.createElement("button");
                     validateButton.id = "validateButton";
                     validateButton.textContent = "Validate";

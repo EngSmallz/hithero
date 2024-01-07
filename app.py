@@ -8,6 +8,8 @@ from fastapi.staticfiles import StaticFiles
 from starlette.applications import Starlette
 from starlette.middleware.sessions import SessionMiddleware
 from email.mime.text import MIMEText
+from passlib.hash import sha256_crypt
+
 
 app = FastAPI()
 load_dotenv()
@@ -62,7 +64,7 @@ def decode_image(hex_string):
 #######apis#######
 ###api used to register a new user (and only a new user) into the new_user list
 @app.post("/register/")
-async def register_user(name: str = Form(...),email: str = Form(...),state: str = Form(...),county: str = Form(...),district: str = Form(...),school: str = Form(...),role: str = Form(...),):
+async def register_user(name: str = Form(...), email: str = Form(...), phone_number: str = Form(...), password: str = Form(...), confirm_password: str = Form(...), state: str = Form(...),county: str = Form(...),district: str = Form(...), school: str = Form(...), role: str = Form(...),):
     cursor = connection.cursor()
     try:
         cursor.execute("SELECT id FROM registered_users WHERE CAST(email AS nvarchar) = ?", email)
@@ -74,12 +76,14 @@ async def register_user(name: str = Form(...),email: str = Form(...),state: str 
         existing_user = cursor.fetchone()
         if existing_user:
             raise HTTPException(status_code=400, detail="User with this email is already in the registration queue")
-
+        if password != confirm_password:
+            raise HTTPException(status_code=400, detail="Password do not match")
+        hashed_password = sha256_crypt.hash(password)
         insert_query = """
-            INSERT INTO new_users (name, email, state, county, district, school, role)
-            VALUES (?, CAST(? AS NVARCHAR), ?, ?, ?, ?, ?)
+            INSERT INTO new_users (name, email, state, county, district, school, phone_number, password, role)
+            VALUES (?, CAST(? AS NVARCHAR), ?, ?, ?, ?, ?, ?, ?)
         """
-        cursor.execute(insert_query, (name, email, state, county, district, school, role))
+        cursor.execute(insert_query, (name, email, state, county, district, school, phone_number, hashed_password, role))
         connection.commit()
         cursor.close()
         return {"message": "User registered successfully"}
@@ -92,18 +96,24 @@ async def register_user(name: str = Form(...),email: str = Form(...),state: str 
 @app.post("/login/")
 async def login_user(request: Request, email: str = Form(...), password: str = Form(...)):
     cursor = connection.cursor()
-    cursor.execute("SELECT id, role FROM registered_users WHERE CAST(email AS NVARCHAR) = ? AND CAST(password AS NVARCHAR) = ?", (email, password))
+    cursor.execute("SELECT id, role, password FROM registered_users WHERE CAST(email AS NVARCHAR) = ?", (email,))
     user = cursor.fetchone()
     cursor.close()
+
     if user:
-        message = "Login successful as " + user.role
-        request.session["user_name"] = email
-        request.session["user_role"] = user.role
-        request.session["user_id"] = user.id
-        return JSONResponse(content={"message": message})
+        hashed_password = user.password
+        if sha256_crypt.verify(password, hashed_password):
+            message = "Login successful as " + user.role
+            request.session["user_name"] = email
+            request.session["user_role"] = user.role
+            request.session["user_id"] = user.id
+            return JSONResponse(content={"message": message})
+        else:
+            message = "Invalid email or password"
     else:
         message = "Invalid email or password"
-        return JSONResponse(content={"message": message}, status_code=400)
+
+    return JSONResponse(content={"message": message}, status_code=400)
 
 ##end cookie session
 @app.post("/logout/")
@@ -122,11 +132,9 @@ async def move_user(user_email: str):
     user = cursor.fetchone()
     if not user:
         raise HTTPException(status_code=404, detail="User not found in new_users")
-    password_characters = string.ascii_letters + string.digits
-    password = ''.join(secrets.choice(password_characters) for _ in range(10))
     cursor.execute("INSERT INTO registered_users (email, password, role) "
                    "VALUES (?, ?, ?)",
-                   (user.email, password, user.role))
+                   (user.email, user.password, user.role))
     connection.commit()
     cursor.execute("DELETE FROM new_users WHERE CAST(email AS NVARCHAR) = ?", user_email)
     connection.commit()
@@ -142,7 +150,7 @@ async def create_teacher_profile(name: str = Form(...), state: str = Form(...), 
         link = cursor.fetchone()
         if link[0] == 0 or role == 'admin':
             insert_query = "INSERT INTO teacher_list (name, state, county, district, school, regUserID, about_me, wishlist_url) " \
-                           "VALUES (?, ?, ?, ?, ?, ?)"
+                           "VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
             cursor.execute(insert_query, (name, state, county, district, school, id, aboutMe, wishlist))
             connection.commit()
             cursor.execute("UPDATE registered_users SET createCount = createCount + 1 WHERE id = ?", id)
@@ -272,14 +280,20 @@ async def get_index_list(index: str, request: Request):
             state = get_index_cookie(index, request)
             cursor.execute("SELECT county FROM teacher_list WHERE CAST(state AS nvarchar) = ?", state)
         elif index == "county":
+            state = get_index_cookie('state', request)
             county = get_index_cookie(index, request)
-            cursor.execute("SELECT district FROM teacher_list WHERE CAST(county AS nvarchar) = ?", county)
+            cursor.execute("SELECT district FROM teacher_list WHERE CAST(state AS nvarchar) = ? AND CAST(county AS nvarchar) = ?", state, county)
         elif index == "district":
+            state = get_index_cookie('state', request)
+            county = get_index_cookie('county', request)
             district = get_index_cookie(index, request)
-            cursor.execute("SELECT school FROM teacher_list WHERE CAST(district AS nvarchar) = ?", district)
+            cursor.execute("SELECT school FROM teacher_list WHERE CAST(state AS nvarchar) = ? AND CAST(county AS nvarchar) = ? AND CAST(district AS nvarchar) = ?", state, county, district)
         elif index == "school":
+            state = get_index_cookie('state', request)
+            county = get_index_cookie('county', request)
+            district = get_index_cookie('district', request)
             school = get_index_cookie(index, request)
-            cursor.execute("SELECT name FROM teacher_list WHERE CAST(school AS nvarchar) = ?", school)
+            cursor.execute("SELECT name FROM teacher_list WHERE CAST(state AS nvarchar) = ? AND CAST(county AS nvarchar) = ? AND CAST(district AS nvarchar) = ? AND CAST(school AS nvarchar) = ?", state, county, district, school)
         rows = cursor.fetchall()
         unique = set(row[0] for row in rows)
         result_list = list(unique)
@@ -386,18 +400,15 @@ async def update_password(request: Request, id: int = Depends(get_current_id), o
         cursor = connection.cursor()
         cursor.execute("SELECT password FROM registered_users WHERE id = ?", id)
         old_pass = cursor.fetchone()
-        if new_password == new_password_confirmed:
-            cursor = connection.cursor()
-            cursor.execute("SELECT password FROM registered_users WHERE id = ?", id)
-            old_pass = cursor.fetchone()
-            if old_pass and old_pass[0] == old_password:
-                cursor.execute("UPDATE registered_users SET password = ? WHERE id = ?", (new_password, id))
-                connection.commit()
-                cursor.close()
-                return {"status": "success", "message": "Password updated successfully"}
-            else:
-                cursor.close()
-                raise HTTPException(status_code=403, detail="Invalid old password")
+        if old_pass and sha256_crypt.verify(old_password, old_pass[0]):
+            hashed_new_password = sha256_crypt.hash(new_password)
+            cursor.execute("UPDATE registered_users SET password = ? WHERE id = ?", (hashed_new_password, id))
+            connection.commit()
+            cursor.close()
+            return {"status": "success", "message": "Password updated successfully"}
+        else:
+            cursor.close()
+            raise HTTPException(status_code=403, detail="Invalid old password")
     else:
         raise HTTPException(status_code=403, detail="New passwords do not match.")
 
@@ -432,7 +443,7 @@ async def validation_page(request: Request, role: str = Depends(get_current_role
         cursor.execute("SELECT * FROM new_users WHERE CAST(state AS nvarchar) = ? AND CAST(county AS nvarchar) = ? AND CAST(district AS nvarchar) = ?", (state, county, district))
         new_users = cursor.fetchall()
         cursor.close()
-        return {"new_users": [{"name": user.name, "email": user.email, "school": user.school} for user in new_users]}
+        return {"new_users": [{"name": user.name, "email": user.email, "school": user.school, "phone_number": user.phone_number} for user in new_users]}
     else:
         raise HTTPException(status_code=403, detail="You don't have permission to access this page.")
 
