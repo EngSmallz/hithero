@@ -11,6 +11,8 @@
                 if (response.ok) {
                     document.getElementById('logoutButton').style.display = 'block';
                     document.getElementById('mypageButton').style.display = 'block';
+                    document.getElementById('validationButton').style.display = 'block';
+                    document.getElementById('createButton').style.display = 'block';
                 }
             })
             .catch(error => console.error('Error checking authentication:', error));
@@ -33,6 +35,9 @@
 
     <button id="logoutButton" style="display: none" onclick="logout()">Logout</button>
     <button id="mypageButton" style="display: none" onclick="mypage()">My Page</button>
+    <button id="validationButton" style="display: none" onclick="validation()">Validation</button>
+    <button id="createButton" style="display: none" onclick="create()">Create Profile</button>
+
     <main>
         <section> 
             <h2>Find a Teacher to Support</h2>
@@ -103,7 +108,7 @@
 
         async function mypage() {
             try {
-                const response = await fetch('/mypage/', {
+                const response = await fetch('/myinfo/', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -120,6 +125,25 @@
                 window.location.href = '/';
             }
         }
+
+        async function validation() {
+            try {
+                window.location.href = '/pages/validation.html';
+            } catch (error) {
+                console.error('Error:', error);
+                window.location.href = '/';
+            }
+        }
+
+        async function create() {
+            try {
+                window.location.href = '/pages/create.html';
+            } catch (error) {
+                console.error('Error:', error);
+                window.location.href = '/';
+            }
+        }
+
     </script>
     
     

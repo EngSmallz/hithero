@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hometown Heroes - Validation Page</title>
+    <link rel="stylesheet" type="text/css" href="/static/css/style.css">
+</head>
+<script>
+    function checkAuthentication() {
+        fetch('/profile/')
+            .then(response => {
+                if (!response.ok) {
+                    // User is not authenticated, redirect to 403 page
+                    window.location.href = '/pages/403.html';
+                }
+            })
+            .catch(error => console.error('Error checking authentication:', error));
+    }
+    window.onload = checkAuthentication;
+</script>
+<body>
+    <header>
+        <h1>Validation Page</h1>
+    </header>
+
+    <button id="logoutButton" style="display: block" onclick="logout()">Logout</button>
+    <button id="mypageButton" style="display: block" onclick="mypage()">My Page</button>
+    <nav>
+        <ul>
+            <li><a href="/pages/homepage.html">Home</a></li>
+            <li><a href="/pages/about.html">About</a></li>
+            <li><a href="/pages/contact.html">Contact</a></li>
+            <!-- Add links to other pages here -->
+        </ul>
+    </nav>
+
+    <main>
+        <h2>Validation List</h2>
+        <ul id="validationList"></ul>
+
+    </main>
+    <script>
+        fetch(`/validation_list`)
+            .then(response => response.json())
+            .then(data => {
+                const validationList = document.getElementById("validationList");
+                validationList.innerHTML = "";
+                data.new_users.forEach(user => {
+                    const listItem = document.createElement("li");
+                    const userInfoSpan = document.createElement("span");
+                    userInfoSpan.textContent = `${user.name} - ${user.email} - ${user.school} - ${user.phone_number}`;
+                    const validateButton = document.createElement("button");
+                    validateButton.id = "validateButton";
+                    validateButton.textContent = "Validate";
+                    validateButton.addEventListener("click", async () => {
+                        try {
+                            const validateResponse = await fetch(`/validate_user/${user.email}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                            });
+
+                            if (validateResponse.ok) {
+                                console.log(`Validation successful for user: ${user.name}`);
+                                window.location.reload();
+                            } else {
+                                console.error(`Validation failed for user: ${user.name}`);
+                            }
+                        } catch (error) {
+                            console.error('Error validating user:', error);
+                        }
+                    });
+                    listItem.appendChild(userInfoSpan);
+                    listItem.appendChild(validateButton);
+                    validationList.appendChild(listItem);
+                });
+            })
+            .catch(error => console.error('Error:', error));
+        
+        async function logout() {
+                try {
+                    const response = await fetch(`/logout/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                    });
+                    window.location.href = '/';
+                } catch (error) {
+                    console.error('Error:', error);
+                }
+            }
+
+            async function mypage() {
+            try {
+                const response = await fetch('/myinfo/', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+                if (response.ok) {
+                    window.location.href = '/pages/teacher.html';
+                } else {
+                    console.error('Error:', response.status);
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                window.location.href = '/';
+            }
+        }
+    </script>
+    <footer>
+        <p>&copy; 2023 Hometown Heroes</p>
+    </footer>
+</body>
+</html>
