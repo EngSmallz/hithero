@@ -62,21 +62,31 @@ def decode_image(hex_string):
 #######apis#######
 ###api used to register a new user (and only a new user) into the new_user list
 @app.post("/register/")
-async def register_user(name: str = Form(...), email: str = Form(...), phone_number: str = Form(...), role: str = Form(...)):
+async def register_user(name: str = Form(...),email: str = Form(...),state: str = Form(...),county: str = Form(...),district: str = Form(...),school: str = Form(...),role: str = Form(...),):
     cursor = connection.cursor()
-    cursor.execute("SELECT id FROM registered_users WHERE CAST(email AS nvarchar) = ?", email)
-    existing_user = cursor.fetchone()
-    if existing_user:
-        raise HTTPException(status_code=400, detail="User with this email already exists")
-    cursor.execute("SELECT id FROM new_users WHERE CAST(email AS nvarchar) = ?", email)
-    existing_user = cursor.fetchone()
-    if existing_user:
-        raise HTTPException(status_code=400, detail="User with this email is already in the registration queue")
-    insert_query = "INSERT INTO new_users (name, email, phone_number, role) VALUES (?, CAST(? AS NVARCHAR), ?, ?)"
-    cursor.execute(insert_query, (name, email, phone_number, role))
-    connection.commit()
-    cursor.close()
-    return {"message": "User registered successfully"}
+    try:
+        cursor.execute("SELECT id FROM registered_users WHERE CAST(email AS nvarchar) = ?", email)
+        existing_user = cursor.fetchone()
+        if existing_user:
+            raise HTTPException(status_code=400, detail="User with this email already exists")
+
+        cursor.execute("SELECT id FROM new_users WHERE CAST(email AS nvarchar) = ?", email)
+        existing_user = cursor.fetchone()
+        if existing_user:
+            raise HTTPException(status_code=400, detail="User with this email is already in the registration queue")
+
+        insert_query = """
+            INSERT INTO new_users (name, email, state, county, district, school, role)
+            VALUES (?, CAST(? AS NVARCHAR), ?, ?, ?, ?, ?)
+        """
+        cursor.execute(insert_query, (name, email, state, county, district, school, role))
+        connection.commit()
+        cursor.close()
+        return {"message": "User registered successfully"}
+
+    except Exception as e:
+        # Handle errors
+        return {"message": "Registration unsuccessful", "error": str(e)}
 
 ###api used to create cookie based session via authentication with registered_user table
 @app.post("/login/")
@@ -105,7 +115,7 @@ async def logout_user(request: Request):
     return RedirectResponse(url="/", status_code=303)
 
 # Endpoint to move a user from new_users to registered_users and delete item in new_users
-@app.post("/move_user/{user_email}")
+@app.post("/validate_user/{user_email}")
 async def move_user(user_email: str):
     cursor = connection.cursor()
     cursor.execute("SELECT * FROM new_users WHERE CAST(email AS NVARCHAR) = ?", user_email)
@@ -123,22 +133,24 @@ async def move_user(user_email: str):
     cursor.close()
     return {"message": "User moved from new_users to registered_users"}
 
-##this api allows a logged in user to create an item in the table teacher_list in the hithero database. 
-@app.post("/create_teacher_item/")
-async def create_teacher_item(name: str, state: str, county: str, district: str, school: str, email: str, role: str = Depends(get_current_role)):
+##this api allows a logged in user to create an item in the table teacher_list in the hithero database if they have not created a user already
+@app.post("/create_teacher_profile/")
+async def create_teacher_profile(name: str = Form(...), state: str = Form(...), county: str = Form(...), district: str = Form(...), school: str = Form(...), aboutMe: str = Form(...), wishlist: str = Form(...), id: int = Depends(get_current_id), role: str = Depends(get_current_role)):
     if role:
         cursor = connection.cursor()
-        cursor.execute("SELECT id FROM registered_users WHERE CAST(email AS NVARCHAR) = ?", email)
+        cursor.execute("SELECT createCount FROM registered_users WHERE id = ?", id)
         link = cursor.fetchone()
-        if link:
-            insert_query = "INSERT INTO teacher_list (name, state, county, district, school, regUserID) " \
+        if link[0] == 0 or role == 'admin':
+            insert_query = "INSERT INTO teacher_list (name, state, county, district, school, regUserID, about_me, wishlist_url) " \
                            "VALUES (?, ?, ?, ?, ?, ?)"
-            cursor.execute(insert_query, (name, state, county, district, school, link[0]))
+            cursor.execute(insert_query, (name, state, county, district, school, id, aboutMe, wishlist))
+            connection.commit()
+            cursor.execute("UPDATE registered_users SET createCount = createCount + 1 WHERE id = ?", id)
             connection.commit()
             cursor.close()
             return {"message": "Teacher created successfully"}
         else:
-            raise HTTPException(status_code=404, detail="User not found in registered_users")
+            raise HTTPException(status_code=404, detail="Unable to create new profile. Profile already created.")
     else:
         raise HTTPException(status_code=404, detail="No user logged in.")
 
@@ -298,6 +310,7 @@ async def get_teacher_info(request: Request):
                     "about_me": teacher_info[1],
                     #"image_data": teacher_info[2]
                 }
+                #print(f'teacher_info: {data['image_data']}')
                 return data
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
@@ -310,7 +323,7 @@ async def edit_teacher_info(request: Request, wishlist: str = Form(...), aboutMe
         state = get_index_cookie('state', request)
         county = get_index_cookie('county', request)
         district = get_index_cookie('district', request)
-        school = get_index_cookie('school', request)
+        school = get_index_cookie('school', request) 
         name = get_index_cookie('teacher', request)
         cursor = connection.cursor()
         cursor.execute(
@@ -349,8 +362,8 @@ async def edit_teacher_image(request: Request,role: str = Depends(get_current_ro
         raise HTTPException(status_code=403, detail="Permission denied.")
 
 ##api gets your page based on the id in reg_users and and regUserID in teacher_list
-@app.get("/mypage/")
-async def get_mypage(request: Request, id: int = Depends(get_current_id)):
+@app.get("/myinfo/")
+async def get_myinfo(request: Request, id: int = Depends(get_current_id)):
     cursor = connection.cursor()
     cursor.execute("SELECT name, state, county, district, school FROM teacher_list WHERE regUserID = ?", id)
     teacher_data = cursor.fetchone()
@@ -364,11 +377,11 @@ async def get_mypage(request: Request, id: int = Depends(get_current_id)):
         request.session["teacher"] = name
         return
     else:
-        raise HTTPException(status_code=404, detail="You do not have a homepage")
+        raise HTTPException(status_code=404, detail="Your account does not have a database listing")
 
 ##api lets the logged in user update their password
 @app.post("/update_password/")
-async def get_mypage(request: Request, id: int = Depends(get_current_id), old_password: str = Form(...), new_password: str = Form(...), new_password_confirmed: str = Form(...)):
+async def update_password(request: Request, id: int = Depends(get_current_id), old_password: str = Form(...), new_password: str = Form(...), new_password_confirmed: str = Form(...)):
     if new_password == new_password_confirmed:
         cursor = connection.cursor()
         cursor.execute("SELECT password FROM registered_users WHERE id = ?", id)
@@ -403,6 +416,25 @@ async def check_access_teacher(request: Request, id: int = Depends(get_current_i
         if teacher_data and teacher_data[0] == id:
             return {"status": "success", "message": "Access granted"}
     raise HTTPException(status_code=403, detail="No access")
+
+@app.get("/validation_list/")
+async def validation_page(request: Request, role: str = Depends(get_current_role), id: int = Depends(get_current_id)):
+    if role == "admin":
+        cursor = connection.cursor()
+        new_users = cursor.execute("SELECT * FROM new_users").fetchall()
+        return {"new_users": [{"name": user.name, "email": user.email, "school": user.school} for user in new_users]}
+    if role == 'teacher':
+        await get_myinfo(request, id)
+        state = get_index_cookie('state', request)
+        county = get_index_cookie('county', request)
+        district = get_index_cookie('district', request)
+        cursor = connection.cursor()
+        cursor.execute("SELECT * FROM new_users WHERE CAST(state AS nvarchar) = ? AND CAST(county AS nvarchar) = ? AND CAST(district AS nvarchar) = ?", (state, county, district))
+        new_users = cursor.fetchall()
+        cursor.close()
+        return {"new_users": [{"name": user.name, "email": user.email, "school": user.school} for user in new_users]}
+    else:
+        raise HTTPException(status_code=403, detail="You don't have permission to access this page.")
 
 if __name__ == "__main__":
     import uvicorn

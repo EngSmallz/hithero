@@ -35,12 +35,12 @@
         
     <button id="logoutButton" style="display: none" onclick="logout()">Logout</button>
     <button id="mypageButton" style="display: none" onclick="mypage()">My Page</button>
-    <main>
+    <main_index>
         <h1 id="schoolHeader">List of Schools</h1>
         <ul id="schoolList"></ul>
         <p>If your school is missing, contact your local teachers to sign up today!</p>
 
-    </main>
+    </main_index>
     <script>
         async function storeSchool(school) {
             try {
@@ -108,7 +108,7 @@
 
         async function mypage() {
             try {
-                const response = await fetch('/mypage/', {
+                const response = await fetch('/myinfo/', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
