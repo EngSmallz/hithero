@@ -48,14 +48,14 @@
             <div class="team-member">
                 <img src="/static/images/peanut.jpg" alt="Team Member 1">
                 <h3>Justin Brundage</h3>
-                <p>Co-Founder & CEO</p>
+                <p>Founder & CEO</p>
             </div>
 
             <!-- Team Member 2 -->
             <div class="team-member">
                 <img src="/static/images/grape.jpg" alt="Team Member 2">
                 <h3>Sam Mahan</h3>
-                <p>Co-Founder & CTO</p>
+                <p>CTO</p>
             </div>
             <!-- Add more team members here -->
         </section>
@@ -76,7 +76,7 @@
         }
         async function mypage() {
             try {
-                const response = await fetch('/mypage/', {
+                const response = await fetch('/myinfo/', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',

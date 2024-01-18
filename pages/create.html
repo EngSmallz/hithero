@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hometown Heroes - Validation Page</title>
+    <link rel="stylesheet" type="text/css" href="/static/css/style.css">
+</head>
+<script>
+    function checkAuthentication() {
+        fetch('/profile/')
+            .then(response => {
+                if (!response.ok) {
+                    window.location.href = '/pages/403.html';
+                }
+            })
+            .catch(error => console.error('Error checking authentication:', error));
+    }
+    window.onload = checkAuthentication;
+</script>
+<body>
+    <header>
+        <h1>Create Profile Page</h1>
+    </header>
+
+    <button id="logoutButton" style="display: block" onclick="logout()">Logout</button>
+    <button id="mypageButton" style="display: block" onclick="mypage()">My Page</button>
+    <nav>
+        <ul>
+            <li><a href="/pages/homepage.html">Home</a></li>
+            <li><a href="/pages/about.html">About</a></li>
+            <li><a href="/pages/contact.html">Contact</a></li>
+            <!-- Add links to other pages here -->
+        </ul>
+    </nav>
+
+    <main>
+
+        <h2>Create Profile</h2>
+        <form id="create-form" method="post" enctype="multipart/form-data">
+            <label for="name">Name:</label>
+            <input type="text" id="name" name="name" required><br><br>
+        
+            <label for="state">State:</label>
+            <input type="text" id="state" name="state" required><br><br>
+        
+            <label for="county">County:</label>
+            <input type="text" id="county" name="county" required><br><br>
+        
+            <label for="district">District:</label>
+            <input type="text" id="district" name="district" required><br><br>
+        
+            <label for="school">School:</label>
+            <input type="text" id="school" name="school" required><br><br>
+
+            <label for="aboutMe">About Me:</label>
+            <input type="text" id="aboutMe" name="aboutMe" required><br><br>
+
+            <label for="wishlist">Amazon Wishlist URL: </label>
+            <input type="text" id="wishlist" name="wishlist" required><br><br>
+        
+            <p><input type="button" value="Submit" id="create-button"></p>
+        </form>
+        
+
+    </main>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const createForm = document.getElementById("create-form");
+            const createButton = document.getElementById("create-button");
+
+            createButton.addEventListener("click", async function () {
+                const formData = new FormData(createForm);
+
+                try {
+                    const response = await fetch("/create_teacher_profile/", {
+                        method: "POST",
+                        body: formData,
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        alert(data.message); // Use alert for success
+                    } else {
+                        alert("Creation unsuccessful"); // Use alert for failure
+                    }
+                } catch (error) {
+                    alert("An error occurred"); // Use alert for error
+                }
+            });
+        });
+
+        async function logout() {
+                try {
+                    const response = await fetch(`/logout/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                    });
+                    window.location.href = '/';
+                } catch (error) {
+                    console.error('Error:', error);
+                }
+            }
+
+            async function mypage() {
+            try {
+                const response = await fetch('/myinfo/', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+                if (response.ok) {
+                    window.location.href = '/pages/teacher.html';
+                } else {
+                    console.error('Error:', response.status);
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                window.location.href = '/';
+            }
+        }
+    </script>
+    <footer>
+        <p>&copy; 2023 Hometown Heroes</p>
+    </footer>
+</body>
+</html>

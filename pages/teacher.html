@@ -29,7 +29,7 @@
                 <h2 id="teacher-name">Teacher Name</h2>
                 <p id="school-name">School: School Name</p>
                 <p id="location">Location: County, State</p>
-                <button id="updateImgBtn" style="display: none" onclick="updateImage()">Update Image</button>
+                <!--<button id="updateImgBtn" style="display: none" onclick="updateImage()">Update Image</button>-->
             </div>
 
             <div class="wishlist" id="wishlist-section">
@@ -88,16 +88,11 @@
             .then(response => response.json())
             .then(data => {
                 if (data) {
-                    document.getElementById('location').innerText = `Location: ${data.county} County, ${data.state}`;
+                    document.getElementById('location').innerText = `Location: ${data.county}, ${data.state}`;
                     document.getElementById('teacher-name').innerText = data.name;
                     document.getElementById('school-name').innerText = `School: ${data.school}`;
                     document.getElementById('about-me').innerText = data.about_me;
                     const teacherImage = document.getElementById('teacher-image');
-                    if (teacherImage) {
-                        if (data.image_data) {
-                            teacherImage.src = `data:image/jpeg;base64,${base64_encode(data.image_data)}`;
-                        }
-                    }
                     const wishlistLink = document.getElementById('wishlistLink');
                     wishlistLink.href = data.wishlist_url;
                 }
@@ -120,7 +115,7 @@
 
         async function mypage() {
             try {
-                const response = await fetch('/mypage/', {
+                const response = await fetch('/myinfo/', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -149,6 +144,7 @@
                     if (selectedFile) {
                         const formData = new FormData();
                         formData.append('image', selectedFile);
+
                         try {
                             const response = await fetch('/update_teacher_image/', {
                                 method: 'POST',
@@ -157,17 +153,21 @@
                             if (response.ok) {
                                 location.reload();
                             } else {
-                                console.error('Error updating teacher image:', response.status);
+                                const errorMessage = `Error updating teacher image: ${response.status}`;
+                                console.error(errorMessage);
                             }
                         } catch (error) {
-                            console.error('Error updating teacher image:', error);
+                            const errorMessage = `Error updating teacher image: ${error.message}`;
+                            console.error(errorMessage);
                         }
                     }
                 });
             } catch (error) {
-                console.error('Error opening file explorer:', error);
+                const errorMessage = `Error opening file explorer: ${error.message}`;
+                console.error(errorMessage);
             }
         }
+
     </script>
 
     <footer>

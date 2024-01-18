@@ -35,7 +35,7 @@
         
     <button id="logoutButton" style="display: none" onclick="logout()">Logout</button>
     <button id="mypageButton" style="display: none" onclick="mypage()">My Page</button>
-    <main>
+    <main_index>
         <h1>List of States</h1>
         <ul>
             <li><button onclick="storeState('Alabama')">Alabama</button></li>
@@ -94,7 +94,7 @@
         </ul>
         
         <p>If your US territory is missing, contact us to add support!</p>
-    </main>
+    </main_index>
     <script>
         async function storeState(state) {
             try {
@@ -129,7 +129,7 @@
 
         async function mypage() {
             try {
-                const response = await fetch('/mypage/', {
+                const response = await fetch('/myinfo/', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
