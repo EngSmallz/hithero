@@ -22,7 +22,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Define your AAD ODBC connection string
 connection_string = (f'Driver={os.getenv("DATABASE_DRIVER")};Server={os.getenv("DATABASE_SERVER")};Database={os.getenv("DATABASE_NAME")};Uid={os.getenv("DATABASE_UID")};Pwd={os.getenv("DATABASE_PASSWORD")};Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30;')
-
+print(connection_string)
 # Define the ODBC connection
 try:
     connection = pyodbc.connect(connection_string)
@@ -64,14 +64,13 @@ def decode_image(hex_string):
 #######apis#######
 ###api used to register a new user (and only a new user) into the new_user list
 @app.post("/register/")
-async def register_user(name: str = Form(...), email: str = Form(...), phone_number: str = Form(...), password: str = Form(...), confirm_password: str = Form(...), state: str = Form(...),county: str = Form(...),district: str = Form(...), school: str = Form(...), role: str = Form(...),):
+async def register_user(name: str = Form(...), email: str = Form(...), phone_number: str = Form(...), password: str = Form(...), confirm_password: str = Form(...), state: str = Form(...),county: str = Form(...),district: str = Form(...), school: str = Form(...), role: str = Form(...)):
     cursor = connection.cursor()
     try:
         cursor.execute("SELECT id FROM registered_users WHERE CAST(email AS nvarchar) = ?", email)
         existing_user = cursor.fetchone()
         if existing_user:
             raise HTTPException(status_code=400, detail="User with this email already exists")
-
         cursor.execute("SELECT id FROM new_users WHERE CAST(email AS nvarchar) = ?", email)
         existing_user = cursor.fetchone()
         if existing_user:
@@ -99,7 +98,6 @@ async def login_user(request: Request, email: str = Form(...), password: str = F
     cursor.execute("SELECT id, role, password FROM registered_users WHERE CAST(email AS NVARCHAR) = ?", (email,))
     user = cursor.fetchone()
     cursor.close()
-
     if user:
         hashed_password = user.password
         if sha256_crypt.verify(password, hashed_password):
