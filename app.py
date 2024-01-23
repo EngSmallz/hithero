@@ -22,7 +22,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Define your AAD ODBC connection string
 connection_string = (f'Driver={os.getenv("DATABASE_DRIVER")};Server={os.getenv("DATABASE_SERVER")};Database={os.getenv("DATABASE_NAME")};Uid={os.getenv("DATABASE_UID")};Pwd={os.getenv("DATABASE_PASSWORD")};Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30;')
-print(connection_string)
+
 # Define the ODBC connection
 try:
     connection = pyodbc.connect(connection_string)
