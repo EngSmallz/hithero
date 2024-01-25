@@ -39,7 +39,7 @@
 
     </main>
     <script>
-        fetch(`/validation_list`)
+        fetch(`/validation_list/`)
             .then(response => response.json())
             .then(data => {
                 const validationList = document.getElementById("validationList");
@@ -49,33 +49,35 @@
                     const userInfoSpan = document.createElement("span");
                     userInfoSpan.textContent = `${user.name} - ${user.email} - ${user.school} - ${user.phone_number}`;
                     const validateButton = document.createElement("button");
-                    validateButton.id = "validateButton";
                     validateButton.textContent = "Validate";
-                    validateButton.addEventListener("click", async () => {
-                        try {
-                            const validateResponse = await fetch(`/validate_user/${user.email}`, {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                },
-                            });
-
-                            if (validateResponse.ok) {
-                                console.log(`Validation successful for user: ${user.name}`);
-                                window.location.reload();
-                            } else {
-                                console.error(`Validation failed for user: ${user.name}`);
-                            }
-                        } catch (error) {
-                            console.error('Error validating user:', error);
-                        }
-                    });
+                    validateButton.addEventListener("click", () => validate(user.email));
                     listItem.appendChild(userInfoSpan);
                     listItem.appendChild(validateButton);
                     validationList.appendChild(listItem);
                 });
             })
             .catch(error => console.error('Error:', error));
+        
+        async function validate(email) {
+            try {
+                const validateResponse = await fetch(`/validate_user/${email}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (validateResponse.ok) {
+                    console.log(`Validation successful for user: ${email}`);
+                    window.location.reload();
+                } else {
+                    console.error(`Validation failed for user: ${email}`);
+                }
+            } catch (error) {
+                console.error('Error validating user:', error);
+            }
+        }
+
         
         async function logout() {
                 try {
