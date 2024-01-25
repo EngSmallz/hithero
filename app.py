@@ -431,7 +431,7 @@ async def validation_page(request: Request, role: str = Depends(get_current_role
     if role == "admin":
         cursor = connection.cursor()
         new_users = cursor.execute("SELECT * FROM new_users").fetchall()
-        return {"new_users": [{"name": user.name, "email": user.email, "school": user.school} for user in new_users]}
+        return {"new_users": [{"name": user.name, "email": user.email, "school": user.school, "phone_number": user.phone_number} for user in new_users]}
     if role == 'teacher':
         await get_myinfo(request, id)
         state = get_index_cookie('state', request)
