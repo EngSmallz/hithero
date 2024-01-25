@@ -59,6 +59,22 @@ def decode_image(hex_string):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+def store_my_cookies(request: Request, id: int = Depends(get_current_id)):
+    cursor = connection.cursor()
+    cursor.execute("SELECT name, state, county, district, school FROM teacher_list WHERE regUserID = ?", id)
+    teacher_data = cursor.fetchone()
+    cursor.close()
+    if teacher_data:
+        name, state, county, district, school = teacher_data
+        request.session["state"] = state
+        request.session["county"] = county
+        request.session["district"] = district
+        request.session["school"] = school
+        request.session["teacher"] = name
+        return
+    else:
+        raise HTTPException(status_code=404, detail="Your account does not have a database listing")
+
 
 
 #######apis#######
@@ -433,7 +449,7 @@ async def validation_page(request: Request, role: str = Depends(get_current_role
         new_users = cursor.execute("SELECT * FROM new_users").fetchall()
         return {"new_users": [{"name": user.name, "email": user.email, "school": user.school, "phone_number": user.phone_number} for user in new_users]}
     if role == 'teacher':
-        await get_myinfo(request, id)
+        store_my_cookies(request, id)
         state = get_index_cookie('state', request)
         county = get_index_cookie('county', request)
         district = get_index_cookie('district', request)
