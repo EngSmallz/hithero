@@ -466,16 +466,15 @@ async def validation_page(request: Request, role: str = Depends(get_current_role
 @app.get("/get_states/")
 async def get_states():
     try:
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT DISTINCT state_name FROM statecounty")
-            states = cursor.fetchall()
+        cursor = connection.cursor()
+        cursor.execute("SELECT DISTINCT state_name FROM statecounty")
+        states = cursor.fetchall()
         if states:
             state_names = sorted([state[0] for state in states])
             return state_names
         else:
             return {"message": "No states found"}
     except Exception as e:
-        print('error')
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
     finally:
         cursor.close()
@@ -484,10 +483,10 @@ async def get_states():
 @app.get("/get_counties/{state}")
 async def get_counties(state: str):
     try:
-        with connection.cursor() as cursor:
-            query = "SELECT county_name FROM statecounty WHERE state_name = ?"
-            cursor.execute(query, (state,))
-            counties = cursor.fetchall()
+        cursor = connection.cursor()
+        query = "SELECT county_name FROM statecounty WHERE state_name = ?"
+        cursor.execute(query, (state,))
+        counties = cursor.fetchall()
         if counties:
             county_names = sorted([county[0] for county in counties])
             return county_names
