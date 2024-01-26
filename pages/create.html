@@ -14,7 +14,10 @@
             })
             .catch(error => console.error('Error checking authentication:', error));
     }
-    window.onload = checkAuthentication;
+    window.onload = function () {
+        checkAuthentication();
+        populateStatesDropdown();
+    };
 </script>
 <body>
     <header>
@@ -40,10 +43,14 @@
             <input type="text" id="name" name="name" required><br><br>
         
             <label for="state">State:</label>
-            <input type="text" id="state" name="state" required><br><br>
-        
+            <select id="state" name="state" onchange="populateCountiesDropdown()" required>
+                <option value="" disabled selected>Choose state</option>
+            </select><br><br>
+            
             <label for="county">County:</label>
-            <input type="text" id="county" name="county" required><br><br>
+            <select id="county" name="county" required>
+                <option value="" disabled selected>Choose county</option>
+            </select><br><br>
         
             <label for="district">District:</label>
             <input type="text" id="district" name="district" required><br><br>
@@ -87,7 +94,41 @@
                 }
             });
         });
+        
+        async function populateStatesDropdown() {
+            try {
+                const response = await fetch("/get_states/");
+                const states = await response.json();
+                const stateDropdown = document.getElementById("state");
+                stateDropdown.innerHTML = "";
+                const chooseStateOption = new Option("Choose state", "");
+                stateDropdown.add(chooseStateOption);
+                states.forEach(state => {
+                    const option = new Option(state, state);
+                    stateDropdown.add(option);
+                });
+            } catch (error) {
+                alert("Error retrieving state information");
+            }
+        }
 
+        async function populateCountiesDropdown() {
+            try {
+                const selectedState = document.getElementById("state").value;
+                const response = await fetch(`/get_counties/${selectedState}`);
+                const counties = await response.json();
+                const countyDropdown = document.getElementById("county");
+                countyDropdown.innerHTML = "";
+                const chooseCountyOption = new Option("Choose county", "");
+                countyDropdown.add(chooseCountyOption);
+                counties.forEach(county => {
+                    const option = new Option(county, county);
+                    countyDropdown.add(option);
+                });
+            } catch (error) {
+                alert("Not a vlid option.");
+            }
+        }
         async function logout() {
                 try {
                     const response = await fetch(`/logout/`, {

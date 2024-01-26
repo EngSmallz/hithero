@@ -46,14 +46,17 @@
                 validationList.innerHTML = "";
                 data.new_users.forEach(user => {
                     const listItem = document.createElement("li");
+                    const endItem = document.createElement("p");
                     const userInfoSpan = document.createElement("span");
-                    userInfoSpan.textContent = `${user.name} - ${user.email} - ${user.school} - ${user.phone_number}`;
+                    userInfoSpan.textContent = `${user.name} - ${user.email} - ${user.school} - ${user.phone_number} `;
                     const validateButton = document.createElement("button");
                     validateButton.textContent = "Validate";
+                    validateButton.id = "validateButton";
                     validateButton.addEventListener("click", () => validate(user.email));
                     listItem.appendChild(userInfoSpan);
                     listItem.appendChild(validateButton);
                     validationList.appendChild(listItem);
+                    validationList.appendChild(endItem)
                 });
             })
             .catch(error => console.error('Error:', error));

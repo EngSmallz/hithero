@@ -15,7 +15,10 @@
             })
             .catch(error => console.error('Error checking authentication:', error));
     }
-    window.onload = checkAuthentication;
+    window.onload = function () {
+            checkAuthentication();
+            populateStatesDropdown();
+        };
 </script>
 <body>
     <header>
@@ -53,10 +56,14 @@
             <input type="password" id="confirm_password" name="confirm_password" required><br><br>
         
             <label for="state">State:</label>
-            <input type="text" id="state" name="state" required><br><br>
-        
+            <select id="state" name="state" onchange="populateCountiesDropdown()" required>
+                <option value="" disabled selected>Choose state</option>
+            </select><br><br>
+            
             <label for="county">County:</label>
-            <input type="text" id="county" name="county" required><br><br>
+            <select id="county" name="county" required>
+                <option value="" disabled selected>Choose county</option>
+            </select><br><br>
         
             <label for="district">District:</label>
             <input type="text" id="district" name="district" required><br><br>
@@ -69,38 +76,69 @@
                 <option value="teacher">Teacher</option>
             </select><br>
         
-            <p><input type="button" value="Submit" id="register-button"></p>
+            <p><button id="registerButton" class="btn" onclick="register()">Submit</button>
         </form>
 
         <p>Already have an account? <a href="/pages/login.html">Log in</a></p>
     </main>
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
+        async function register() {
             const registrationForm = document.getElementById("registration-form");
-            const registerButton = document.getElementById("register-button");
+            const formData = new FormData(registrationForm);
 
-            registerButton.addEventListener("click", async function () {
-                const formData = new FormData(registrationForm);
+            try {
+                const response = await fetch("/register/", {
+                    method: "POST",
+                    body: formData,
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    alert(data.message);
+                    window.location.href = '/pages/homepage.html';
 
-                try {
-                    const response = await fetch("/register/", {
-                        method: "POST",
-                        body: formData,
-                    });
-
-                    if (response.ok) {
-                        const data = await response.json();
-                        alert(data.message); // Use alert for success
-                    } else {
-                        alert("Registration unsuccessful"); // Use alert for failure
-                    }
-                } catch (error) {
-                    alert("An error occurred"); // Use alert for error
+                } else {
+                    alert("Registration unsuccessful");
                 }
-            });
-        });
+            } catch (error) {
+                alert("An error occurred");
+            }
+        }
 
-        
+        async function populateStatesDropdown() {
+            try {
+                const response = await fetch("/get_states/");
+                const states = await response.json();
+                const stateDropdown = document.getElementById("state");
+                stateDropdown.innerHTML = "";
+                const chooseStateOption = new Option("Choose state", "");
+                stateDropdown.add(chooseStateOption);
+                states.forEach(state => {
+                    const option = new Option(state, state);
+                    stateDropdown.add(option);
+                });
+            } catch (error) {
+                alert("Error retrieving state information");
+            }
+        }
+
+        async function populateCountiesDropdown() {
+            try {
+                const selectedState = document.getElementById("state").value;
+                const response = await fetch(`/get_counties/${selectedState}`);
+                const counties = await response.json();
+                const countyDropdown = document.getElementById("county");
+                countyDropdown.innerHTML = "";
+                const chooseCountyOption = new Option("Choose county", "");
+                countyDropdown.add(chooseCountyOption);
+                counties.forEach(county => {
+                    const option = new Option(county, county);
+                    countyDropdown.add(option);
+                });
+            } catch (error) {
+                alert("Not a vlid option.");
+            }
+        }
+
         async function logout() {
             try {
                 const response = await fetch(`/logout/`, {
@@ -133,6 +171,8 @@
             console.error('Error:', error);
             window.location.href = '/';
         }
+
+        populateStatesDropdown();
     }
     </script>
     <footer>

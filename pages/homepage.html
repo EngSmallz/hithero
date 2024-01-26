@@ -13,6 +13,8 @@
                     document.getElementById('mypageButton').style.display = 'block';
                     document.getElementById('validationButton').style.display = 'block';
                     document.getElementById('createButton').style.display = 'block';
+                } else {
+                    document.getElementById('loginButton').style.display = 'block';
                 }
             })
             .catch(error => console.error('Error checking authentication:', error));
@@ -34,15 +36,16 @@
     </nav>
 
     <button id="logoutButton" style="display: none" onclick="logout()">Logout</button>
+    <button id="loginButton" style="display: none" onclick="redirectTo('/pages/login.html')">Login</button>
     <button id="mypageButton" style="display: none" onclick="mypage()">My Page</button>
     <button id="validationButton" style="display: none" onclick="validation()">Validation</button>
     <button id="createButton" style="display: none" onclick="create()">Create Profile</button>
 
     <main>
-        <section> 
+        <section>
             <h2>Find a Teacher to Support</h2>
             <p>Explore teachers from across America and make a difference in their classroom.</p>
-            <a href="/pages/state_index.html" class="btn">Find Teachers</a>
+            <button id="findButton" onclick="redirectTo('/pages/state_index.html')">Find Teachers</button>
         </section>
 
         <section>
@@ -56,13 +59,9 @@
         <section>
             <h2>Are You a Teacher?</h2>
             <p>If you're an educator in need of support, register to create your profile.</p>
-            <a href="/pages/register.html" class="btn">Register</a>
+            <button id="registerButton" onclick="redirectTo('/pages/register.html')">Register</button>
         </section>
 
-        <section>
-            <h2>Do you have an account?</h2>
-            <a href="/pages/login.html" class="btn">Login</a>
-        </section>
     </main>
 
     <footer>
@@ -70,6 +69,10 @@
     </footer>
 
     <script>
+        function redirectTo(url) {
+                window.location.href = url;
+            }
+            
         async function randomTeacher() {
             try {
                 const response = await fetch('/random_teacher/');

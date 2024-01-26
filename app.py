@@ -318,30 +318,30 @@ async def get_index_list(index: str, request: Request):
 ###api gets a teacher data from teacher_list table
 @app.get("/get_teacher_info/")
 async def get_teacher_info(request: Request):
-        try:
-            state = get_index_cookie('state', request)
-            county = get_index_cookie('county', request)
-            district = get_index_cookie('district', request)
-            school = get_index_cookie('school', request)
-            name = get_index_cookie('teacher', request)
-            cursor = connection.cursor()
-            cursor.execute("SELECT wishlist_url, about_me, image_data FROM teacher_list WHERE CAST(state AS nvarchar) = ? AND CAST(county AS nvarchar) = ? AND  CAST(district AS nvarchar) = ? AND CAST(school AS nvarchar) = ? AND CAST(name AS nvarchar) = ?", state, county, district, school, name)
-            teacher_info = cursor.fetchone()
-            if teacher_info:
-                data = {
-                    "state": state,
-                    "county": county,
-                    "district": district,
-                    "school": school,
-                    "name": name,
-                    "wishlist_url": teacher_info[0],
-                    "about_me": teacher_info[1],
-                    #"image_data": teacher_info[2]
-                }
-                #print(f'teacher_info: {data['image_data']}')
-                return data
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    try:
+        state = get_index_cookie('state', request)
+        county = get_index_cookie('county', request)
+        district = get_index_cookie('district', request)
+        school = get_index_cookie('school', request)
+        name = get_index_cookie('teacher', request)
+        cursor = connection.cursor()
+        cursor.execute("SELECT wishlist_url, about_me, image_data FROM teacher_list WHERE CAST(state AS nvarchar) = ? AND CAST(county AS nvarchar) = ? AND  CAST(district AS nvarchar) = ? AND CAST(school AS nvarchar) = ? AND CAST(name AS nvarchar) = ?", state, county, district, school, name)
+        teacher_info = cursor.fetchone()
+        if teacher_info:
+            data = {
+                "state": state,
+                "county": county,
+                "district": district,
+                "school": school,
+                "name": name,
+                "wishlist_url": teacher_info[0],
+                "about_me": teacher_info[1],
+                #"image_data": teacher_info[2]
+            }
+            #print(f'teacher_info: {data['image_data']}')
+            return data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 
 ###api used to update the logged in users teacher page
@@ -442,6 +442,7 @@ async def check_access_teacher(request: Request, id: int = Depends(get_current_i
             return {"status": "success", "message": "Access granted"}
     raise HTTPException(status_code=403, detail="No access")
 
+#gets a list of unverified users to validate based on the role of the user
 @app.get("/validation_list/")
 async def validation_page(request: Request, role: str = Depends(get_current_role), id: int = Depends(get_current_id)):
     if role == "admin":
@@ -460,6 +461,43 @@ async def validation_page(request: Request, role: str = Depends(get_current_role
         return {"new_users": [{"name": user.name, "email": user.email, "school": user.school, "phone_number": user.phone_number} for user in new_users]}
     else:
         raise HTTPException(status_code=403, detail="You don't have permission to access this page.")
+
+#api gets a list of states from statecoutny table
+@app.get("/get_states/")
+async def get_states():
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT DISTINCT state_name FROM statecounty")
+            states = cursor.fetchall()
+        if states:
+            state_names = sorted([state[0] for state in states])
+            return state_names
+        else:
+            return {"message": "No states found"}
+    except Exception as e:
+        print('error')
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    finally:
+        cursor.close()
+
+#api gets the names of the counties in the desired state
+@app.get("/get_counties/{state}")
+async def get_counties(state: str):
+    try:
+        with connection.cursor() as cursor:
+            query = "SELECT county_name FROM statecounty WHERE state_name = ?"
+            cursor.execute(query, (state,))
+            counties = cursor.fetchall()
+        if counties:
+            county_names = sorted([county[0] for county in counties])
+            return county_names
+        else:
+            return {"message": f"No counties found for state: {state}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    finally:
+        cursor.close()
+
 
 if __name__ == "__main__":
     import uvicorn

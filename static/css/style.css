@@ -65,6 +65,27 @@ nav a {
     z-index: 999; /* Ensure the button is above other elements */
 }
 
+#loginButton {
+    box-shadow: inset 0px 1px 0px 0px #cf866c;
+    background: linear-gradient(to bottom, #d0451b 5%, #bc3315 100%);
+    background-color: #d0451b;
+    border-radius: 3px;
+    border: 1px solid #942911;
+    cursor: pointer;
+    color: #ffffff;
+    font-family: Arial;
+    font-size: 13px;
+    padding: 6px 24px;
+    text-decoration: none;
+    text-shadow: 0px 1px 0px #854629;
+
+    /* Position the button on the right side */
+    position: fixed;
+    top: 10px; /* Adjust the distance from the top */
+    right: 10px; /* Adjust the distance from the right */
+    z-index: 999; /* Ensure the button is above other elements */
+}
+
 #mypageButton {
     box-shadow: inset 0px 1px 0px 0px #6c73cf;
     background: linear-gradient(to bottom, #1e1bd0 5%, #1815bc 100%);
@@ -131,19 +152,18 @@ nav a {
 }
 
 #validateButton {
-	background-color:#44c767;
-	border-radius:28px;
-	border:1px solid #18ab29;
+	box-shadow:inset 0px 1px 0px 0px #9acc85;
+	background:linear-gradient(to bottom, #74ad5a 5%, #68a54b 100%);
+	background-color:#74ad5a;
+	border:1px solid #3b6e22;
 	display:inline-block;
 	cursor:pointer;
 	color:#ffffff;
 	font-family:Arial;
 	font-size:13px;
-	padding:7px 16px;
+	font-weight:bold;
+	padding:6px 12px;
 	text-decoration:none;
-	text-shadow:0px 1px 0px #2f6627;
-    margin-left: 10px; /* Adjust the value as needed */
-
 }
 
 main_index {
