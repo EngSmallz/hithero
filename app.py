@@ -59,19 +59,34 @@ def decode_image(hex_string):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+def store_my_cookies(request: Request, id: int = Depends(get_current_id)):
+    cursor = connection.cursor()
+    cursor.execute("SELECT name, state, county, district, school FROM teacher_list WHERE regUserID = ?", id)
+    teacher_data = cursor.fetchone()
+    cursor.close()
+    if teacher_data:
+        name, state, county, district, school = teacher_data
+        request.session["state"] = state
+        request.session["county"] = county
+        request.session["district"] = district
+        request.session["school"] = school
+        request.session["teacher"] = name
+        return
+    else:
+        raise HTTPException(status_code=404, detail="Your account does not have a database listing")
+
 
 
 #######apis#######
 ###api used to register a new user (and only a new user) into the new_user list
 @app.post("/register/")
-async def register_user(name: str = Form(...), email: str = Form(...), phone_number: str = Form(...), password: str = Form(...), confirm_password: str = Form(...), state: str = Form(...),county: str = Form(...),district: str = Form(...), school: str = Form(...), role: str = Form(...),):
+async def register_user(name: str = Form(...), email: str = Form(...), phone_number: str = Form(...), password: str = Form(...), confirm_password: str = Form(...), state: str = Form(...),county: str = Form(...),district: str = Form(...), school: str = Form(...), role: str = Form(...)):
     cursor = connection.cursor()
     try:
         cursor.execute("SELECT id FROM registered_users WHERE CAST(email AS nvarchar) = ?", email)
         existing_user = cursor.fetchone()
         if existing_user:
             raise HTTPException(status_code=400, detail="User with this email already exists")
-
         cursor.execute("SELECT id FROM new_users WHERE CAST(email AS nvarchar) = ?", email)
         existing_user = cursor.fetchone()
         if existing_user:
@@ -99,7 +114,6 @@ async def login_user(request: Request, email: str = Form(...), password: str = F
     cursor.execute("SELECT id, role, password FROM registered_users WHERE CAST(email AS NVARCHAR) = ?", (email,))
     user = cursor.fetchone()
     cursor.close()
-
     if user:
         hashed_password = user.password
         if sha256_crypt.verify(password, hashed_password):
@@ -433,9 +447,9 @@ async def validation_page(request: Request, role: str = Depends(get_current_role
     if role == "admin":
         cursor = connection.cursor()
         new_users = cursor.execute("SELECT * FROM new_users").fetchall()
-        return {"new_users": [{"name": user.name, "email": user.email, "school": user.school} for user in new_users]}
+        return {"new_users": [{"name": user.name, "email": user.email, "school": user.school, "phone_number": user.phone_number} for user in new_users]}
     if role == 'teacher':
-        await get_myinfo(request, id)
+        store_my_cookies(request, id)
         state = get_index_cookie('state', request)
         county = get_index_cookie('county', request)
         district = get_index_cookie('district', request)
