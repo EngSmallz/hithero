@@ -41,12 +41,17 @@ def get_current_user(request: Request):
     return request.session.get("user_name", None)
 
 def get_email_password():
-    connection = pyodbc.connect(connection_string)
-    cursor = connection.cursor()
-    cursor.execute("SELECT password FROM hitheroEmail WHERE CAST(email AS NVARCHAR) = ?", 'hometown.heroes.main@gmail.com')
-    data = cursor.fetchone()
-    password = data[0]
-    return password
+    try:
+        connection = pyodbc.connect(connection_string)
+        cursor = connection.cursor()
+        cursor.execute("SELECT password FROM hitheroEmail WHERE CAST(email AS NVARCHAR) = ?", 'hometown.heroes.main@gmail.com')
+        data = cursor.fetchone()
+        password = data[0]
+        return password
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    finally:
+        cursor.close()
 
 def get_index_cookie(index: str, request: Request):
     return request.session.get(index, None)
@@ -60,20 +65,26 @@ def decode_image(hex_string):
         raise HTTPException(status_code=400, detail=str(e))
 
 def store_my_cookies(request: Request, id: int = Depends(get_current_id)):
-    cursor = connection.cursor()
-    cursor.execute("SELECT name, state, county, district, school FROM teacher_list WHERE regUserID = ?", id)
-    teacher_data = cursor.fetchone()
-    cursor.close()
-    if teacher_data:
-        name, state, county, district, school = teacher_data
-        request.session["state"] = state
-        request.session["county"] = county
-        request.session["district"] = district
-        request.session["school"] = school
-        request.session["teacher"] = name
-        return
-    else:
-        raise HTTPException(status_code=404, detail="Your account does not have a database listing")
+    try:
+        cursor = connection.cursor()
+        cursor.execute("SELECT name, state, county, district, school FROM teacher_list WHERE regUserID = ?", id)
+        teacher_data = cursor.fetchone()
+        cursor.close()
+        if teacher_data:
+            name, state, county, district, school = teacher_data
+            request.session["state"] = state
+            request.session["county"] = county
+            request.session["district"] = district
+            request.session["school"] = school
+            request.session["teacher"] = name
+            return
+        else:
+            raise HTTPException(status_code=404, detail="Your account does not have a database listing")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    finally:
+        cursor.close()
+    
 
 
 
@@ -81,8 +92,8 @@ def store_my_cookies(request: Request, id: int = Depends(get_current_id)):
 ###api used to register a new user (and only a new user) into the new_user list
 @app.post("/register/")
 async def register_user(name: str = Form(...), email: str = Form(...), phone_number: str = Form(...), password: str = Form(...), confirm_password: str = Form(...), state: str = Form(...),county: str = Form(...),district: str = Form(...), school: str = Form(...), role: str = Form(...)):
-    cursor = connection.cursor()
     try:
+        cursor = connection.cursor()
         cursor.execute("SELECT id FROM registered_users WHERE CAST(email AS nvarchar) = ?", email)
         existing_user = cursor.fetchone()
         if existing_user:
@@ -102,32 +113,36 @@ async def register_user(name: str = Form(...), email: str = Form(...), phone_num
         connection.commit()
         cursor.close()
         return {"message": "User registered successfully"}
-
     except Exception as e:
-        # Handle errors
         return {"message": "Registration unsuccessful", "error": str(e)}
+    finally:
+        cursor.close()
 
 ###api used to create cookie based session via authentication with registered_user table
 @app.post("/login/")
 async def login_user(request: Request, email: str = Form(...), password: str = Form(...)):
-    cursor = connection.cursor()
-    cursor.execute("SELECT id, role, password FROM registered_users WHERE CAST(email AS NVARCHAR) = ?", (email,))
-    user = cursor.fetchone()
-    cursor.close()
-    if user:
-        hashed_password = user.password
-        if sha256_crypt.verify(password, hashed_password):
-            message = "Login successful as " + user.role
-            request.session["user_name"] = email
-            request.session["user_role"] = user.role
-            request.session["user_id"] = user.id
-            return JSONResponse(content={"message": message})
+    try:
+        cursor = connection.cursor()
+        cursor.execute("SELECT id, role, password FROM registered_users WHERE CAST(email AS NVARCHAR) = ?", (email,))
+        user = cursor.fetchone()
+        cursor.close()
+        if user:
+            hashed_password = user.password
+            if sha256_crypt.verify(password, hashed_password):
+                message = "Login successful as " + user.role
+                request.session["user_name"] = email
+                request.session["user_role"] = user.role
+                request.session["user_id"] = user.id
+                return JSONResponse(content={"message": message})
+            else:
+                message = "Invalid email or password"
         else:
             message = "Invalid email or password"
-    else:
-        message = "Invalid email or password"
-
-    return JSONResponse(content={"message": message}, status_code=400)
+        return JSONResponse(content={"message": message}, status_code=400)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    finally:
+        cursor.close()
 
 ##end cookie session
 @app.post("/logout/")
@@ -141,64 +156,79 @@ async def logout_user(request: Request):
 # Endpoint to move a user from new_users to registered_users and delete item in new_users
 @app.post("/validate_user/{user_email}")
 async def move_user(user_email: str):
-    cursor = connection.cursor()
-    cursor.execute("SELECT * FROM new_users WHERE CAST(email AS NVARCHAR) = ?", user_email)
-    user = cursor.fetchone()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found in new_users")
-    cursor.execute("INSERT INTO registered_users (email, password, role) "
-                   "VALUES (?, ?, ?)",
-                   (user.email, user.password, user.role))
-    connection.commit()
-    cursor.execute("DELETE FROM new_users WHERE CAST(email AS NVARCHAR) = ?", user_email)
-    connection.commit()
-    cursor.close()
-    return {"message": "User moved from new_users to registered_users"}
+    try:
+        cursor = connection.cursor()
+        cursor.execute("SELECT * FROM new_users WHERE CAST(email AS NVARCHAR) = ?", user_email)
+        user = cursor.fetchone()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found in new_users")
+        cursor.execute("INSERT INTO registered_users (email, password, role) "
+                    "VALUES (?, ?, ?)",
+                    (user.email, user.password, user.role))
+        connection.commit()
+        cursor.execute("DELETE FROM new_users WHERE CAST(email AS NVARCHAR) = ?", user_email)
+        connection.commit()
+        cursor.close()
+        return {"message": "User moved from new_users to registered_users"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    finally:
+        cursor.close()
 
 ##this api allows a logged in user to create an item in the table teacher_list in the hithero database if they have not created a user already
 @app.post("/create_teacher_profile/")
 async def create_teacher_profile(name: str = Form(...), state: str = Form(...), county: str = Form(...), district: str = Form(...), school: str = Form(...), aboutMe: str = Form(...), wishlist: str = Form(...), id: int = Depends(get_current_id), role: str = Depends(get_current_role)):
-    if role:
-        cursor = connection.cursor()
-        cursor.execute("SELECT createCount FROM registered_users WHERE id = ?", id)
-        link = cursor.fetchone()
-        if link[0] == 0 or role == 'admin':
-            insert_query = "INSERT INTO teacher_list (name, state, county, district, school, regUserID, about_me, wishlist_url) " \
-                           "VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-            cursor.execute(insert_query, (name, state, county, district, school, id, aboutMe, wishlist))
-            connection.commit()
-            cursor.execute("UPDATE registered_users SET createCount = createCount + 1 WHERE id = ?", id)
-            connection.commit()
-            cursor.close()
-            return {"message": "Teacher created successfully"}
+    try:
+        if role:
+            cursor = connection.cursor()
+            cursor.execute("SELECT createCount FROM registered_users WHERE id = ?", id)
+            link = cursor.fetchone()
+            if link[0] == 0 or role == 'admin':
+                insert_query = "INSERT INTO teacher_list (name, state, county, district, school, regUserID, about_me, wishlist_url) " \
+                            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+                cursor.execute(insert_query, (name, state, county, district, school, id, aboutMe, wishlist))
+                connection.commit()
+                cursor.execute("UPDATE registered_users SET createCount = createCount + 1 WHERE id = ?", id)
+                connection.commit()
+                cursor.close()
+                return {"message": "Teacher created successfully"}
+            else:
+                raise HTTPException(status_code=404, detail="Unable to create new profile. Profile already created.")
         else:
-            raise HTTPException(status_code=404, detail="Unable to create new profile. Profile already created.")
-    else:
-        raise HTTPException(status_code=404, detail="No user logged in.")
+            raise HTTPException(status_code=404, detail="No user logged in.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    finally:
+        cursor.close()
 
 ##api gets a random teacher from the list teacher_list in the hithero data base
 @app.get("/random_teacher/")
 async def get_random_teacher(request: Request):
-    cursor = connection.cursor()
-    cursor.execute("SELECT TOP 1 name, state, county, district, school FROM teacher_list ORDER BY NEWID()")
-    random_teacher = cursor.fetchone()
-    cursor.close()
-    if random_teacher:
-        data = {
-            "name": random_teacher.name,
-            "state": random_teacher.state,
-            "county": random_teacher.county,
-            "district": random_teacher.district,
-            "school": random_teacher.school
-        }
-        request.session["state"] = data["state"]
-        request.session["county"] = data["county"]
-        request.session["district"] = data["district"]
-        request.session["school"] = data["school"]
-        request.session["teacher"] = data["name"]
-        return data
-    else:
-        raise HTTPException(status_code=404, detail="No teachers found in the database")
+    try:
+        cursor = connection.cursor()
+        cursor.execute("SELECT TOP 1 name, state, county, district, school FROM teacher_list ORDER BY NEWID()")
+        random_teacher = cursor.fetchone()
+        cursor.close()
+        if random_teacher:
+            data = {
+                "name": random_teacher.name,
+                "state": random_teacher.state,
+                "county": random_teacher.county,
+                "district": random_teacher.district,
+                "school": random_teacher.school
+            }
+            request.session["state"] = data["state"]
+            request.session["county"] = data["county"]
+            request.session["district"] = data["district"]
+            request.session["school"] = data["school"]
+            request.session["teacher"] = data["name"]
+            return data
+        else:
+            raise HTTPException(status_code=404, detail="No teachers found in the database")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    finally:
+        cursor.close()
 
 ###api gets the current session info of the logged in user
 @app.get("/profile/")
@@ -273,6 +303,7 @@ async def store_cookie(name: str, index: str, request: Request):
         return {"message": "String saved as a session cookie"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    
 
 ##api gets the wanted cookie
 @app.get("/get_cookie/{index}")
@@ -284,6 +315,7 @@ async def get_cookie(index: str, request: Request):
         return JSONResponse(content=cookie)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+
 
 ###api gets a list from the database table teacher_list
 @app.get("/get_index_list/{index}")
@@ -314,6 +346,8 @@ async def get_index_list(index: str, request: Request):
         return result_list
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    finally:
+        cursor.close()
 
 ###api gets a teacher data from teacher_list table
 @app.get("/get_teacher_info/")
@@ -338,129 +372,162 @@ async def get_teacher_info(request: Request):
                 "about_me": teacher_info[1],
                 #"image_data": teacher_info[2]
             }
-            #print(f'teacher_info: {data['image_data']}')
             return data
+        else:
+            raise HTTPException(status_code=404, detail=f"Teacher not found")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    finally:
+        cursor.close()
 
 
 ###api used to update the logged in users teacher page
 @app.post("/update_teacher_info/")
 async def edit_teacher_info(request: Request, wishlist: str = Form(...), aboutMe: str = Form(...), role: str = Depends(get_current_role)):
-    if role:
-        state = get_index_cookie('state', request)
-        county = get_index_cookie('county', request)
-        district = get_index_cookie('district', request)
-        school = get_index_cookie('school', request) 
-        name = get_index_cookie('teacher', request)
-        cursor = connection.cursor()
-        cursor.execute(
-            "UPDATE teacher_list SET wishlist_url = ?, about_me = ? WHERE CAST(state AS nvarchar) = ? AND CAST(county AS nvarchar) = ? AND CAST(district AS nvarchar) = ? AND CAST(school AS nvarchar) = ? AND CAST(name AS nvarchar) = ?",
-            wishlist, aboutMe, state, county, district, school, name
-        )
-        connection.commit()
+    try:
+        if role:
+            state = get_index_cookie('state', request)
+            county = get_index_cookie('county', request)
+            district = get_index_cookie('district', request)
+            school = get_index_cookie('school', request) 
+            name = get_index_cookie('teacher', request)
+            cursor = connection.cursor()
+            cursor.execute(
+                "UPDATE teacher_list SET wishlist_url = ?, about_me = ? WHERE CAST(state AS nvarchar) = ? AND CAST(county AS nvarchar) = ? AND CAST(district AS nvarchar) = ? AND CAST(school AS nvarchar) = ? AND CAST(name AS nvarchar) = ?",
+                wishlist, aboutMe, state, county, district, school, name
+            )
+            connection.commit()
 
-        return JSONResponse(content={"success": True}, status_code=200)
-    else:
-        raise HTTPException(status_code=403, detail="Permission denied.")
+            return JSONResponse(content={"success": True}, status_code=200)
+        else:
+            raise HTTPException(status_code=403, detail="Permission denied.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    finally:
+        cursor.close()
     
 ###api used to update the logged in users teacher page image
 @app.post("/update_teacher_image/")
 async def edit_teacher_image(request: Request,role: str = Depends(get_current_role),image: UploadFile = Form(...)):
-    if role:
-        state = get_index_cookie('state', request)
-        county = get_index_cookie('county', request)
-        district = get_index_cookie('district', request)
-        school = get_index_cookie('school', request)
-        name = get_index_cookie('teacher', request)
-        cursor = connection.cursor()
-        query = """
-            UPDATE teacher_list 
-            SET image_data = ?
-            WHERE CAST(state AS nvarchar) = ? 
-                AND CAST(county AS nvarchar) = ? 
-                AND CAST(district AS nvarchar) = ? 
-                AND CAST(school AS nvarchar) = ? 
-                AND CAST(name AS nvarchar) = ?
-        """
-        cursor.execute(query, (image.file.read(), state, county, district, school, name))
-        connection.commit()
-        return JSONResponse(content={"success": True}, status_code=200)
-    else:
-        raise HTTPException(status_code=403, detail="Permission denied.")
+    try:
+        if role:
+            state = get_index_cookie('state', request)
+            county = get_index_cookie('county', request)
+            district = get_index_cookie('district', request)
+            school = get_index_cookie('school', request)
+            name = get_index_cookie('teacher', request)
+            cursor = connection.cursor()
+            query = """
+                UPDATE teacher_list 
+                SET image_data = ?
+                WHERE CAST(state AS nvarchar) = ? 
+                    AND CAST(county AS nvarchar) = ? 
+                    AND CAST(district AS nvarchar) = ? 
+                    AND CAST(school AS nvarchar) = ? 
+                    AND CAST(name AS nvarchar) = ?
+            """
+            cursor.execute(query, (image.file.read(), state, county, district, school, name))
+            connection.commit()
+            return JSONResponse(content={"success": True}, status_code=200)
+        else:
+            raise HTTPException(status_code=403, detail="Permission denied.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    finally:
+        cursor.close()
 
 ##api gets your page based on the id in reg_users and and regUserID in teacher_list
 @app.get("/myinfo/")
 async def get_myinfo(request: Request, id: int = Depends(get_current_id)):
-    cursor = connection.cursor()
-    cursor.execute("SELECT name, state, county, district, school FROM teacher_list WHERE regUserID = ?", id)
-    teacher_data = cursor.fetchone()
-    cursor.close()
-    if teacher_data:
-        name, state, county, district, school = teacher_data
-        request.session["state"] = state
-        request.session["county"] = county
-        request.session["district"] = district
-        request.session["school"] = school
-        request.session["teacher"] = name
-        return
-    else:
-        raise HTTPException(status_code=404, detail="Your account does not have a database listing")
+    try:
+        cursor = connection.cursor()
+        cursor.execute("SELECT name, state, county, district, school FROM teacher_list WHERE regUserID = ?", id)
+        teacher_data = cursor.fetchone()
+        cursor.close()
+        if teacher_data:
+            name, state, county, district, school = teacher_data
+            request.session["state"] = state
+            request.session["county"] = county
+            request.session["district"] = district
+            request.session["school"] = school
+            request.session["teacher"] = name
+            return
+        else:
+            raise HTTPException(status_code=404, detail="Your account does not have a database listing")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    finally:
+        cursor.close()
 
 ##api lets the logged in user update their password
 @app.post("/update_password/")
 async def update_password(request: Request, id: int = Depends(get_current_id), old_password: str = Form(...), new_password: str = Form(...), new_password_confirmed: str = Form(...)):
-    if new_password == new_password_confirmed:
-        cursor = connection.cursor()
-        cursor.execute("SELECT password FROM registered_users WHERE id = ?", id)
-        old_pass = cursor.fetchone()
-        if old_pass and sha256_crypt.verify(old_password, old_pass[0]):
-            hashed_new_password = sha256_crypt.hash(new_password)
-            cursor.execute("UPDATE registered_users SET password = ? WHERE id = ?", (hashed_new_password, id))
-            connection.commit()
-            cursor.close()
-            return {"status": "success", "message": "Password updated successfully"}
+    try:
+        if new_password == new_password_confirmed:
+            cursor = connection.cursor()
+            cursor.execute("SELECT password FROM registered_users WHERE id = ?", id)
+            old_pass = cursor.fetchone()
+            if old_pass and sha256_crypt.verify(old_password, old_pass[0]):
+                hashed_new_password = sha256_crypt.hash(new_password)
+                cursor.execute("UPDATE registered_users SET password = ? WHERE id = ?", (hashed_new_password, id))
+                connection.commit()
+                cursor.close()
+                return {"status": "success", "message": "Password updated successfully"}
+            else:
+                cursor.close()
+                raise HTTPException(status_code=403, detail="Invalid old password")
         else:
-            cursor.close()
-            raise HTTPException(status_code=403, detail="Invalid old password")
-    else:
-        raise HTTPException(status_code=403, detail="New passwords do not match.")
+            raise HTTPException(status_code=403, detail="New passwords do not match.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    finally:
+        cursor.close()
 
 #api to check if a user has teacher based access
 @app.get("/check_access_teacher/")
 async def check_access_teacher(request: Request, id: int = Depends(get_current_id), role: int = Depends(get_current_role)):
-    if role == 'teacher':
-        state = get_index_cookie('state', request)
-        county = get_index_cookie('county', request)
-        district = get_index_cookie('district', request)
-        school = get_index_cookie('school', request)
-        name = get_index_cookie('teacher', request)
-        cursor = connection.cursor()
-        cursor.execute("SELECT regUserID FROM teacher_list WHERE CAST(state AS nvarchar) = ? AND CAST(county AS nvarchar) = ? AND CAST(district AS nvarchar) = ? AND CAST(school AS nvarchar) = ? AND CAST(name AS nvarchar) = ?", state, county, district, school, name)
-        teacher_data = cursor.fetchone()
-        if teacher_data and teacher_data[0] == id:
-            return {"status": "success", "message": "Access granted"}
-    raise HTTPException(status_code=403, detail="No access")
+    try:
+        if role == 'teacher':
+            state = get_index_cookie('state', request)
+            county = get_index_cookie('county', request)
+            district = get_index_cookie('district', request)
+            school = get_index_cookie('school', request)
+            name = get_index_cookie('teacher', request)
+            cursor = connection.cursor()
+            cursor.execute("SELECT regUserID FROM teacher_list WHERE CAST(state AS nvarchar) = ? AND CAST(county AS nvarchar) = ? AND CAST(district AS nvarchar) = ? AND CAST(school AS nvarchar) = ? AND CAST(name AS nvarchar) = ?", state, county, district, school, name)
+            teacher_data = cursor.fetchone()
+            if teacher_data and teacher_data[0] == id:
+                return {"status": "success", "message": "Access granted"}
+        raise HTTPException(status_code=403, detail="No access")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    finally:
+        cursor.close()
 
 #gets a list of unverified users to validate based on the role of the user
 @app.get("/validation_list/")
 async def validation_page(request: Request, role: str = Depends(get_current_role), id: int = Depends(get_current_id)):
-    if role == "admin":
-        cursor = connection.cursor()
-        new_users = cursor.execute("SELECT * FROM new_users").fetchall()
-        return {"new_users": [{"name": user.name, "email": user.email, "school": user.school, "phone_number": user.phone_number} for user in new_users]}
-    if role == 'teacher':
-        store_my_cookies(request, id)
-        state = get_index_cookie('state', request)
-        county = get_index_cookie('county', request)
-        district = get_index_cookie('district', request)
-        cursor = connection.cursor()
-        cursor.execute("SELECT * FROM new_users WHERE CAST(state AS nvarchar) = ? AND CAST(county AS nvarchar) = ? AND CAST(district AS nvarchar) = ?", (state, county, district))
-        new_users = cursor.fetchall()
+    try:
+        if role == "admin":
+            cursor = connection.cursor()
+            new_users = cursor.execute("SELECT * FROM new_users").fetchall()
+            return {"new_users": [{"name": user.name, "email": user.email, "school": user.school, "phone_number": user.phone_number} for user in new_users]}
+        if role == 'teacher':
+            store_my_cookies(request, id)
+            state = get_index_cookie('state', request)
+            county = get_index_cookie('county', request)
+            district = get_index_cookie('district', request)
+            cursor = connection.cursor()
+            cursor.execute("SELECT * FROM new_users WHERE CAST(state AS nvarchar) = ? AND CAST(county AS nvarchar) = ? AND CAST(district AS nvarchar) = ?", (state, county, district))
+            new_users = cursor.fetchall()
+            cursor.close()
+            return {"new_users": [{"name": user.name, "email": user.email, "school": user.school, "phone_number": user.phone_number} for user in new_users]}
+        else:
+            raise HTTPException(status_code=403, detail="You don't have permission to access this page.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")            
+    finally:
         cursor.close()
-        return {"new_users": [{"name": user.name, "email": user.email, "school": user.school, "phone_number": user.phone_number} for user in new_users]}
-    else:
-        raise HTTPException(status_code=403, detail="You don't have permission to access this page.")
 
 #api gets a list of states from statecoutny table
 @app.get("/get_states/")
@@ -472,8 +539,6 @@ async def get_states():
         if states:
             state_names = sorted([state[0] for state in states])
             return state_names
-        else:
-            return {"message": "No states found"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
     finally:
