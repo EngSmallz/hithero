@@ -69,7 +69,6 @@ def store_my_cookies(request: Request, id: int = Depends(get_current_id)):
         cursor = connection.cursor()
         cursor.execute("SELECT name, state, county, district, school FROM teacher_list WHERE regUserID = ?", id)
         teacher_data = cursor.fetchone()
-        cursor.close()
         if teacher_data:
             name, state, county, district, school = teacher_data
             request.session["state"] = state
@@ -111,7 +110,6 @@ async def register_user(name: str = Form(...), email: str = Form(...), phone_num
         """
         cursor.execute(insert_query, (name, email, state, county, district, school, phone_number, hashed_password, role))
         connection.commit()
-        cursor.close()
         return {"message": "User registered successfully"}
     except Exception as e:
         return {"message": "Registration unsuccessful", "error": str(e)}
@@ -125,7 +123,6 @@ async def login_user(request: Request, email: str = Form(...), password: str = F
         cursor = connection.cursor()
         cursor.execute("SELECT id, role, password FROM registered_users WHERE CAST(email AS NVARCHAR) = ?", (email,))
         user = cursor.fetchone()
-        cursor.close()
         if user:
             hashed_password = user.password
             if sha256_crypt.verify(password, hashed_password):
@@ -168,7 +165,6 @@ async def move_user(user_email: str):
         connection.commit()
         cursor.execute("DELETE FROM new_users WHERE CAST(email AS NVARCHAR) = ?", user_email)
         connection.commit()
-        cursor.close()
         return {"message": "User moved from new_users to registered_users"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
@@ -190,7 +186,6 @@ async def create_teacher_profile(name: str = Form(...), state: str = Form(...), 
                 connection.commit()
                 cursor.execute("UPDATE registered_users SET createCount = createCount + 1 WHERE id = ?", id)
                 connection.commit()
-                cursor.close()
                 return {"message": "Teacher created successfully"}
             else:
                 raise HTTPException(status_code=404, detail="Unable to create new profile. Profile already created.")
@@ -208,7 +203,6 @@ async def get_random_teacher(request: Request):
         cursor = connection.cursor()
         cursor.execute("SELECT TOP 1 name, state, county, district, school FROM teacher_list ORDER BY NEWID()")
         random_teacher = cursor.fetchone()
-        cursor.close()
         if random_teacher:
             data = {
                 "name": random_teacher.name,
@@ -443,7 +437,6 @@ async def get_myinfo(request: Request, id: int = Depends(get_current_id)):
         cursor = connection.cursor()
         cursor.execute("SELECT name, state, county, district, school FROM teacher_list WHERE regUserID = ?", id)
         teacher_data = cursor.fetchone()
-        cursor.close()
         if teacher_data:
             name, state, county, district, school = teacher_data
             request.session["state"] = state
@@ -471,10 +464,8 @@ async def update_password(request: Request, id: int = Depends(get_current_id), o
                 hashed_new_password = sha256_crypt.hash(new_password)
                 cursor.execute("UPDATE registered_users SET password = ? WHERE id = ?", (hashed_new_password, id))
                 connection.commit()
-                cursor.close()
                 return {"status": "success", "message": "Password updated successfully"}
             else:
-                cursor.close()
                 raise HTTPException(status_code=403, detail="Invalid old password")
         else:
             raise HTTPException(status_code=403, detail="New passwords do not match.")
@@ -520,7 +511,6 @@ async def validation_page(request: Request, role: str = Depends(get_current_role
             cursor = connection.cursor()
             cursor.execute("SELECT * FROM new_users WHERE CAST(state AS nvarchar) = ? AND CAST(county AS nvarchar) = ? AND CAST(district AS nvarchar) = ?", (state, county, district))
             new_users = cursor.fetchall()
-            cursor.close()
             return {"new_users": [{"name": user.name, "email": user.email, "school": user.school, "phone_number": user.phone_number} for user in new_users]}
         else:
             raise HTTPException(status_code=403, detail="You don't have permission to access this page.")
@@ -565,4 +555,4 @@ async def get_counties(state: str):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
