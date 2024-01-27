@@ -40,11 +40,11 @@ def get_current_role(request: Request):
 def get_current_user(request: Request):
     return request.session.get("user_name", None)
 
-def get_email_password():
+def get_email_password(email: str):
     try:
         connection = pyodbc.connect(connection_string)
         cursor = connection.cursor()
-        cursor.execute("SELECT password FROM hitheroEmail WHERE CAST(email AS NVARCHAR) = ?", 'hometown.heroes.main@gmail.com')
+        cursor.execute("SELECT password FROM hitheroEmail WHERE CAST(email AS NVARCHAR) = ?", email)
         data = cursor.fetchone()
         password = data[0]
         return password
@@ -83,9 +83,24 @@ def store_my_cookies(request: Request, id: int = Depends(get_current_id)):
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
     finally:
         cursor.close()
-    
 
-
+def send_email(sender_email: str, password: str, recipient_email: str, subject: str, message: str):
+    msg = MIMEText(message)
+    msg['Subject'] = subject
+    msg['From'] = sender_email
+    msg['To'] = recipient_email
+    try:
+        server = smtplib.SMTP_SSL('smtp.gmail.com', 587)
+        server.login(sender_email, password)
+        print('logged in')
+        server.sendmail(sender_email, recipient_email, msg.as_string())
+        server.quit()
+        return "Email sent successfully!"
+    except smtplib.SMTPAuthenticationError as e:
+        raise ValueError("Authentication failed. Check your email credentials.")
+    except Exception as e:
+        raise ValueError(f"Error: {str(e)}")
+        
 
 #######apis#######
 ###api used to register a new user (and only a new user) into the new_user list
@@ -239,35 +254,18 @@ async def get_user_profile(username: str = Depends(get_current_user), role: str 
 
 ##api used to send contact us email from /contact.html
 @app.post('/contact_us/')
-def contact_us(name: str = Form(...), email: str = Form(...), subject: str = Form(...), message: str = Form(...)):
+async def contact_us(name: str = Form(...), email: str = Form(...), subject: str = Form(...), message: str = Form(...)):
     sender_email = 'hometown.heroes.main@gmail.com'
-    password_data = get_email_password()
-    recipient_email = 'hometown.heroes.contactUs@gmail.com'
-
-    subject = f"Contact Us Form Submission: {subject}"
-    email_message = f"Name: {name}\nEmail: {email}\nMessage: {message}"
-
-    msg = MIMEText(email_message)
-    msg['Subject'] = subject
-    msg['From'] = sender_email
-    msg['To'] = recipient_email
-
+    sender_password = get_email_password(sender_email)
+    recipient_email = 'hometown.heroes.contactus@gmail.com'
+    full_message = f"{name}\n{email}\n{message}"
     try:
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        server.login(sender_email, password_data)
-        server.sendmail(sender_email, recipient_email, msg.as_string())
-        server.quit()
-        message = 'Email sent successfully!'
-        return JSONResponse(content={"message": message})
-    except smtplib.SMTPAuthenticationError as e:
-        logger.error(f"SMTP Authentication Error: {str(e)}")
-        message = "Error: Authentication failed. Check your email credentials."
-        return JSONResponse(content={"message": message}, status_code=400)
+        result = send_email(sender_email, sender_password, recipient_email, subject, full_message)
+        return {"message": result}
+    except HTTPException as e:
+        raise e
     except Exception as e:
-        logger.error(f"Email sending failed: {str(e)}")
-        message = f"Error: {str(e)}"
-        return JSONResponse(content={"message": message}, status_code=400)
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 #homepage get
 @app.get("/")

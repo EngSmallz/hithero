@@ -14,7 +14,7 @@
                     document.getElementById('logoutButton').style.display = 'block';
                     document.getElementById('mypageButton').style.display = 'block';
                 } else {
-                    document.getElementById('logoutButton').style.display = 'none';
+                    window.location.href = '/pages/403.html';
                 }
             })
             .catch(error => console.error('Error checking authentication:', error));

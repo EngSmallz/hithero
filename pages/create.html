@@ -15,8 +15,8 @@
             .catch(error => console.error('Error checking authentication:', error));
     }
     window.onload = function () {
-        checkAuthentication();
         populateStatesDropdown();
+        checkAuthentication();
     };
 </script>
 <body>

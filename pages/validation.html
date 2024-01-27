@@ -9,7 +9,6 @@
         fetch('/profile/')
             .then(response => {
                 if (!response.ok) {
-                    // User is not authenticated, redirect to 403 page
                     window.location.href = '/pages/403.html';
                 }
             })

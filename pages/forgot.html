@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hometown Heroes - Forgot Password</title>
+    <link rel="stylesheet" type="text/css" href="/static/css/style.css">
+</head>
+<body>
+    <header>
+        <h1>Forgot Password</h1>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="/pages/homepage.html">Home</a></li>
+            <li><a href="/pages/about.html">About</a></li>
+            <li><a href="/pages/contact.html">Contact</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <section class="forgot-form">
+            <h2>Forgot Your Password?</h2>
+            <p>Enter your email address below, and we'll send you instructions on how to reset your password.</p>
+            <form id="forgot-form" method="post" enctype="multipart/form-data">
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required>
+
+                <p><button id="submitButton" onclick="resetPassword()">Reset Password</button></p>
+            </form>
+        </section>
+        <p>Remember your password? <a href="/pages/login.html">Login</a></p>
+    </main>
+
+    <script>
+        async function resetPassword() {
+            const forgotForm = document.getElementById("forgot-form");
+            const formData = new FormData(forgotForm);
+            try {
+                const response = await fetch("/forgot_password/", {
+                    method: "POST",
+                    body: formData,
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    alert(data.message); // Use alert for success
+                    window.location.href = '/pages/login.html'; // Redirect to login page after successful reset
+                } else {
+                    alert("Password reset unsuccessful"); // Use alert for failure
+                }
+            } catch (error) {
+                alert("An error occurred"); // Use alert for error
+            }
+        }
+
+    </script>
+
+    <footer>
+        <p>&copy; 2023 Hometown Heroes</p>
+    </footer>
+</body>
+</html>

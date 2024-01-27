@@ -45,23 +45,18 @@
                 <label for="password">Password:</label>
                 <input type="password" id="password" name="password" required>
 
-                <p><input type='button' value='Submit' id='login-button'/></p>
+                <p><button id="submitButton" onclick="login()">Login</button>
+                </p>
             </form>
         </section>
-
+        <p>Forget password? <a href="/pages/forgot.html">Forgot Password</a></p>
         <p>Don't have an account? <a href="/pages/register.html">Register</a></p>
     </main>
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
+        async function login() {
             const loginForm = document.getElementById("login-form");
-
-            const loginButton = document.getElementById("login-button");
-            const loginMessage = document.getElementById("login-message");
-        
-            loginButton.addEventListener("click", async function () {
-                const formData = new FormData(loginForm);
-        
-                try {
+            const formData = new FormData(loginForm);
+            try {
                     const response = await fetch("/login/", {
                         method: "POST",
                         body: formData,
@@ -77,8 +72,7 @@
                 } catch (error) {
                     alert("An error occurred"); // Use alert for error
                 }
-            });
-        });
+        }
         
         async function logout() {
             try {
