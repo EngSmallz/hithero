@@ -37,8 +37,8 @@ def get_current_id(request: Request):
 def get_current_role(request: Request):
     return request.session.get("user_role", None)
 
-def get_current_user(request: Request):
-    return request.session.get("user_name", None)
+def get_current_email(request: Request):
+    return request.session.get("user_email", None)
 
 def get_email_password(email: str):
     try:
@@ -135,20 +135,20 @@ async def register_user(name: str = Form(...), email: str = Form(...), phone_num
 async def login_user(request: Request, email: str = Form(...), password: str = Form(...)):
     try:
         cursor = connection.cursor()
-        cursor.execute("SELECT id, role, password FROM registered_users WHERE CAST(email AS NVARCHAR) = ?", (email,))
+        cursor.execute("SELECT id, role, password, createCount FROM registered_users WHERE CAST(email AS NVARCHAR) = ?", (email,))
         user = cursor.fetchone()
         if user:
             hashed_password = user.password
             if sha256_crypt.verify(password, hashed_password):
                 message = "Login successful as " + user.role
-                request.session["user_name"] = email
+                request.session["user_email"] = email
                 request.session["user_role"] = user.role
                 request.session["user_id"] = user.id
-                return JSONResponse(content={"message": message})
+                return JSONResponse(content={"message": message, "createCount": user.createCount, "role": user.role})
             else:
-                message = "Invalid email or password"
+                message = "Invalid password"
         else:
-            message = "Invalid email or password"
+            message = "Invalid email"
         return JSONResponse(content={"message": message}, status_code=400)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
@@ -161,7 +161,7 @@ async def logout_user(request: Request):
     if "user_id" in request.session:
         del request.session["user_id"]
         del request.session["user_role"]
-        del request.session["user_name"]
+        del request.session["user_email"]
     return RedirectResponse(url="/", status_code=303)
 
 # Endpoint to move a user from new_users to registered_users and delete item in new_users
@@ -240,12 +240,12 @@ async def get_random_teacher(request: Request):
 
 ###api gets the current session info of the logged in user
 @app.get("/profile/")
-async def get_user_profile(username: str = Depends(get_current_user), role: str = Depends(get_current_role), id: str = Depends(get_current_id)):
-    if username:
+async def get_user_profile(email: str = Depends(get_current_email), role: str = Depends(get_current_role), id: str = Depends(get_current_id)):
+    if email:
         user_info = {
-            "user_id": username,
+            "user_id": id,
             "user_role": role,
-            "user_name": id
+            "user_email": email
         }
         return JSONResponse(content=user_info)
     else:

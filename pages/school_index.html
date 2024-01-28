@@ -7,15 +7,24 @@
 <script>
     function checkAuthentication() {
         fetch('/profile/')
-            .then(response => {
-                if (response.ok) {
+            .then(response => response.json())
+            .then(data => {
+                if (data.user_role === 'teacher') {
                     document.getElementById('logoutButton').style.display = 'block';
                     document.getElementById('mypageButton').style.display = 'block';
+                    document.getElementById('validationButton').style.display = 'block';
+                } else if (data.user_role === 'admin') {
+                    document.getElementById('logoutButton').style.display = 'block';
+                    document.getElementById('validationButton').style.display = 'block';
+                    document.getElementById('createButton').style.display = 'block';
                 } else {
-                    document.getElementById('logoutButton').style.display = 'none';
+                    throw new Error('Unknown role');
                 }
             })
-            .catch(error => console.error('Error checking authentication:', error));
+            .catch(error => {
+                console.error('Error checking authentication:', error);
+                document.getElementById('loginButton').style.display = 'block';
+            });
     }
     window.onload = checkAuthentication;
 </script>
@@ -29,13 +38,16 @@
             <li><a href="/pages/homepage.html">Home</a></li>
             <li><a href="/pages/about.html">About</a></li>
             <li><a href="/pages/contact.html">Contact</a></li>
-            <!-- Add links to other pages here -->
         </ul>
     </nav>
-        
+
     <button id="logoutButton" style="display: none" onclick="logout()">Logout</button>
+    <button id="loginButton" style="display: none" onclick="redirectTo('/pages/login.html')">Login</button>
     <button id="mypageButton" style="display: none" onclick="mypage()">My Page</button>
-    <main_index>
+    <button id="validationButton" style="display: none" onclick="redirectTo('/pages/validation.html')">Validation</button>
+    <button id="createButton" style="display: none" onclick="redirectTo('/pages/create.html')">Create Profile</button>
+
+     <main_index>
         <h1 id="schoolHeader"></h1>
         <ul id="schoolList"></ul>
 
@@ -44,6 +56,10 @@
         <p>If your school is missing, contact your local teachers to sign up today!</p>
     </main>
     <script>
+        function redirectTo(url) {
+                window.location.href = url;
+            }
+            
         async function storeSchool(school) {
             try {
                 const response = await fetch(`/store_cookie/school/${school}`, {

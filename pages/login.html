@@ -4,21 +4,6 @@
     <title>Hometown Heroes - Support Teachers</title>
     <link rel="stylesheet" type="text/css" href="/static/css/style.css">
 </head>
-<script>
-    function checkAuthentication() {
-        fetch('/profile/')
-            .then(response => {
-                if (response.ok) {
-                    document.getElementById('logoutButton').style.display = 'block';
-                    document.getElementById('mypageButton').style.display = 'block';
-                } else {
-                    document.getElementById('logoutButton').style.display = 'none';
-                }
-            })
-            .catch(error => console.error('Error checking authentication:', error));
-    }
-    window.onload = checkAuthentication;
-</script>
 <body>
     <header>
         <h1>Login</h1>
@@ -31,9 +16,6 @@
             <li><a href="/pages/contact.html">Contact</a></li>
         </ul>
     </nav>
-
-    <button id="logoutButton" style="display: none" onclick="logout()">Logout</button>
-    <button id="mypageButton" style="display: none" onclick="mypage()">My Page</button>
 
     <main>
         <section class="login-form">
@@ -57,54 +39,25 @@
             const loginForm = document.getElementById("login-form");
             const formData = new FormData(loginForm);
             try {
-                    const response = await fetch("/login/", {
-                        method: "POST",
-                        body: formData,
-                    });
-        
-                    if (response.ok) {
-                        const data = await response.json();
-                        alert(data.message); // Use alert for success
-                        window.location.href = '/pages/homepage.html';
-                    } else {
-                        alert("Login unsuccessful"); // Use alert for failure
-                    }
-                } catch (error) {
-                    alert("An error occurred"); // Use alert for error
-                }
-        }
-        
-        async function logout() {
-            try {
-                const response = await fetch(`/logout/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                const response = await fetch("/login/", {
+                    method: "POST",
+                    body: formData,
                 });
-                window.location.href = '/';
-            } catch (error) {
-                console.error('Error:', error);
-            }
-        }
 
-        async function mypage() {
-            try {
-                const response = await fetch('/myinfo/', {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                });
                 if (response.ok) {
-                    window.location.href = '/pages/teacher.html';
+                    const data = await response.json();
+                    alert(data.message);
+                    if (data.createCount === 0 && data.role === 'teacher') {
+                        window.location.href = '/pages/create.html';
+                    } else {
+                        window.location.href = '/pages/homepage.html';
+                    }
                 } else {
-                    console.error('Error:', response.status);
-                    window.location.href = '/';
+                    alert("Login unsuccessful"); // Use alert for failure
+                    window.location.reload();
                 }
             } catch (error) {
-                console.error('Error:', error);
-                window.location.href = '/';
+                alert("An error occurred"); // Use alert for error
             }
         }
     </script>

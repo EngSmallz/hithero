@@ -9,15 +9,24 @@
 <script>
     function checkAuthentication() {
         fetch('/profile/')
-            .then(response => {
-                if (response.ok) {
+            .then(response => response.json())
+            .then(data => {
+                if (data.user_role === 'teacher') {
                     document.getElementById('logoutButton').style.display = 'block';
                     document.getElementById('mypageButton').style.display = 'block';
+                    document.getElementById('validationButton').style.display = 'block';
+                } else if (data.user_role === 'admin') {
+                    document.getElementById('logoutButton').style.display = 'block';
+                    document.getElementById('validationButton').style.display = 'block';
+                    document.getElementById('createButton').style.display = 'block';
                 } else {
-                    window.location.href = '/pages/403.html';
+                    throw new Error('Unknown role');
                 }
             })
-            .catch(error => console.error('Error checking authentication:', error));
+            .catch(error => {
+                console.error('Error checking authentication:', error);
+                document.getElementById('loginButton').style.display = 'block';
+            });
     }
     window.onload = checkAuthentication;
 </script>
@@ -35,7 +44,11 @@
     </nav>
 
     <button id="logoutButton" style="display: none" onclick="logout()">Logout</button>
+    <button id="loginButton" style="display: none" onclick="redirectTo('/pages/login.html')">Login</button>
     <button id="mypageButton" style="display: none" onclick="mypage()">My Page</button>
+    <button id="validationButton" style="display: none" onclick="redirectTo('/pages/validation.html')">Validation</button>
+    <button id="createButton" style="display: none" onclick="redirectTo('/pages/create.html')">Create Profile</button>
+
     <main>
         <section class="update-form">
             <h2>Edit Your Info</h2>
@@ -57,6 +70,10 @@
     </main>
 
     <script>
+        function redirectTo(url) {
+                window.location.href = url;
+            }
+            
         async function update() {
             const updateForm = document.getElementById("update-form");
             const formData = new FormData(updateForm);

@@ -7,29 +7,37 @@
 <script>
     function checkAuthentication() {
         fetch('/profile/')
-            .then(response => {
-                if (!response.ok) {
-                    window.location.href = '/pages/403.html';
-                } else {
-                    populateStatesDropdown();
-            }})
-            .catch(error => console.error('Error checking authentication:', error));
+            .then(response => response.json())
+            .then(data => {
+                populateStatesDropdown()
+                if (data.user_role === 'admin') {
+                    document.getElementById('logoutButton').style.display = 'block';
+                    document.getElementById('validationButton').style.display = 'block';
+                    document.getElementById('createButton').style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('Error checking authentication:', error);
+                window.location.href = '/pages/403.html';
+            });
     }
-    window.onload = checkAuthentication();
+    window.onload = checkAuthentication;
 </script>
+
 <body>
     <header>
         <h1>Create Profile Page</h1>
     </header>
 
-    <button id="logoutButton" style="display: block" onclick="logout()">Logout</button>
-    <button id="mypageButton" style="display: block" onclick="mypage()">My Page</button>
+    <button id="logoutButton" style="display: none" onclick="logout()">Logout</button>
+    <button id="validationButton" style="display: none" onclick="redirectTo('/pages/validation.html')">Validation</button>
+    <button id="createButton" style="display: none" onclick="redirectTo('/pages/create.html')">Create Profile</button>
+
     <nav>
         <ul>
             <li><a href="/pages/homepage.html">Home</a></li>
             <li><a href="/pages/about.html">About</a></li>
             <li><a href="/pages/contact.html">Contact</a></li>
-            <!-- Add links to other pages here -->
         </ul>
     </nav>
 
@@ -64,36 +72,33 @@
             <label for="wishlist">Amazon Wishlist URL: </label>
             <input type="text" id="wishlist" name="wishlist" required><br><br>
         
-            <p><input type="button" value="Submit" id="create-button"></p>
+            <p><button id="submitButton" onclick="create()">Submit</button></p>
         </form>
         
 
     </main>
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
+        async function create(){
             const createForm = document.getElementById("create-form");
-            const createButton = document.getElementById("create-button");
+            const formData = new FormData(createForm);
+            try {
+                const response = await fetch("/create_teacher_profile/", {
+                    method: "POST",
+                    body: formData,
+                });
 
-            createButton.addEventListener("click", async function () {
-                const formData = new FormData(createForm);
-
-                try {
-                    const response = await fetch("/create_teacher_profile/", {
-                        method: "POST",
-                        body: formData,
-                    });
-
-                    if (response.ok) {
-                        const data = await response.json();
-                        alert(data.message); // Use alert for success
-                    } else {
-                        alert("Creation unsuccessful"); // Use alert for failure
-                    }
-                } catch (error) {
-                    alert("An error occurred"); // Use alert for error
+                if (response.ok) {
+                    const data = await response.json();
+                    alert(data.message);
+                    window.location.href = '/pages/homepage.html';
+                } else {
+                    alert("Creation unsuccessful");
+                    window.location.reload();
                 }
-            });
-        });
+            } catch (error) {
+                alert("An error occurred");
+            }
+        }
         
         async function populateStatesDropdown() {
             try {

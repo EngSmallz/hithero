@@ -1,11 +1,45 @@
 <!DOCTYPE html>
 <html>
-
 <head>
     <title>Teacher Profile - Hometown Heroes</title>
     <link rel="stylesheet" type="text/css" href="/static/css/style.css">
 </head>
+<script>
+    function checkAuthentication() {
+        fetch('/profile/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.user_role === 'teacher') {
+                    document.getElementById('logoutButton').style.display = 'block';
+                    document.getElementById('mypageButton').style.display = 'block';
+                    document.getElementById('validationButton').style.display = 'block';
+                    fetch('/check_access_teacher/')
+                        .then(response => {
+                            if (response.ok) {
+                                document.getElementById('editButton').style.display = 'block';
+                                document.getElementById('passButton').style.display = 'block';
+                                // document.getElementById('updateImgBtn').style.display = 'block';
+                            }
+                        })
+                } else if (data.user_role === 'admin') {
+                    document.getElementById('editButton').style.display = 'block';
+                    document.getElementById('passButton').style.display = 'block';
+                    // document.getElementById('updateImgBtn').style.display = 'block';
+                    document.getElementById('logoutButton').style.display = 'block';
+                    document.getElementById('validationButton').style.display = 'block';
+                    document.getElementById('createButton').style.display = 'block';
+                } else {
+                    throw new Error('Unknown role');
+                }
+            })
+            .catch(error => {
+                console.error('Error checking authentication:', error);
+                document.getElementById('loginButton').style.display = 'block';
+            });
+    }
 
+    window.onload = checkAuthentication;
+</script>
 <body>
     <header>
         <h1>Teacher Profile</h1>
@@ -20,16 +54,19 @@
     </nav>
     
     <button id="logoutButton" style="display: none" onclick="logout()">Logout</button>
+    <button id="loginButton" style="display: none" onclick="redirectTo('/pages/login.html')">Login</button>
     <button id="mypageButton" style="display: none" onclick="mypage()">My Page</button>
+    <button id="validationButton" style="display: none" onclick="redirectTo('/pages/validation.html')">Validation</button>
+    <button id="createButton" style="display: none" onclick="redirectTo('/pages/create.html')">Create Profile</button>
 
-    <main id="main-container" style="display: none;">
+     <main id="main-container" style="display: none;">
         <section class="profile" id="profile-section">
             <div class="teacher-info" id="teacher-info">
                 <img id="teacher-image">
                 <h2 id="teacher-name"></h2>
                 <p id="school-name"></p>
                 <p id="location"></p>
-                <!--<button id="updateImgBtn" style="display: none" onclick="updateImage()">Update Image</button>-->
+                <button id="updateImgBtn" style="display: none" onclick="updateImage()">Update Image</button>
             </div>
 
             <div class="wishlist" id="wishlist-section">
@@ -45,49 +82,15 @@
         </section>
 
 
-        <button id="updateButton" onclick="redirectTo('/pages/edit_teacher.html')">Edit Info</button><p></p>
-        <button id="updateButton" onclick="redirectTo('/pages/update_password.html')">Update Password</button><p></p>
+        <button id="editButton" style="display: none" onclick="redirectTo('/pages/edit_teacher.html')">Edit Info</button><p></p>
+        <button id="passButton" style="display: none" onclick="redirectTo('/pages/update_password.html')">Update Password</button><p></p>
 
     </main>
 
     <script>
-
         function redirectTo(url) {
             window.location.href = url;
         }
-
-        function checkAuthentication() {
-            fetch('/profile/')
-                .then(response => response.json())
-                .then(profileData => {
-                    if (profileData) {
-                        document.getElementById('logoutButton').style.display = 'block';
-                        document.getElementById('mypageButton').style.display = 'block';
-
-                        if (profileData.user_role === 'admin') {
-                            document.getElementById('editButton').style.display = 'block';
-                            document.getElementById('passButton').style.display = 'block';
-                            document.getElementById('updateImgBtn').style.display = 'block';
-                        }
-
-                        if (profileData.user_role === 'teacher') { 
-                            fetch('/check_access_teacher/')
-                                .then(response => {
-                                    if (response.ok) {
-                                        document.getElementById('editButton').style.display = 'block';
-                                        document.getElementById('passButton').style.display = 'block';
-                                        document.getElementById('updateImgBtn').style.display = 'block';
-                                    }
-                                })
-                                .catch(error => console.error('Error checking teacher role:', error));
-                        }
-                    } else {
-                        document.getElementById('logoutButton').style.display = 'none';
-                    }
-                })
-                .catch(error => console.error('Error checking authentication:', error));
-        }
-        window.onload = checkAuthentication;
 
         fetch('/get_teacher_info/')
             .then(response => response.json())
@@ -107,6 +110,10 @@
                 }
             })
             .catch(error => console.error('Error fetching teacher info:', error));
+        
+        function redirectTo(url) {
+                window.location.href = url;
+            }
 
         async function logout() {
             try {
