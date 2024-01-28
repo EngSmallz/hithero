@@ -42,7 +42,6 @@ def get_current_user(request: Request):
 
 def get_email_password(email: str):
     try:
-        connection = pyodbc.connect(connection_string)
         cursor = connection.cursor()
         cursor.execute("SELECT password FROM hitheroEmail WHERE CAST(email AS NVARCHAR) = ?", email)
         data = cursor.fetchone()

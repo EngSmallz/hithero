@@ -57,41 +57,36 @@
                 <label for="message">Message:</label><br>
                 <textarea id="message" name="message" rows="4" cols="50"></textarea><br><br>
 
-                <p><input type="button" value="Submit" id="contact-button"></p>
+                <button id="submitButton" onclick="contactus()">Submit</button>
             </form>
-
+            <p>
             <div id="contact-message"></div>
-
-            <script>
-                document.addEventListener("DOMContentLoaded", function () {
-                    const contactForm = document.getElementById("contact-form");
-                    const contactMessage = document.getElementById("contact-message");
-                    const contactButton = document.getElementById("contact-button");
-        
-                    contactButton.addEventListener("click", async function () {
-                        const formData = new FormData(contactForm);
-        
-                        try {
-                            const response = await fetch("/contact_us/", {
-                                method: "POST",
-                                body: formData,
-                            });
-        
-                            if (response.ok) {
-                                const data = await response.json();
-                                contactMessage.textContent = data.message;
-                            } else {
-                                contactMessage.textContent = "Message unsuccessful";
-                            }
-                        } catch (error) {
-                            contactMessage.textContent = "An error occurred";
-                        }
-                    });
-                });
-            </script>
+            <p>
         </section>
     </main>
     <script>
+        async function contactus() {
+            const contactForm = document.getElementById("contact-form");
+            const formData = new FormData(contactForm);
+            try {
+                const response = await fetch("/contact_us/", {
+                    method: "POST",
+                    body: formData,
+                });
+
+                if (response.ok) {
+                        const data = await response.json();
+                        alert(data.message); // Use alert for success
+                        window.location.href = '/pages/homepage.html';
+                    } else {
+                        alert("Message unsuccessful");
+                        window.location.reload();
+                    }
+                } catch (error) {
+                    alert("An error occurred");
+                }
+        }
+
         async function logout() {
             try {
                 const response = await fetch(`/logout/`, {

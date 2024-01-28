@@ -50,7 +50,7 @@
                     userInfoSpan.textContent = `${user.name} - ${user.email} - ${user.school} - ${user.phone_number} `;
                     const validateButton = document.createElement("button");
                     validateButton.textContent = "Validate";
-                    validateButton.id = "validateButton";
+                    validateButton.id = "submitButton";
                     validateButton.addEventListener("click", () => validate(user.email));
                     listItem.appendChild(userInfoSpan);
                     listItem.appendChild(validateButton);

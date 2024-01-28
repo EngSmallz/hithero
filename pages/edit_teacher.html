@@ -50,38 +50,34 @@
                 <label for="teacherImage">Upload Profile Picture (JPG only):</label>
                 <input type="file" id="teacherImage" name="teacherImage" accept=".jpg">-->
 
-                <p><input type="button" value="Submit" id="update-button"></p>
+                <p><button id="submitButton" onclick="update()">Submit</button>
+                <p></p>
             </form>
         </section>
     </main>
 
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
+        async function update() {
             const updateForm = document.getElementById("update-form");
-            const updateButton = document.getElementById("update-button");
+            const formData = new FormData(updateForm);
 
-            updateButton.addEventListener("click", async function (event) {
-                event.preventDefault();
-                const formData = new FormData(updateForm);
+            try {
+                const response = await fetch("/update_teacher_info/", {
+                    method: "POST",
+                    body: formData,
+                });
 
-                try {
-                    const response = await fetch("/update_teacher_info/", {
-                        method: "POST",
-                        body: formData,
-                    });
-
-                    if (response.ok) {
-                        alert('Profile updated successfully!');
-                        window.location.href = '/pages/teacher.html';
-                    } else {
-                        alert('Failed to update profile. Please try again.');
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                    alert('An error occurred. Please try again later.');
+                if (response.ok) {
+                    alert('Profile updated successfully!');
+                    window.location.href = '/pages/teacher.html';
+                } else {
+                    alert('Failed to update profile. Please try again.');
                 }
-            });
-        });
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred. Please try again later.');
+            }
+        }
 
         async function logout() {
             try {

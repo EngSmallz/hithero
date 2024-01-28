@@ -35,7 +35,7 @@
             <div class="wishlist" id="wishlist-section">
                 <h2>Amazon Wishlist</h2>
                 <p>Here is my Amazon wishlist where you can help support my classroom:</p>
-                <a href="#" class="btn" target="_blank" id="wishlistLink">View Wishlist</a>
+                <p><button id="wishlistButton" onclick="wishlist()"> View Wishlist</button></p>
             </div>
         </section>
 
@@ -44,12 +44,18 @@
             <p id="about-me"></p>
         </section>
 
-        <a href="edit_teacher.html" class="btn" id="editButton" style="display: none;">Edit Info</a>
-        
-        <a href="update_password.html" class="btn" id="passButton" style="display: none;">Update Password</a>
+
+        <button id="updateButton" onclick="redirectTo('/pages/edit_teacher.html')">Edit Info</button><p></p>
+        <button id="updateButton" onclick="redirectTo('/pages/update_password.html')">Update Password</button><p></p>
+
     </main>
 
     <script>
+
+        function redirectTo(url) {
+            window.location.href = url;
+        }
+
         function checkAuthentication() {
             fetch('/profile/')
                 .then(response => response.json())
@@ -92,8 +98,6 @@
                     document.getElementById('school-name').innerText = `School: ${data.school}`;
                     document.getElementById('about-me').innerText = data.about_me;
                     const teacherImage = document.getElementById('teacher-image');
-                    const wishlistLink = document.getElementById('wishlistLink');
-                    wishlistLink.href = data.wishlist_url;
                     if (data.image_data){
                         teacherImage.src=data.image_data
                     }else{
@@ -115,6 +119,20 @@
                 window.location.href = '/';
             } catch (error) {
                 console.error('Error:', error);
+            }
+        }
+
+        async function wishlist() {
+            try {
+                const response = await fetch('/get_teacher_info/');
+                const data = await response.json();
+                if (data && data.wishlist_url) {
+                    window.location.href = data.wishlist_url;
+                } else {
+                    console.error('Wishlist URL not found.');
+                }
+            } catch (error) {
+                console.error('Error fetching teacher info:', error);
             }
         }
 
