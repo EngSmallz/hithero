@@ -36,11 +36,13 @@
     <button id="logoutButton" style="display: none" onclick="logout()">Logout</button>
     <button id="mypageButton" style="display: none" onclick="mypage()">My Page</button>
     <main_index>
-        <h1 id="schoolHeader">List of Schools</h1>
+        <h1 id="schoolHeader"></h1>
         <ul id="schoolList"></ul>
-        <p>If your school is missing, contact your local teachers to sign up today!</p>
 
     </main_index>
+    <main>
+        <p>If your school is missing, contact your local teachers to sign up today!</p>
+    </main>
     <script>
         async function storeSchool(school) {
             try {
@@ -58,39 +60,51 @@
             }
         }
         
-        fetch(`/get_cookie/district`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.cookie) {
-                // Change the header name to include the cookie string
-                const schoolHeader = document.getElementById('schoolHeader');
-                schoolHeader.textContent = `List of Schools in ${data.cookie}`;
+        async function fetchData() {
+            try {
+                const districtResponse = await fetch(`/get_cookie/district`);
+                const districtData = await districtResponse.json();
 
-                fetch('/get_index_list/district')
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data) {
-                            // Create a list for each item in the data
-                            const schoolList = document.getElementById('schoolList');
-                            data.forEach(school => {
-                                const listItem = document.createElement('li');
-                                const button = document.createElement('button');
-                                button.textContent = school;
-                                button.onclick = () => storeSchool(school);
-                                listItem.appendChild(button);
-                                schoolList.appendChild(listItem);
-                            });
-                        } else {
-                            console.error('404 Error: List error');
-                        }
-                    })
-                    .catch(error => console.error('Error:', error));
-            } else {
-                console.error('404 Error: district cookie not found');
-                window.location.href = '/pages/404.html';
+                if (!districtData.cookie) {
+                    console.error('404 Error: District cookie not found');
+                    window.location.href = '/pages/404.html';
+                    return;
+                }
+
+                const stateResponse = await fetch(`/get_cookie/state`);
+                const stateData = await stateResponse.json();
+
+                if (!stateData.cookie) {
+                    console.error('404 Error: State cookie not found');
+                    return;
+                }
+
+                const schoolHeader = document.getElementById('schoolHeader');
+                schoolHeader.textContent = `List of Schools in ${districtData.cookie}, ${stateData.cookie}`;
+
+                const indexListResponse = await fetch('/get_index_list/district');
+                const indexListData = await indexListResponse.json();
+
+                if (indexListData) {
+                    const schoolList = document.getElementById('schoolList');
+                    indexListData.forEach(school => {
+                        const listItem = document.createElement('li');
+                        const button = document.createElement('button');
+                        button.textContent = school;
+                        button.onclick = () => storeSchool(school);
+                        listItem.appendChild(button);
+                        schoolList.appendChild(listItem);
+                    });
+                } else {
+                    console.error('404 Error: List error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
             }
-        })
-        .catch(error => console.error('Error:', error));
+        }
+
+        fetchData();
+
 
         async function logout() {
             try {

@@ -36,12 +36,14 @@
     <button id="logoutButton" style="display: none" onclick="logout()">Logout</button>
     <button id="mypageButton" style="display: none" onclick="mypage()">My Page</button>
     <main_index>
-        <h1 id="countyHeader">List of Counties</h1>
+        <h1 id="countyHeader"></h1>
         <ul id="countyList"></ul>
         
-        <p>If your county is missing, contact your local teachers to sign up today!</p>
 
     </main_index>
+    <main>
+        <p>If your county is missing, contact your local teachers to sign up today!</p>
+    </main>
     <script>
         async function storeCounty(county) {
             try {

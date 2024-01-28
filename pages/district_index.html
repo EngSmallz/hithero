@@ -36,11 +36,13 @@
     <button id="logoutButton" style="display: none" onclick="logout()">Logout</button>
     <button id="mypageButton" style="display: none" onclick="mypage()">My Page</button>
     <main_index>
-        <h1 id="districtHeader">List of Districts</h1>
+        <h1 id="districtHeader"></h1>
         <ul id="districtList"></ul>
-        <p>If your district is missing, contact your local teachers to sign up today!</p>
 
     </main_index>
+    <main>
+        <p>If your district is missing, contact your local teachers to sign up today!</p>
+    </main>
     <script>
         async function storeDistrict(district) {
             try {
@@ -58,37 +60,51 @@
             }
         }
         
-        fetch(`/get_cookie/county`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.cookie) {
-                const districtHeader = document.getElementById('districtHeader');
-                districtHeader.textContent = `List of Districts in ${data.cookie}`;
+        async function fetchData() {
+            try {
+                const countyResponse = await fetch(`/get_cookie/county`);
+                const countyData = await countyResponse.json();
 
-                fetch('/get_index_list/county')
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data) {
-                            const districtList = document.getElementById('districtList');
-                            data.forEach(district => {
-                                const listItem = document.createElement('li');
-                                const button = document.createElement('button');
-                                button.textContent = district;
-                                button.onclick = () => storeDistrict(district);
-                                listItem.appendChild(button);
-                                districtList.appendChild(listItem);
-                            });
-                        } else {
-                            console.error('404 Error: List error');
-                        }
-                    })
-                    .catch(error => console.error('Error:', error));
-            } else {
-                console.error('404 Error: County cookie not found');
-                window.location.href = '/pages/404.html';
+                if (!countyData.cookie) {
+                    console.error('404 Error: County cookie not found');
+                    window.location.href = '/pages/404.html';
+                    return;
+                }
+
+                const stateResponse = await fetch(`/get_cookie/state`);
+                const stateData = await stateResponse.json();
+
+                if (!stateData.cookie) {
+                    console.error('404 Error: State cookie not found');
+                    return;
+                }
+
+                const districtHeader = document.getElementById('districtHeader');
+                districtHeader.textContent = `List of Districts in ${countyData.cookie}, ${stateData.cookie}`;
+
+                const indexListResponse = await fetch('/get_index_list/county');
+                const indexListData = await indexListResponse.json();
+
+                if (indexListData) {
+                    const districtList = document.getElementById('districtList');
+                    indexListData.forEach(district => {
+                        const listItem = document.createElement('li');
+                        const button = document.createElement('button');
+                        button.textContent = district;
+                        button.onclick = () => storeDistrict(district);
+                        listItem.appendChild(button);
+                        districtList.appendChild(listItem);
+                    });
+                } else {
+                    console.error('404 Error: List error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
             }
-        })
-        .catch(error => console.error('Error:', error));
+        }
+
+        fetchData();
+
 
         async function logout() {
             try {

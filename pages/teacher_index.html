@@ -36,11 +36,13 @@
     <button id="logoutButton" style="display: none" onclick="logout()">Logout</button>
     <button id="mypageButton" style="display: none" onclick="mypage()">My Page</button>
     <main_index>
-        <h1 id="teacherHeader">List of Teachers</h1>
+        <h1 id="teacherHeader"></h1>
         <ul id="teacherList"></ul>
         
-        <p>If your teacher is missing, contact them to sign up today!</p>
     </main_index>
+    <main>
+    <p>If your teacher is missing, contact them to sign up today!</p>
+    </main>
     <script>
         async function storeTeacher(teacher) {
             try {
@@ -58,39 +60,59 @@
             }
         }
         
-        fetch(`/get_cookie/school`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.cookie) {
-                // Change the header name to include the cookie string
-                const teacherHeader = document.getElementById('teacherHeader');
-                teacherHeader.textContent = `List of Teachers at ${data.cookie}`;
+        async function fetchTeachers() {
+            try {
+                // Fetch the school cookie
+                const schoolResponse = await fetch(`/get_cookie/school`);
+                const schoolData = await schoolResponse.json();
 
-                fetch('/get_index_list/school')
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data) {
-                            // Create a list for each item in the data
-                            const teacherList = document.getElementById('teacherList');
-                            data.forEach(teacher => {
-                                const listItem = document.createElement('li');
-                                const button = document.createElement('button');
-                                button.textContent = teacher;
-                                button.onclick = () => storeTeacher(teacher);
-                                listItem.appendChild(button);
-                                teacherList.appendChild(listItem);
-                            });
-                        } else {
-                            console.error('404 Error: List error');
-                        }
-                    })
-                    .catch(error => console.error('Error:', error));
-            } else {
-                console.error('404 Error: school cookie not found');
-                window.location.href = '/pages/404.html';
+                // Check if the school cookie exists
+                if (!schoolData.cookie) {
+                    console.error('404 Error: School cookie not found');
+                    window.location.href = '/pages/404.html';
+                    return;
+                }
+
+                // Fetch the state cookie
+                const stateResponse = await fetch(`/get_cookie/state`);
+                const stateData = await stateResponse.json();
+
+                // Check if the state cookie exists
+                if (!stateData.cookie) {
+                    console.error('404 Error: State cookie not found');
+                    window.location.href = '/pages/404.html';
+                    return;
+                }
+
+                // Update the header to include both state and school
+                const teacherHeader = document.getElementById('teacherHeader');
+                teacherHeader.textContent = `List of Teachers at ${schoolData.cookie}, ${stateData.cookie}`;
+
+                // Fetch the list of teachers for the school
+                const indexListResponse = await fetch('/get_index_list/school');
+                const indexListData = await indexListResponse.json();
+
+                if (indexListData) {
+                    // Populate the list of teachers
+                    const teacherList = document.getElementById('teacherList');
+                    indexListData.forEach(teacher => {
+                        const listItem = document.createElement('li');
+                        const button = document.createElement('button');
+                        button.textContent = teacher;
+                        button.onclick = () => storeTeacher(teacher);
+                        listItem.appendChild(button);
+                        teacherList.appendChild(listItem);
+                    });
+                } else {
+                    console.error('404 Error: List error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
             }
-        })
-        .catch(error => console.error('Error:', error));
+        }
+
+        fetchTeachers();
+
 
         async function logout() {
             try {

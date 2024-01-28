@@ -10,14 +10,12 @@
             .then(response => {
                 if (!response.ok) {
                     window.location.href = '/pages/403.html';
-                }
-            })
+                } else {
+                    populateStatesDropdown();
+            }})
             .catch(error => console.error('Error checking authentication:', error));
     }
-    window.onload = function () {
-        populateStatesDropdown();
-        checkAuthentication();
-    };
+    window.onload = checkAuthentication();
 </script>
 <body>
     <header>
@@ -59,7 +57,9 @@
             <input type="text" id="school" name="school" required><br><br>
 
             <label for="aboutMe">About Me:</label>
-            <input type="text" id="aboutMe" name="aboutMe" required><br><br>
+            <textarea id="aboutMe" name="aboutMe" maxlength="250" rows="4" cols="50" oninput="updateCharacterCount()" required></textarea>
+            <div id="charCount">250 characters remaining</div><br><br>
+                                  
 
             <label for="wishlist">Amazon Wishlist URL: </label>
             <input type="text" id="wishlist" name="wishlist" required><br><br>
@@ -130,20 +130,20 @@
             }
         }
         async function logout() {
-                try {
-                    const response = await fetch(`/logout/`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                    });
-                    window.location.href = '/';
-                } catch (error) {
-                    console.error('Error:', error);
-                }
+            try {
+                const response = await fetch(`/logout/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+                window.location.href = '/';
+            } catch (error) {
+                console.error('Error:', error);
             }
+        }
 
-            async function mypage() {
+        async function mypage() {
             try {
                 const response = await fetch('/myinfo/', {
                     method: 'GET',
@@ -162,6 +162,14 @@
                 window.location.href = '/';
             }
         }
+
+        function updateCharacterCount() {
+            var maxLength = 250;
+            var currentLength = document.getElementById("aboutMe").value.length;
+            var charsRemaining = maxLength - currentLength;
+            var countElement = document.getElementById("charCount");
+            countElement.textContent = charsRemaining + " characters remaining";
+            }
     </script>
     <footer>
         <p>&copy; 2023 Hometown Heroes</p>
