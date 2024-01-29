@@ -9,6 +9,7 @@ from starlette.applications import Starlette
 from starlette.middleware.sessions import SessionMiddleware
 from email.mime.text import MIMEText
 from passlib.hash import sha256_crypt
+import time
 
 
 app = FastAPI()
@@ -241,6 +242,7 @@ async def get_random_teacher(request: Request):
 ###api gets the current session info of the logged in user
 @app.get("/profile/")
 async def get_user_profile(email: str = Depends(get_current_email), role: str = Depends(get_current_role), id: str = Depends(get_current_id)):
+    time.sleep(.25)
     if email:
         user_info = {
             "user_id": id,
