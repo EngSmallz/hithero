@@ -43,14 +43,13 @@
                     method: "POST",
                     body: formData,
                 });
-
                 if (response.ok) {
                     const data = await response.json();
                     alert(data.message);
                     if (data.createCount === 0 && data.role === 'teacher') {
-                        window.location.href = '/pages/create.html';
+                        redirectTo('/pages/create.html');
                     } else {
-                        window.location.href = '/pages/homepage.html';
+                        redirectTo('/pages/homepage.html');
                     }
                 } else {
                     alert("Login unsuccessful"); // Use alert for failure
@@ -60,6 +59,11 @@
                 alert("An error occurred"); // Use alert for error
             }
         }
+
+        function redirectTo(url) {
+                window.location.href = url;
+            }
+
     </script>
     <footer>
         <p>&copy; 2023 Hometown Heroes</p>
