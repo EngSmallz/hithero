@@ -78,28 +78,36 @@
 
     </main>
     <script>
-        async function create(){
+        document.addEventListener("DOMContentLoaded", function () {
             const createForm = document.getElementById("create-form");
-            const formData = new FormData(createForm);
-            try {
-                const response = await fetch("/create_teacher_profile/", {
-                    method: "POST",
-                    body: formData,
-                });
+            const createButton = document.getElementById("submitButton");
 
-                if (response.ok) {
-                    const data = await response.json();
-                    alert(data.message);
-                    window.location.href = '/pages/homepage.html';
-                } else {
-                    alert("Creation unsuccessful");
+            createButton.addEventListener("click", async function (event) {
+                event.preventDefault();
+                const formData = new FormData(createForm);
+
+                try {
+                    const response = await fetch("/create_teacher_profile/", {
+                        method: "POST",
+                        body: formData,
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        alert(data.message);
+                        window.location.href = '/pages/homepage.html';
+                    } else {
+                        alert(data.message);
+                        window.location.reload();
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('An error occurred. Please try again.');
                     window.location.reload();
                 }
-            } catch (error) {
-                alert("An error occurred");
-                window.location.reload();
-            }
-        }
+            });
+        });
+
         
         async function populateStatesDropdown() {
             try {

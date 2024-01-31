@@ -59,35 +59,42 @@
                 <option value="teacher">Teacher</option>
             </select><br>
         
-            <p><button id="submitButton" onclick="register()">Submit</button>
+            <p><button id="submitButton">Submit</button>
         </form>
 
         <p>Already have an account? <a href="/pages/login.html">Log in</a></p>
     </main>
     <script>
-        async function register() {
+        document.addEventListener("DOMContentLoaded", function () {
             const registrationForm = document.getElementById("registration-form");
-            const formData = new FormData(registrationForm);
+            const registrationButton = document.getElementById("submitButton");
 
-            try {
-                const response = await fetch("/register/", {
-                    method: "POST",
-                    body: formData,
-                });
-                if (response.ok) {
-                    const data = await response.json();
-                    alert(data.message);
-                    window.location.href = '/pages/homepage.html';
+            registrationButton.addEventListener("click", async function (event) {
+                event.preventDefault();
+                const formData = new FormData(registrationForm);
 
-                } else {
-                    alert("Registration unsuccessful");
+                try {
+                    const response = await fetch("/register/", {
+                        method: "POST",
+                        body: formData,
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        alert(data.message);
+                        window.location.href = '/pages/homepage.html';
+                    } else {
+                        alert(data.message);
+                        window.location.reload();
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('An error occurred. Please try again.');
                     window.location.reload();
                 }
-            } catch (error) {
-                alert("An error occurred");
-                window.location.reload();
-            }
-        }
+            });
+        });
+
 
         async function populateStatesDropdown() {
             try {

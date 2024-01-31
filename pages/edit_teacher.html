@@ -74,27 +74,35 @@
                 window.location.href = url;
             }
             
-        async function update() {
+        document.addEventListener("DOMContentLoaded", function () {
             const updateForm = document.getElementById("update-form");
-            const formData = new FormData(updateForm);
+            const updateButton = document.getElementById("submitButton");
 
-            try {
-                const response = await fetch("/update_teacher_info/", {
-                    method: "POST",
-                    body: formData,
-                });
+            updateButton.addEventListener("click", async function (event) {
+                event.preventDefault();
+                const formData = new FormData(updateForm);
 
-                if (response.ok) {
-                    alert('Profile updated successfully!');
-                    window.location.href = '/pages/teacher.html';
-                } else {
-                    alert('Failed to update profile. Please try again.');
+                try {
+                    const response = await fetch("/update_teacher_info/", {
+                        method: "POST",
+                        body: formData,
+                    });
+
+                    if (response.ok) {
+                        alert('Profile updated successfully!');
+                        window.location.href = '/pages/teacher.html';
+                    } else {
+                        alert('Failed to update profile. Please try again.');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('An error occurred. Please try again.');
+                    window.location.reload();
                 }
-            } catch (error) {
-                alert('An error occurred.');
-                window.location.reload();
-            }
-        }
+            });
+        });
+
+
 
         async function logout() {
             try {

@@ -111,13 +111,13 @@ async def register_user(name: str = Form(...), email: str = Form(...), phone_num
         cursor.execute("SELECT id FROM registered_users WHERE CAST(email AS nvarchar) = ?", email)
         existing_user = cursor.fetchone()
         if existing_user:
-            raise HTTPException(status_code=400, detail="User with this email already exists")
+            return {"message": "User with this email already exists."}
         cursor.execute("SELECT id FROM new_users WHERE CAST(email AS nvarchar) = ?", email)
         existing_user = cursor.fetchone()
         if existing_user:
-            raise HTTPException(status_code=400, detail="User with this email is already in the registration queue")
+            return {"message": "User with this email is already in the registration queue."}
         if password != confirm_password:
-            raise HTTPException(status_code=400, detail="Password do not match")
+            return {"message": "Password do not match."}
         hashed_password = sha256_crypt.hash(password)
         insert_query = """
             INSERT INTO new_users (name, email, state, county, district, school, phone_number, password, role)
@@ -125,7 +125,7 @@ async def register_user(name: str = Form(...), email: str = Form(...), phone_num
         """
         cursor.execute(insert_query, (name, email, state, county, district, school, phone_number, hashed_password, role))
         connection.commit()
-        return {"message": "User registered successfully"}
+        return {"message": "User registered successfully."}
     except Exception as e:
         return {"message": "Registration unsuccessful", "error": str(e)}
     finally:
@@ -147,9 +147,9 @@ async def login_user(request: Request, email: str = Form(...), password: str = F
                 request.session["user_id"] = user.id
                 return JSONResponse(content={"message": message, "createCount": user.createCount, "role": user.role})
             else:
-                message = "Invalid password"
+                message = "Invalid password."
         else:
-            message = "Invalid email"
+            message = "Invalid email."
         return JSONResponse(content={"message": message}, status_code=400)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
