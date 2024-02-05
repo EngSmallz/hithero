@@ -92,20 +92,19 @@ def send_email(recipient_email: str, subject: str, message: str):
         msg['From'] = sender
         msg['To'] = recipient_email
         msg.attach(MIMEText(message, 'plain'))
-        smtp_server = 'smtp.gmail.com'
+        smtp_server = 'smtp.sendgrid.net'
         smtp_port = 465
-        print(msg)
         try:
             context = ssl.create_default_context()
             with smtplib.SMTP_SSL(smtp_server, smtp_port, context=context) as smtp:
-                smtp.login(sender, get_email_password(sender))
-                # Send the email
+                smtp.login('apikey', os.environ.get('SENDGRID_API_KEY'))
                 smtp.send_message(msg)
-                print('Email sent successfully.')
+                return
         except Exception as e:
             print(f'Error: {e}')
     except Exception as e:
         print(f'Error: {e}')
+    return
         
 
 #######apis#######

@@ -82,32 +82,32 @@
                 window.location.href = url;
             }
         
-            document.addEventListener("DOMContentLoaded", function () {
-                const contactForm = document.getElementById("contact-form");
-                const contactButton = document.getElementById("submitButton");
+        document.addEventListener("DOMContentLoaded", function () {
+            const contactForm = document.getElementById("contact-form");
+            const contactButton = document.getElementById("submitButton");
 
-                contactButton.addEventListener("click", async function (event) {
-                    event.preventDefault();
-                    const formData = new FormData(contactForm);
-                    try {
-                        const response = await fetch("/contact_us/", {
-                            method: "POST",
-                            body: formData,
-                        });
+            contactButton.addEventListener("click", async function (event) {
+                event.preventDefault();
+                const formData = new FormData(contactForm);
+                try {
+                    const response = await fetch("/contact_us/", {
+                        method: "POST",
+                        body: formData,
+                    });
 
-                        if (response.ok) {
-                            const data = await response.json();
-                            alert(data.message); // Use alert for success
-                            window.location.href = '/pages/homepage.html';
-                        } else {
-                            alert("Message unsuccessful");
-                            window.location.reload();
-                        }
-                    } catch (error) {
-                        alert("An error occurred");
+                    if (response.ok) {
+                        const data = await response.json();
+                        alert("Message sent successfully."); // Use alert for success
+                        window.location.href = '/pages/homepage.html';
+                    } else {
+                        alert("Message unsuccessful");
+                        window.location.reload();
                     }
-                });
+                } catch (error) {
+                    alert("An error occurred");
+                }
             });
+        });
 
         async function logout() {
             try {
