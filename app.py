@@ -99,12 +99,20 @@ def send_email(recipient_email: str, subject: str, message: str):
             with smtplib.SMTP_SSL(smtp_server, smtp_port, context=context) as smtp:
                 smtp.login('apikey', os.environ.get('SENDGRID_API_KEY'))
                 smtp.send_message(msg)
-                return
         except Exception as e:
             print(f'Error: {e}')
     except Exception as e:
         print(f'Error: {e}')
-    return
+
+def update_temp_password(email: str, new_password: str):
+    try:
+        hashed_password = sha256_crypt.hash(new_password)
+        cursor = connection.cursor()
+        cursor.execute("UPDATE registered_users SET password = ? WHERE CAST(email AS nvarchar) = ?", (hashed_password, email))
+        connection.commit()
+    except Exception as e:
+        print(f"Error updating password: {e}")
+        raise
         
 
 #######apis#######
@@ -130,6 +138,7 @@ async def register_user(name: str = Form(...), email: str = Form(...), phone_num
         """
         cursor.execute(insert_query, (name, email, state, county, district, school, phone_number, hashed_password, role))
         connection.commit()
+        send_email(email, "Registration successful", "Hello user, thank you for registering! Once you are validated by a fellow teacher in your district or one of us here at HTHeroes, you will be able to create your profile and start recieving support.")
         return {"message": "User registered successfully."}
     except Exception as e:
         return {"message": "Registration unsuccessful", "error": str(e)}
@@ -566,9 +575,10 @@ async def forgot_password(email: str = Form(...)):
             temp_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(10))
             full_message = f"Hello user, Here is your new temporary password: {temp_password}. Please use this the next time you login and update your password."
             send_email(recipient_email, 'Forgot Pasword', full_message)
+            update_temp_password(recipient_email, temp_password)
         else:
             time.sleep(1)
-        message = "If account exists, instructions for password reset will be sent to your email."
+        message = "If account exists, instructions for password reset will be sent to your email. Check spam."
         return JSONResponse(content={"message": message})
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
