@@ -97,9 +97,8 @@ def send_email(recipient_email: str, subject: str, message: str):
         print(msg)
         try:
             context = ssl.create_default_context()
-            password = 'AIzaSyB7oqRbTIJnuNjI8DmOhTaaAEteSIz_J3s'
             with smtplib.SMTP_SSL(smtp_server, smtp_port, context=context) as smtp:
-                smtp.login(sender, password)
+                smtp.login(sender, get_email_password(sender))
                 # Send the email
                 smtp.send_message(msg)
                 print('Email sent successfully.')
