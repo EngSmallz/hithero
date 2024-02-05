@@ -1,15 +1,15 @@
 from fastapi import FastAPI, HTTPException, Request, Form, Depends, Body, APIRouter, File, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel
-import os, logging, smtplib, secrets, string, pyodbc
+import os, logging, smtplib, secrets, string, pyodbc, time, ssl
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.applications import Starlette
 from starlette.middleware.sessions import SessionMiddleware
+from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from passlib.hash import sha256_crypt
-import time
 
 
 app = FastAPI()
@@ -84,22 +84,29 @@ def store_my_cookies(request: Request, id: int = Depends(get_current_id)):
     finally:
         cursor.close()
 
-def send_email(sender_email: str, password: str, recipient_email: str, subject: str, message: str):
-    msg = MIMEText(message)
-    msg['Subject'] = subject
-    msg['From'] = sender_email
-    msg['To'] = recipient_email
+def send_email(recipient_email: str, subject: str, message: str):
     try:
-        server = smtplib.SMTP_SSL('smtp.gmail.com', 587)
-        server.login(sender_email, password)
-        print('logged in')
-        server.sendmail(sender_email, recipient_email, msg.as_string())
-        server.quit()
-        return "Email sent successfully!"
-    except smtplib.SMTPAuthenticationError as e:
-        raise ValueError("Authentication failed. Check your email credentials.")
+        sender = 'noReply.htheroes@gmail.com'
+        msg = MIMEMultipart()
+        msg['Subject'] = subject
+        msg['From'] = sender
+        msg['To'] = recipient_email
+        msg.attach(MIMEText(message, 'plain'))
+        smtp_server = 'smtp.gmail.com'
+        smtp_port = 465
+        print(msg)
+        try:
+            context = ssl.create_default_context()
+            password = 'AIzaSyB7oqRbTIJnuNjI8DmOhTaaAEteSIz_J3s'
+            with smtplib.SMTP_SSL(smtp_server, smtp_port, context=context) as smtp:
+                smtp.login(sender, password)
+                # Send the email
+                smtp.send_message(msg)
+                print('Email sent successfully.')
+        except Exception as e:
+            print(f'Error: {e}')
     except Exception as e:
-        raise ValueError(f"Error: {str(e)}")
+        print(f'Error: {e}')
         
 
 #######apis#######
@@ -180,7 +187,8 @@ async def move_user(user_email: str):
         connection.commit()
         cursor.execute("DELETE FROM new_users WHERE CAST(email AS NVARCHAR) = ?", user_email)
         connection.commit()
-        return {"message": "User moved from new_users to registered_users"}
+        send_email(user.email, "Validated!", "Hello user, you have been validated! Login and create your profile to start geting support today.")
+        return {"message": "User validated."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
     finally:
@@ -203,9 +211,9 @@ async def create_teacher_profile(name: str = Form(...), state: str = Form(...), 
                 connection.commit()
                 return {"message": "Teacher created successfully"}
             else:
-                raise HTTPException(status_code=404, detail="Unable to create new profile. Profile already created.")
+                return {"message": "Unable to create new profile. Profile already created."}
         else:
-            raise HTTPException(status_code=404, detail="No user logged in.")
+            return {"message": "No user logged in."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
     finally:
@@ -242,7 +250,6 @@ async def get_random_teacher(request: Request):
 ###api gets the current session info of the logged in user
 @app.get("/profile/")
 async def get_user_profile(email: str = Depends(get_current_email), role: str = Depends(get_current_role), id: str = Depends(get_current_id)):
-    time.sleep(.25)
     if email:
         user_info = {
             "user_id": id,
@@ -256,12 +263,10 @@ async def get_user_profile(email: str = Depends(get_current_email), role: str = 
 ##api used to send contact us email from /contact.html
 @app.post('/contact_us/')
 async def contact_us(name: str = Form(...), email: str = Form(...), subject: str = Form(...), message: str = Form(...)):
-    sender_email = 'hometown.heroes.main@gmail.com'
-    sender_password = get_email_password(sender_email)
     recipient_email = 'hometown.heroes.contactus@gmail.com'
     full_message = f"{name}\n{email}\n{message}"
     try:
-        result = send_email(sender_email, sender_password, recipient_email, subject, full_message)
+        result = send_email(recipient_email, subject, full_message)
         return {"message": result}
     except HTTPException as e:
         raise e
@@ -391,9 +396,9 @@ async def edit_teacher_info(request: Request, wishlist: str = Form(...), aboutMe
             )
             connection.commit()
 
-            return JSONResponse(content={"success": True}, status_code=200)
+            return {"message": "Information updated."}
         else:
-            raise HTTPException(status_code=403, detail="Permission denied.")
+            return {"message": "Permission denied."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
     finally:
@@ -421,9 +426,9 @@ async def edit_teacher_image(request: Request,role: str = Depends(get_current_ro
             """
             cursor.execute(query, (image.file.read(), state, county, district, school, name))
             connection.commit()
-            return JSONResponse(content={"success": True}, status_code=200)
+            return {"message": "Information updated."}
         else:
-            raise HTTPException(status_code=403, detail="Permission denied.")
+            return {"message": "Permission denied."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
     finally:
@@ -445,7 +450,7 @@ async def get_myinfo(request: Request, id: int = Depends(get_current_id)):
             request.session["teacher"] = name
             return
         else:
-            raise HTTPException(status_code=404, detail="Your account does not have a database listing")
+            return {"message": "Your account does not have a database listing"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
     finally:
@@ -465,9 +470,9 @@ async def update_password(request: Request, id: int = Depends(get_current_id), o
                 connection.commit()
                 return {"status": "success", "message": "Password updated successfully"}
             else:
-                raise HTTPException(status_code=403, detail="Invalid old password")
+                return {"message": "Invalid old password"}
         else:
-            raise HTTPException(status_code=403, detail="New passwords do not match.")
+            return {"message": "New passwords do not match."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
     finally:
@@ -546,6 +551,27 @@ async def get_counties(state: str):
             return county_names
         else:
             return {"message": f"No counties found for state: {state}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    finally:
+        cursor.close()
+
+#api for forgotten password reset, currently does not do anything exceptional
+@app.post("/forgot_password/")
+async def forgot_password(email: str = Form(...)):
+    try:
+        cursor = connection.cursor()
+        cursor.execute("SELECT id FROM registered_users WHERE CAST(email AS NVARCHAR) = ?", email)
+        user = cursor.fetchone()
+        if user:
+            recipient_email = email
+            temp_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(10))
+            full_message = f"Hello user, Here is your new temporary password: {temp_password}. Please use this the next time you login and update your password."
+            send_email(recipient_email, 'Forgot Pasword', full_message)
+        else:
+            time.sleep(1)
+        message = "If account exists, instructions for password reset will be sent to your email."
+        return JSONResponse(content={"message": message})
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
     finally:

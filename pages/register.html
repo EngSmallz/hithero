@@ -59,10 +59,10 @@
                 <option value="teacher">Teacher</option>
             </select><br>
         
-            <p><button id="submitButton">Submit</button>
-        </form>
+            <p><button id="submitButton">Submit</button></p>
+            <p><button id="registerButton" onclick="redirectTo('/pages/login.html')">Login</button></p></p>
 
-        <p>Already have an account? <a href="/pages/login.html">Log in</a></p>
+        </form>
     </main>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
@@ -95,6 +95,9 @@
             });
         });
 
+        function redirectTo(url) {
+                window.location.href = url;
+            }
 
         async function populateStatesDropdown() {
             try {

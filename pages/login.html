@@ -26,13 +26,12 @@
 
                 <label for="password">Password:</label>
                 <input type="password" id="password" name="password" required>
-
-                <p><button id="submitButton">Login</button>
+                <p><button id="submitButton">Submit</button>
                 </p>
             </form>
         </section>
-        <p>Forgot password? <a href="/pages/forgot.html">Forgot Password</a></p>
-        <p>Don't have an account? <a href="/pages/register.html">Register</a></p>
+        <p><button id="passButton" onclick="redirectTo('/pages/forgot.html')">Forgot Password</button></p>
+        <p><button id="registerButton" onclick="redirectTo('/pages/register.html')">Register</button></p>
     </main>
     <script>
         document.addEventListener("DOMContentLoaded", function () {

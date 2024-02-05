@@ -25,33 +25,42 @@
                 <label for="email">Email:</label>
                 <input type="email" id="email" name="email" required>
 
-                <p><button id="submitButton" onclick="resetPassword()">Reset Password</button></p>
+                <p><button id="submitButton">Submit</button></p>
             </form>
         </section>
-        <p>Remember your password? <a href="/pages/login.html">Login</a></p>
+        <p><button id="registerButton" onclick="redirectTo('/pages/login.html')">Login</button></p></p>
     </main>
 
     <script>
-        async function resetPassword() {
+        document.addEventListener("DOMContentLoaded", function () {
             const forgotForm = document.getElementById("forgot-form");
-            const formData = new FormData(forgotForm);
-            try {
-                const response = await fetch("/forgot_password/", {
-                    method: "POST",
-                    body: formData,
-                });
+            const forgotButton = document.getElementById("submitButton");
 
-                if (response.ok) {
-                    const data = await response.json();
-                    alert(data.message); // Use alert for success
-                    window.location.href = '/pages/login.html'; // Redirect to login page after successful reset
-                } else {
-                    alert("Password reset unsuccessful"); // Use alert for failure
+            forgotButton.addEventListener("click", async function (event) {
+                event.preventDefault();
+                const formData = new FormData(forgotForm);
+                try {
+                    const response = await fetch("/forgot_password/", {
+                        method: "POST",
+                        body: formData,
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        alert(data.message);
+                        window.location.href = '/pages/login.html';
+                    } else {
+                        alert("An error occurred");
+                    }
+                } catch (error) {
+                    alert("An error occurred");
                 }
-            } catch (error) {
-                alert("An error occurred"); // Use alert for error
+            });
+        });
+
+        function redirectTo(url) {
+                window.location.href = url;
             }
-        }
 
     </script>
 

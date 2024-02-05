@@ -70,7 +70,7 @@
                 <label for="message">Message:</label><br>
                 <textarea id="message" name="message" rows="4" cols="50"></textarea><br><br>
 
-                <button id="submitButton" onclick="contactus()">Submit</button>
+                <button id="submitButton">Submit</button>
             </form>
             <p>
             <div id="contact-message"></div>
@@ -82,27 +82,32 @@
                 window.location.href = url;
             }
         
-        async function contactus() {
-            const contactForm = document.getElementById("contact-form");
-            const formData = new FormData(contactForm);
-            try {
-                const response = await fetch("/contact_us/", {
-                    method: "POST",
-                    body: formData,
-                });
+            document.addEventListener("DOMContentLoaded", function () {
+                const contactForm = document.getElementById("contact-form");
+                const contactButton = document.getElementById("submitButton");
 
-                if (response.ok) {
-                        const data = await response.json();
-                        alert(data.message); // Use alert for success
-                        window.location.href = '/pages/homepage.html';
-                    } else {
-                        alert("Message unsuccessful");
-                        window.location.reload();
+                contactButton.addEventListener("click", async function (event) {
+                    event.preventDefault();
+                    const formData = new FormData(contactForm);
+                    try {
+                        const response = await fetch("/contact_us/", {
+                            method: "POST",
+                            body: formData,
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            alert(data.message); // Use alert for success
+                            window.location.href = '/pages/homepage.html';
+                        } else {
+                            alert("Message unsuccessful");
+                            window.location.reload();
+                        }
+                    } catch (error) {
+                        alert("An error occurred");
                     }
-                } catch (error) {
-                    alert("An error occurred");
-                }
-        }
+                });
+            });
 
         async function logout() {
             try {
