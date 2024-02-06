@@ -106,6 +106,7 @@
                     indexListData.forEach(school => {
                         const listItem = document.createElement('li');
                         const button = document.createElement('button');
+                        button.id = 'indexButton';
                         button.textContent = school;
                         button.onclick = () => storeSchool(school);
                         listItem.appendChild(button);

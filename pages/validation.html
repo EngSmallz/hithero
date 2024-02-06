@@ -24,7 +24,7 @@
             })
             .catch(error => {
                 console.error('Error checking authentication:', error);
-                document.getElementById('loginButton').style.display = 'block';
+                window.location.href = '/pages/403.html';
             });
     }
     window.onload = checkAuthentication;
@@ -35,7 +35,6 @@
     </header>
 
     <button id="logoutButton" style="display: none" onclick="logout()">Logout</button>
-    <button id="loginButton" style="display: none" onclick="redirectTo('/pages/login.html')">Login</button>
     <button id="mypageButton" style="display: none" onclick="mypage()">My Page</button>
     <button id="validationButton" style="display: none" onclick="redirectTo('/pages/validation.html')">Validation</button>
     <button id="createButton" style="display: none" onclick="redirectTo('/pages/create.html')">Create Profile</button>
@@ -68,7 +67,7 @@
                         const listItem = document.createElement("li");
                         const endItem = document.createElement("p");
                         const userInfoSpan = document.createElement("span");
-                        userInfoSpan.textContent = `${user.name} - ${user.email} - ${user.school} - ${user.phone_number} `;
+                        userInfoSpan.textContent = `${user.name} - ${user.email} - ${user.district} - ${user.school} - ${user.phone_number} `;
                         const validateButton = document.createElement("button");
                         validateButton.textContent = "Validate";
                         validateButton.id = "submitButton";

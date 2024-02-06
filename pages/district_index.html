@@ -107,6 +107,7 @@
                     indexListData.forEach(district => {
                         const listItem = document.createElement('li');
                         const button = document.createElement('button');
+                        button.id = 'indexButton';
                         button.textContent = district;
                         button.onclick = () => storeDistrict(district);
                         listItem.appendChild(button);

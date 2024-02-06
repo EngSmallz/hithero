@@ -138,8 +138,8 @@ async def register_user(name: str = Form(...), email: str = Form(...), phone_num
         """
         cursor.execute(insert_query, (name, email, state, county, district, school, phone_number, hashed_password, role))
         connection.commit()
-        send_email(email, "Registration successful", "Hello user, thank you for registering! Once you are validated by a fellow teacher in your district or one of us here at HTHeroes, you will be able to create your profile and start recieving support.")
-        return {"message": "User registered successfully."}
+        send_email(email, "Registration successful",  f"Dear {email},\n\nThank you for registering with us! Once you are validated by a fellow teacher in your district or one of us here at HTHeroes, you will be able to create your profile and start receiving support.\n\nBest regards,\nHTHeroes Team")
+        return {"message": "User registered successfully. You should recieve and email shortly."}
     except Exception as e:
         return {"message": "Registration unsuccessful", "error": str(e)}
     finally:
@@ -149,6 +149,7 @@ async def register_user(name: str = Form(...), email: str = Form(...), phone_num
 @app.post("/login/")
 async def login_user(request: Request, email: str = Form(...), password: str = Form(...)):
     try:
+        print('try')
         cursor = connection.cursor()
         cursor.execute("SELECT id, role, password, createCount FROM registered_users WHERE CAST(email AS NVARCHAR) = ?", (email,))
         user = cursor.fetchone()
@@ -194,7 +195,7 @@ async def move_user(user_email: str):
         connection.commit()
         cursor.execute("DELETE FROM new_users WHERE CAST(email AS NVARCHAR) = ?", user_email)
         connection.commit()
-        send_email(user.email, "Validated!", "Hello user, you have been validated! Login and create your profile to start geting support today.")
+        send_email(user.email, "Validation Notification", f"Dear {user.email},\n\nWe are pleased to inform you that your registration with us has been successfully validated! You may now log in and create your profile to start receiving support.\n\nIf you have any questions or need assistance, please do not hesitate to contact us.\n\nBest regards,\nHTHeroes Team")
         return {"message": "User validated."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
@@ -513,7 +514,7 @@ async def validation_page(request: Request, role: str = Depends(get_current_role
         if role == "admin":
             cursor = connection.cursor()
             new_users = cursor.execute("SELECT * FROM new_users").fetchall()
-            return {"new_users": [{"name": user.name, "email": user.email, "school": user.school, "phone_number": user.phone_number} for user in new_users]}
+            return {"new_users": [{"name": user.name, "email": user.email, "district": user.district, "school": user.school, "phone_number": user.phone_number} for user in new_users]}
         if role == 'teacher':
             store_my_cookies(request, id)
             state = get_index_cookie('state', request)
@@ -522,7 +523,7 @@ async def validation_page(request: Request, role: str = Depends(get_current_role
             cursor = connection.cursor()
             cursor.execute("SELECT * FROM new_users WHERE CAST(state AS nvarchar) = ? AND CAST(county AS nvarchar) = ? AND CAST(district AS nvarchar) = ?", (state, county, district))
             new_users = cursor.fetchall()
-            return {"new_users": [{"name": user.name, "email": user.email, "school": user.school, "phone_number": user.phone_number} for user in new_users]}
+            return {"new_users": [{"name": user.name, "email": user.email, "district": user.district, "school": user.school, "phone_number": user.phone_number} for user in new_users]}
         else:
             raise HTTPException(status_code=403, detail="You don't have permission to access this page.")
     except Exception as e:
@@ -573,7 +574,7 @@ async def forgot_password(email: str = Form(...)):
         if user:
             recipient_email = email
             temp_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(10))
-            full_message = f"Hello user, Here is your new temporary password: {temp_password}. Please use this the next time you login and update your password."
+            full_message = f"Dear {email},\n\nWe have received a request for a password reset for your account. Here is your new temporary password: {temp_password}. Please use this password the next time you login and update it immediately.\n\nIf you did not request this password reset or have any concerns, please contact our support team.\n\nBest regards,\nHTHeroes Team"
             send_email(recipient_email, 'Forgot Pasword', full_message)
             update_temp_password(recipient_email, temp_password)
         else:

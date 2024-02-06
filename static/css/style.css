@@ -151,6 +151,30 @@ nav a {
     z-index: 999; /* Ensure the button is above other elements */
 }
 
+#updateButton {
+	box-shadow:inset 0px 1px 0px 0px #e184f3;
+	background:linear-gradient(to bottom, #c123de 5%, #a20dbd 100%);
+	background-color:#c123de;
+	border-radius:3px;
+	border:1px solid #a511c0;
+	display:inline-block;
+	cursor:pointer;
+	color:#ffffff;
+	font-family:Arial;
+	font-size:13px;
+	padding:6px 24px;
+	text-decoration:none;
+	text-shadow:0px 1px 0px #9b14b3;
+}
+#updateButton:hover {
+	background:linear-gradient(to bottom, #a20dbd 5%, #c123de 100%);
+	background-color:#a20dbd;
+}
+#updateButton:active {
+	position:relative;
+	top:1px;
+}
+
 #editButton {
 	box-shadow:inset 0px 1px 0px 0px #e184f3;
 	background:linear-gradient(to bottom, #c123de 5%, #a20dbd 100%);
@@ -166,21 +190,13 @@ nav a {
 	text-decoration:none;
 	text-shadow:0px 1px 0px #9b14b3;
 }
-
-#passButton {
-	box-shadow:inset 0px 1px 0px 0px #e184f3;
-	background:linear-gradient(to bottom, #c123de 5%, #a20dbd 100%);
-	background-color:#c123de;
-	border-radius:3px;
-	border:1px solid #a511c0;
-	display:inline-block;
-	cursor:pointer;
-	color:#ffffff;
-	font-family:Arial;
-	font-size:13px;
-	padding:6px 24px;
-	text-decoration:none;
-	text-shadow:0px 1px 0px #9b14b3;
+#editButton:hover {
+	background:linear-gradient(to bottom, #a20dbd 5%, #c123de 100%);
+	background-color:#a20dbd;
+}
+#editButton:active {
+	position:relative;
+	top:1px;
 }
 
 #submitButton {
@@ -196,6 +212,14 @@ nav a {
 	font-weight:bold;
 	padding:6px 12px;
 	text-decoration:none;
+}
+#submitButton:hover {
+	background:linear-gradient(to bottom, #68a54b 5%, #74ad5a 100%);
+	background-color:#68a54b;
+}
+#submitButton:active {
+	position:relative;
+	top:1px;
 }
 
 #teacherButton {
@@ -214,6 +238,14 @@ nav a {
 	text-decoration:none;
 	text-shadow:0px 1px 0px #283966;
 }
+#teacherButton:hover {
+	background:linear-gradient(to bottom, #476e9e 5%, #7892c2 100%);
+	background-color:#476e9e;
+}
+#teacherButton:active {
+	position:relative;
+	top:1px;
+}
 
 #wishlistButton {
 	box-shadow:inset 0px 1px 0px 0px #232f3e;
@@ -231,6 +263,14 @@ nav a {
 	text-decoration:none;
 	text-shadow:0px 1px 0px #000000;
 }
+#wishlistButton:hover {
+	background:linear-gradient(to bottom, #000000 5%, #232f3e 100%);
+	background-color:#000000;
+}
+#wishlistButton:active {
+	position:relative;
+	top:1px;
+}
 
 #registerButton {
     box-shadow: inset 0px 1px 0px 0px #cf866c;
@@ -245,6 +285,39 @@ nav a {
     padding: 6px 24px;
     text-decoration: none;
     text-shadow: 0px 1px 0px #854629;
+}
+#registerButton:hover {
+	background:linear-gradient(to bottom, #bc3315 5%, #d0451b 100%);
+	background-color:#bc3315;
+}
+#registerButton:active {
+	position:relative;
+	top:1px;
+}
+
+#indexButton {
+	box-shadow:inset 0px 1px 0px 0px #caefab;
+	background:linear-gradient(to bottom, #77d42a 5%, #5cb811 100%);
+	background-color:#77d42a;
+	border-radius:6px;
+	border:1px solid #268a16;
+	display:inline-block;
+	cursor:pointer;
+	color:#306108;
+	font-family:Arial;
+	font-size:15px;
+	font-weight:bold;
+	padding:6px 24px;
+	text-decoration:none;
+	text-shadow:0px 1px 0px #aade7c;
+}
+#indexButton:hover {
+	background:linear-gradient(to bottom, #5cb811 5%, #77d42a 100%);
+	background-color:#5cb811;
+}
+#indexButton:active {
+	position:relative;
+	top:1px;
 }
 
 main_index {
@@ -277,6 +350,11 @@ label {
     display: block;
     margin-bottom: 5px;
     font-weight: bold;
+}
+
+smallerlabel label{
+    display: block;
+    margin-bottom: 5px;
 }
 
 footer {

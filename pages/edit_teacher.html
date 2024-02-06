@@ -25,7 +25,7 @@
             })
             .catch(error => {
                 console.error('Error checking authentication:', error);
-                document.getElementById('loginButton').style.display = 'block';
+                window.location.href = '/pages/403.html';
             });
     }
     window.onload = checkAuthentication;

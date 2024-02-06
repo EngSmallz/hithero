@@ -85,13 +85,16 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    const link = document.createElement('a');
-                    link.href = '/pages/teacher.html';
-                    link.textContent = "View Teacher Profile";
+                    const button = document.createElement('button');
+                    button.id = 'teacherButton';
+                    button.textContent = "View Teacher Profile";
+                    button.addEventListener('click', function() {
+                        window.location.href = '/pages/teacher.html';
+                    });
 
                     const randomTeacherInfo = document.getElementById('randomTeacherInfo');
-                    randomTeacherInfo.innerHTML = `<h3>${data.name}</h3>`;
-                    randomTeacherInfo.appendChild(link);
+                    randomTeacherInfo.innerHTML = `<h3>${data.name} from ${data.school} in ${data.county}, ${data.state}</h3>`;
+                    randomTeacherInfo.appendChild(button);
                 } else {
                     const randomTeacherInfo = document.getElementById('randomTeacherInfo');
                     randomTeacherInfo.innerHTML = "Unable to fetch random teacher information.";
@@ -100,6 +103,7 @@
                 console.error('Error fetching random teacher:', error);
             }
         }
+
         
         async function logout() {
             try {

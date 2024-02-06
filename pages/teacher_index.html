@@ -102,6 +102,7 @@
                     indexListData.forEach(teacher => {
                         const listItem = document.createElement('li');
                         const button = document.createElement('button');
+                        button.id = 'indexButton';
                         button.textContent = teacher;
                         button.onclick = () => storeTeacher(teacher);
                         listItem.appendChild(button);

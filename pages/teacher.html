@@ -17,13 +17,13 @@
                         .then(response => {
                             if (response.ok) {
                                 document.getElementById('editButton').style.display = 'block';
-                                document.getElementById('passButton').style.display = 'block';
+                                document.getElementById('updateButton').style.display = 'block';
                                 // document.getElementById('updateImgBtn').style.display = 'block';
                             }
                         })
                 } else if (data.user_role === 'admin') {
                     document.getElementById('editButton').style.display = 'block';
-                    document.getElementById('passButton').style.display = 'block';
+                    document.getElementById('updateButton').style.display = 'block';
                     // document.getElementById('updateImgBtn').style.display = 'block';
                     document.getElementById('logoutButton').style.display = 'block';
                     document.getElementById('validationButton').style.display = 'block';
@@ -83,7 +83,7 @@
 
 
         <button id="editButton" style="display: none" onclick="redirectTo('/pages/edit_teacher.html')">Edit Info</button><p></p>
-        <button id="passButton" style="display: none" onclick="redirectTo('/pages/update_password.html')">Update Password</button><p></p>
+        <button id="updateButton" style="display: none" onclick="redirectTo('/pages/update_password.html')">Update Password</button><p></p>
 
     </main>
 

@@ -93,6 +93,7 @@
                             data.forEach(county => {
                                 const listItem = document.createElement('li');
                                 const button = document.createElement('button');
+                                button.id = 'indexButton';
                                 button.textContent = county;
                                 button.onclick = () => storeCounty(county);
                                 listItem.appendChild(button);
