@@ -136,6 +136,45 @@
             }
         }
 
+        async function populateDistrictsDropdown() {
+            try {
+                const selectedState = document.getElementById("state").value;
+                const selectedCounty = document.getElementById("county").value;
+                const response = await fetch(`/get_districts/${selectedState}/${selectedCounty}`);
+                const districts = await response.json();
+                const districtDropdown = document.getElementById("district");
+                districtDropdown.innerHTML = "";
+                const chooseDistrictOption = new Option("Choose district", "");
+                districtDropdown.add(chooseDistrictOption);
+                districts.forEach(district => {
+                    const option = new Option(district, district);
+                    districtDropdown.add(option);
+                });
+            } catch (error) {
+                alert("Not a vlid option.");
+            }
+        }
+
+        async function populateSchoolsDropdown() {
+            try {
+                const selectedState = document.getElementById("state").value;
+                const selectedCounty = document.getElementById("county").value;
+                const selectedDistrict = document.getElementById("district").value;
+                const response = await fetch(`/get_schools/${selectedState}/${selectedCounty}/${selectedDistrict}`);
+                const schools = await response.json();
+                const schoolDropdown = document.getElementById("school");
+                schoolDropdown.innerHTML = "";
+                const chooseSchoolOption = new Option("Choose school", "");
+                schoolDropdown.add(chooseSchoolOption);
+                schools.forEach(school => {
+                    const option = new Option(school, school);
+                    schoolDropdown.add(option);
+                });
+            } catch (error) {
+                alert("Not a vlid option.");
+            }
+        }
+
         window.onload = populateStatesDropdown();
     </script>
     <footer>

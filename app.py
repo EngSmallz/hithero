@@ -535,7 +535,7 @@ async def validation_page(request: Request, role: str = Depends(get_current_role
 async def get_states():
     try:
         cursor = connection.cursor()
-        cursor.execute("SELECT DISTINCT state_name FROM statecounty")
+        cursor.execute("SELECT DISTINCT state FROM schools")
         states = cursor.fetchall()
         if states:
             state_names = sorted([state[0] for state in states])
@@ -550,8 +550,44 @@ async def get_states():
 async def get_counties(state: str):
     try:
         cursor = connection.cursor()
-        query = "SELECT county_name FROM statecounty WHERE state_name = ?"
+        query = "SELECT county FROM schools WHERE state = ?"
         cursor.execute(query, (state,))
+        counties = cursor.fetchall()
+        if counties:
+            county_names = sorted([county[0] for county in counties])
+            return county_names
+        else:
+            return {"message": f"No counties found for state: {state}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    finally:
+        cursor.close()
+
+#api gets the names of the school districts in the desired county and state
+@app.get("/get_districts/{state}/{county}")
+async def get_districts(state: str, county: str):
+    try:
+        cursor = connection.cursor()
+        query = "SELECT county FROM schools WHERE state = ? AND county = ?"
+        cursor.execute(query, (state, county))
+        counties = cursor.fetchall()
+        if counties:
+            county_names = sorted([county[0] for county in counties])
+            return county_names
+        else:
+            return {"message": f"No counties found for state: {state}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    finally:
+        cursor.close()
+
+#api gets the names of the school in the desired district, coutny, and state
+@app.get("/get_schools/{state}/{county}/{district}")
+async def get_schools(state: str, county: str, district: str):
+    try:
+        cursor = connection.cursor()
+        query = "SELECT school_name FROM schools WHERE state = ? AND county = ? AND district = ?"
+        cursor.execute(query, (state, county, district))
         counties = cursor.fetchall()
         if counties:
             county_names = sorted([county[0] for county in counties])
