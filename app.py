@@ -149,7 +149,6 @@ async def register_user(name: str = Form(...), email: str = Form(...), phone_num
 @app.post("/login/")
 async def login_user(request: Request, email: str = Form(...), password: str = Form(...)):
     try:
-        print('try')
         cursor = connection.cursor()
         cursor.execute("SELECT id, role, password, createCount FROM registered_users WHERE CAST(email AS NVARCHAR) = ?", (email,))
         user = cursor.fetchone()
@@ -210,7 +209,7 @@ async def create_teacher_profile(name: str = Form(...), state: str = Form(...), 
             cursor = connection.cursor()
             cursor.execute("SELECT createCount FROM registered_users WHERE id = ?", id)
             link = cursor.fetchone()
-            if link[0] == 0 or role == 'admin':
+            if link[0] == 0 or role == 'admin' or role == 'principal' or role == 'superintendent':
                 insert_query = "INSERT INTO teacher_list (name, state, county, district, school, regUserID, about_me, wishlist_url) " \
                             "VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
                 cursor.execute(insert_query, (name, state, county, district, school, id, aboutMe, wishlist))
@@ -486,17 +485,18 @@ async def update_password(request: Request, id: int = Depends(get_current_id), o
     finally:
         cursor.close()
 
-#api to check if a user has teacher based access
-@app.get("/check_access_teacher/")
+#api to check if a user has edit acces to teacher page
+@app.get("/check_access/")
 async def check_access_teacher(request: Request, id: int = Depends(get_current_id), role: int = Depends(get_current_role)):
     try:
+        cursor = connection.cursor()
         if role == 'teacher':
             state = get_index_cookie('state', request)
             county = get_index_cookie('county', request)
             district = get_index_cookie('district', request)
             school = get_index_cookie('school', request)
             name = get_index_cookie('teacher', request)
-            cursor = connection.cursor()
+
             cursor.execute("SELECT regUserID FROM teacher_list WHERE CAST(state AS nvarchar) = ? AND CAST(county AS nvarchar) = ? AND CAST(district AS nvarchar) = ? AND CAST(school AS nvarchar) = ? AND CAST(name AS nvarchar) = ?", state, county, district, school, name)
             teacher_data = cursor.fetchone()
             if teacher_data and teacher_data[0] == id:
@@ -511,8 +511,8 @@ async def check_access_teacher(request: Request, id: int = Depends(get_current_i
 @app.get("/validation_list/")
 async def validation_page(request: Request, role: str = Depends(get_current_role), id: int = Depends(get_current_id)):
     try:
+        cursor = connection.cursor()
         if role == "admin":
-            cursor = connection.cursor()
             new_users = cursor.execute("SELECT * FROM new_users").fetchall()
             return {"new_users": [{"name": user.name, "email": user.email, "district": user.district, "school": user.school, "phone_number": user.phone_number} for user in new_users]}
         if role == 'teacher':
@@ -520,10 +520,9 @@ async def validation_page(request: Request, role: str = Depends(get_current_role
             state = get_index_cookie('state', request)
             county = get_index_cookie('county', request)
             district = get_index_cookie('district', request)
-            cursor = connection.cursor()
             cursor.execute("SELECT * FROM new_users WHERE CAST(state AS nvarchar) = ? AND CAST(county AS nvarchar) = ? AND CAST(district AS nvarchar) = ?", (state, county, district))
             new_users = cursor.fetchall()
-            return {"new_users": [{"name": user.name, "email": user.email, "district": user.district, "school": user.school, "phone_number": user.phone_number} for user in new_users]}
+            return {"new_users": [{"name": user.name, "email": user.email, "districst": user.district, "school": user.school, "phone_number": user.phone_number} for user in new_users]}
         else:
             raise HTTPException(status_code=403, detail="You don't have permission to access this page.")
     except Exception as e:
