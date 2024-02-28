@@ -209,10 +209,11 @@ async def create_teacher_profile(name: str = Form(...), state: str = Form(...), 
             cursor = connection.cursor()
             cursor.execute("SELECT createCount FROM registered_users WHERE id = ?", id)
             link = cursor.fetchone()
-            if link[0] == 0 or role == 'admin' or role == 'principal' or role == 'superintendent':
+            if link[0] == 0 or role == 'admin':
+                aa_link = wishlist + "?&_encoding=UTF8&tag=hometownheroe-20"
                 insert_query = "INSERT INTO teacher_list (name, state, county, district, school, regUserID, about_me, wishlist_url) " \
                             "VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-                cursor.execute(insert_query, (name, state, county, district, school, id, aboutMe, wishlist))
+                cursor.execute(insert_query, (name, state, county, district, school, id, aboutMe, aa_link))
                 connection.commit()
                 cursor.execute("UPDATE registered_users SET createCount = createCount + 1 WHERE id = ?", id)
                 connection.commit()
@@ -400,8 +401,9 @@ async def edit_teacher_info(request: Request, wishlist: str = Form(...), aboutMe
             query = "UPDATE teacher_list SET"
             params = []
             if wishlist:
+                aa_link = wishlist + "?&_encoding=UTF8&tag=hometownheroe-20"
                 query += " wishlist_url = ?,"
-                params.append(wishlist)
+                params.append(aa_link)
             if aboutMe:
                 query += " about_me = ?,"
                 params.append(aboutMe)

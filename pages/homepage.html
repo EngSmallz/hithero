@@ -1,9 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html> 
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Teacher Profile - Hometown Heroes</title>
+    <title>Hometown Heroes - Support Teachers</title>
     <link rel="stylesheet" type="text/css" href="/static/css/style.css">
 </head>
 <script>
@@ -23,16 +21,16 @@
                     throw new Error('Unknown role');
                 }
             })
-            .catch(error => {
-                console.error('Error checking authentication:', error);
-                window.location.href = '/pages/403.html';
-            });
+        .catch(error => {
+            document.getElementById('loginButton').style.display = 'block';
+        });
     }
     window.onload = checkAuthentication;
 </script>
 <body>
     <header>
-        <h1>Edit Teacher Profile</h1>
+        <h1>Welcome to Hometown Heroes</h1>
+        <p>Supporting Teachers and Students</p>
     </header>
 
     <nav>
@@ -50,57 +48,64 @@
     <button id="createButton" style="display: none" onclick="redirectTo('/pages/create.html')">Create Profile</button>
 
     <main>
-        <section class="update-form">
-            <h2>Edit Your Info</h2>
-            <h3>Only filled areas will update.</h3>
-            <form id="update-form" method="post" enctype="multipart/form-data">
-                <label for="wishlist">Amazon Wishlist:</label>
-                <input type="text" id="wishlist" name="wishlist" required>
-    
-                <label for="aboutMe">About Me (max 250 characters):</label>
-                <textarea id="aboutMe" name="aboutMe" maxlength="250" required></textarea>
 
-                <p><button id="submitButton" onclick="update()">Submit</button>
-                <p></p>
-            </form>
+        <section>
+            <h2>Find a Teacher to Support</h2>
+            <p>Explore teachers from across America and make a difference in their classroom.</p>
+            <button id="teacherButton" onclick="redirectTo('/pages/state_index.html')">Find Teachers</button>
         </section>
+
+        <section>
+            <h2>Find a Random Teacher</h2>
+            <p>Discover a teacher at random and make a positive impact on their classroom.</p>
+            <button id="teacherButton" class="btn" onclick="randomTeacher()">Find Random Teacher</button><p>
+            <div id="randomTeacherInfo">
+            </div>
+        </section>
+
+        <section>
+            <h2>Are You a Teacher?</h2>
+            <p>If you're an educator in need of support, register to create your profile.</p>
+            <button id="teacherButton" onclick="redirectTo('/pages/register.html')">Register</button>
+        </section>
+
     </main>
+
+    <footer>
+        <p>&copy; 2023 Hometown Heroes</p>
+    </footer>
 
     <script>
         function redirectTo(url) {
                 window.location.href = url;
             }
             
-        document.addEventListener("DOMContentLoaded", function () {
-            const updateForm = document.getElementById("update-form");
-            const updateButton = document.getElementById("submitButton");
+        async function randomTeacher() {
+            try {
+                const response = await fetch('/random_teacher/');
+                const data = await response.json();
 
-            updateButton.addEventListener("click", async function (event) {
-                event.preventDefault();
-                const formData = new FormData(updateForm);
-
-                try {
-                    const response = await fetch("/update_teacher_info/", {
-                        method: "POST",
-                        body: formData,
+                if (response.ok) {
+                    const button = document.createElement('button');
+                    button.id = 'teacherButton';
+                    button.textContent = "View Teacher Profile";
+                    button.addEventListener('click', function() {
+                        window.location.href = '/pages/teacher.html';
                     });
 
-                    if (response.ok) {
-                        alert('Profile updated successfully!');
-                        window.location.href = '/pages/teacher.html';
-                    } else {
-                        alert('Failed to update profile. Please try again.');
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                    alert('An error occurred. Please try again.');
-                    window.location.reload();
+                    const randomTeacherInfo = document.getElementById('randomTeacherInfo');
+                    randomTeacherInfo.innerHTML = `<h3>${data.name} from ${data.school} in ${data.county}, ${data.state}</h3>`;
+                    randomTeacherInfo.appendChild(button);
+                } else {
+                    const randomTeacherInfo = document.getElementById('randomTeacherInfo');
+                    randomTeacherInfo.innerHTML = "Unable to fetch random teacher information.";
                 }
-            });
-        });
+            } catch (error) {
+                console.error('Error fetching random teacher:', error);
+            }
+        }
 
-
-
+        
         async function logout() {
             try {
                 const response = await fetch(`/logout/`, {
@@ -136,8 +141,6 @@
         }
     </script>
     
-    <footer>
-        <p>&copy; 2023 Hometown Heroes</p>
-    </footer>
+    
 </body>
 </html>
