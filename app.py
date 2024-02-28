@@ -386,7 +386,7 @@ async def get_teacher_info(request: Request):
         cursor.close()
 
 
-###api used to update the logged in users teacher page
+###api used to update the logged in users teacher page. only info inpoutted is updated
 @app.post("/update_teacher_info/")
 async def edit_teacher_info(request: Request, wishlist: str = Form(...), aboutMe: str = Form(...), role: str = Depends(get_current_role)):
     try:
@@ -397,12 +397,18 @@ async def edit_teacher_info(request: Request, wishlist: str = Form(...), aboutMe
             school = get_index_cookie('school', request) 
             name = get_index_cookie('teacher', request)
             cursor = connection.cursor()
-            cursor.execute(
-                "UPDATE teacher_list SET wishlist_url = ?, about_me = ? WHERE CAST(state AS nvarchar) = ? AND CAST(county AS nvarchar) = ? AND CAST(district AS nvarchar) = ? AND CAST(school AS nvarchar) = ? AND CAST(name AS nvarchar) = ?",
-                wishlist, aboutMe, state, county, district, school, name
-            )
+            query = "UPDATE teacher_list SET"
+            params = []
+            if wishlist:
+                query += " wishlist_url = ?,"
+                params.append(wishlist)
+            if aboutMe:
+                query += " about_me = ?,"
+                params.append(aboutMe)
+            query = query.rstrip(',') + " WHERE CAST(state AS nvarchar) = ? AND CAST(county AS nvarchar) = ? AND CAST(district AS nvarchar) = ? AND CAST(school AS nvarchar) = ? AND CAST(name AS nvarchar) = ?"
+            params.extend([state, county, district, school, name])
+            cursor.execute(query, params)
             connection.commit()
-
             return {"message": "Information updated."}
         else:
             return {"message": "Permission denied."}
