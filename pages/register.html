@@ -44,17 +44,19 @@
             </select><br><br>
             
             <label for="county">County:</label>
-            <select id="county" name="county" required>
+            <select id="county" name="county" onchange="populateDistrictsDropdown()" required>
                 <option value="" disabled selected>Choose county</option>
             </select><br><br>
         
-            <label for="district">School District:</label>
-            <smallerlabel>E.g. Medical Lake School District, Seattle Public Schools</smallerlabel><p></p>
-            <input type="text" id="district" name="district" required><br><br>
+            <label for="county">School District:</label>
+            <select id="district" name="district" onchange="populateSchoolsDropdown()" required>
+                <option value="" disabled selected>Choose district</option>
+            </select><br><br>
         
-            <label for="school">School:</label>
-            <smallerlabel>E.g. Medical Lake High School, Decatur Elementary School</smallerlabel><p></p>
-            <input type="text" id="school" name="school" required><br><br>
+            <label for="county">School:</label>
+            <select id="school" name="school" required>
+                <option value="" disabled selected>Choose school</option>
+            </select><br><br>
         
             <label for="role">Role:</label>
             <select id="role" name="role" required>
@@ -132,7 +134,7 @@
                     countyDropdown.add(option);
                 });
             } catch (error) {
-                alert("Not a vlid option.");
+                alert("Not a valid option.");
             }
         }
 
@@ -151,7 +153,7 @@
                     districtDropdown.add(option);
                 });
             } catch (error) {
-                alert("Not a vlid option.");
+                alert("Not a valid option.");
             }
         }
 
@@ -171,7 +173,7 @@
                     schoolDropdown.add(option);
                 });
             } catch (error) {
-                alert("Not a vlid option.");
+                alert("Not a valid option.");
             }
         }
 

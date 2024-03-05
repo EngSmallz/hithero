@@ -22,7 +22,7 @@ app.mount("/pages", StaticFiles(directory="pages"), name="pages")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Define your AAD ODBC connection string
-connection_string = (f'Driver={os.getenv("DATABASE_DRIVER")};Server={os.getenv("DATABASE_SERVER")};Database={os.getenv("DATABASE_NAME")};Uid={os.getenv("DATABASE_UID")};Pwd={os.getenv("DATABASE_PASSWORD")};Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30;')
+connection_string = (f'Driver={os.getenv("DATABASE_DRIVER")};Server={os.getenv("DATABASE_SERVER")};Database={os.getenv("DATABASE_NAME")};Uid={os.getenv("DATABASE_UID")};Pwd={os.getenv("DATABASE_PASSWORD")};Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30;ConnectRetryCount=255;')
 
 # Define the ODBC connection
 try:
@@ -32,6 +32,12 @@ except pyodbc.Error as e:
 
 
 #########functions############
+def connect_to_db():
+    try:
+        connection = pyodbc.connect(connection_string)
+    except pyodbc.Error as e:
+        raise Exception(f"Error connecting to the database: {str(e)}")
+
 def get_current_id(request: Request):
     return request.session.get("user_id", None)
 
@@ -541,24 +547,20 @@ async def validation_page(request: Request, role: str = Depends(get_current_role
 #api gets a list of states from statecoutny table
 @app.get("/get_states/")
 async def get_states():
-    try:
-        cursor = connection.cursor()
-        cursor.execute("SELECT DISTINCT state FROM schools")
-        states = cursor.fetchall()
-        if states:
-            state_names = sorted([state[0] for state in states])
-            return state_names
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
-    finally:
-        cursor.close()
+    cursor = connection.cursor()
+    cursor.execute("SELECT DISTINCT state FROM schools")
+    states = cursor.fetchall()
+    if states:
+        state_names = sorted([state[0] for state in states])
+        return state_names
+    cursor.close()
 
 #api gets the names of the counties in the desired state
 @app.get("/get_counties/{state}")
 async def get_counties(state: str):
     try:
         cursor = connection.cursor()
-        query = "SELECT county FROM schools WHERE state = ?"
+        query = "SELECT DISTINCT county FROM schools WHERE state = ?"
         cursor.execute(query, (state,))
         counties = cursor.fetchall()
         if counties:
@@ -576,7 +578,7 @@ async def get_counties(state: str):
 async def get_districts(state: str, county: str):
     try:
         cursor = connection.cursor()
-        query = "SELECT county FROM schools WHERE state = ? AND county = ?"
+        query = "SELECT DISTINCT district FROM schools WHERE state = ? AND county = ?"
         cursor.execute(query, (state, county))
         counties = cursor.fetchall()
         if counties:
@@ -594,7 +596,7 @@ async def get_districts(state: str, county: str):
 async def get_schools(state: str, county: str, district: str):
     try:
         cursor = connection.cursor()
-        query = "SELECT school_name FROM schools WHERE state = ? AND county = ? AND district = ?"
+        query = "SELECT DISTINCT school_name FROM schools WHERE state = ? AND county = ? AND district = ?"
         cursor.execute(query, (state, county, district))
         counties = cursor.fetchall()
         if counties:
