@@ -10,6 +10,11 @@ from starlette.middleware.sessions import SessionMiddleware
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from passlib.hash import sha256_crypt
+from sqlalchemy import create_engine, Column, Integer, String
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import select, cast
 
 
 app = FastAPI()
@@ -21,23 +26,73 @@ app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY"))
 app.mount("/pages", StaticFiles(directory="pages"), name="pages")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Define your AAD ODBC connection string
-connection_string = (f'Driver={os.getenv("DATABASE_DRIVER")};Server={os.getenv("DATABASE_SERVER")};Database={os.getenv("DATABASE_NAME")};Uid={os.getenv("DATABASE_UID")};Pwd={os.getenv("DATABASE_PASSWORD")};Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30;ConnectRetryCount=255;')
 
-# Define the ODBC connection
-try:
-    connection = pyodbc.connect(connection_string)
-except pyodbc.Error as e:
-    raise Exception(f"Error connecting to the database: {str(e)}")
+# Load environment variables
+DATABASE_SERVER = os.getenv("DATABASE_SERVER")
+DATABASE_NAME = os.getenv("DATABASE_NAME")
+DATABASE_UID = os.getenv("DATABASE_UID")
+DATABASE_PASSWORD = os.getenv("DATABASE_PASSWORD")
+DATABASE_PORT = os.getenv("DATABASE_PORT")
+
+# Construct SQLAlchemy database URL
+SQLALCHEMY_DATABASE_URL = f"mssql+pyodbc://{DATABASE_UID}:{DATABASE_PASSWORD}@{DATABASE_SERVER}:{DATABASE_PORT}/{DATABASE_NAME}?driver=ODBC+Driver+18+for+SQL+Server"
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+# Define SQLAlchemy models
+class School(Base):
+    __tablename__ = "schools"
+
+    school_id = Column(Integer, primary_key=True)
+    school_name = Column(String)
+    district = Column(String)
+    county = Column(String)
+    state = Column(String)
+
+class NewUsers(Base):
+    __tablename__ = "new_users"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    email = Column(String)
+    state = Column(String)
+    county = Column(String)
+    district = Column(String)
+    school = Column(String)
+    phone_number = Column(String)
+    password = Column(String)
+    role = Column(String)
+
+class RegisteredUsers(Base):
+    __tablename__ = "registered_users"
+
+    id = Column(Integer, primary_key=True)
+    email = Column(String)
+    password = Column(String)
+    role = Column(String)
+    create_count = Column(Integer)
+
+class TeacherList(Base):
+    __tablename__ = "teacher_list"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    state = Column(String)
+    county = Column(String)
+    district = Column(String)
+    school = Column(String)
+    reg_user_id = Column(Integer)
+    wishlist_url = Column(String)
+    about_me = Column(String)
+    image_data = Column(String)
+
+
+# Create database tables
+Base.metadata.create_all(bind=engine)
 
 
 #########functions############
-def connect_to_db():
-    try:
-        connection = pyodbc.connect(connection_string)
-    except pyodbc.Error as e:
-        raise Exception(f"Error connecting to the database: {str(e)}")
-
 def get_current_id(request: Request):
     return request.session.get("user_id", None)
 
@@ -125,31 +180,29 @@ def update_temp_password(email: str, new_password: str):
 ###api used to register a new user (and only a new user) into the new_user list
 @app.post("/register/")
 async def register_user(name: str = Form(...), email: str = Form(...), phone_number: str = Form(...), password: str = Form(...), confirm_password: str = Form(...), state: str = Form(...),county: str = Form(...),district: str = Form(...), school: str = Form(...), role: str = Form(...)):
+    db = SessionLocal()
     try:
-        cursor = connection.cursor()
-        cursor.execute("SELECT id FROM registered_users WHERE CAST(email AS nvarchar) = ?", email)
-        existing_user = cursor.fetchone()
+        query = select(RegisteredUsers.id).where(cast(RegisteredUsers.email, String) == cast(email, String))
+        result = db.execute(query)
+        existing_user = result.fetchone()
         if existing_user:
             return {"message": "User with this email already exists."}
-        cursor.execute("SELECT id FROM new_users WHERE CAST(email AS nvarchar) = ?", email)
-        existing_user = cursor.fetchone()
+        query = select(NewUsers.id).where(cast(NewUsers.email, String) == cast(email, String))
+        result = db.execute(query)
+        existing_user = result.fetchone()
         if existing_user:
             return {"message": "User with this email is already in the registration queue."}
         if password != confirm_password:
             return {"message": "Password do not match."}
         hashed_password = sha256_crypt.hash(password)
-        insert_query = """
-            INSERT INTO new_users (name, email, state, county, district, school, phone_number, password, role)
-            VALUES (?, CAST(? AS NVARCHAR), ?, ?, ?, ?, ?, ?, ?)
-        """
-        cursor.execute(insert_query, (name, email, state, county, district, school, phone_number, hashed_password, role))
-        connection.commit()
+        new_user = NewUsers(name=name, email=email, state=state, county=county, district=district, school=school, phone_number=phone_number, password=hashed_password, role=role)
+        db.add(new_user)
+        db.commit()
         send_email(email, "Registration successful",  f"Dear {email},\n\nThank you for registering with us! Once you are validated by a fellow teacher in your district or one of us here at HTHeroes, you will be able to create your profile and start receiving support.\n\nBest regards,\nHTHeroes Team")
         return {"message": "User registered successfully. You should recieve and email shortly."}
     except Exception as e:
         return {"message": "Registration unsuccessful", "error": str(e)}
-    finally:
-        cursor.close()
+
 
 ###api used to create cookie based session via authentication with registered_user table
 @app.post("/login/")
@@ -547,67 +600,60 @@ async def validation_page(request: Request, role: str = Depends(get_current_role
 #api gets a list of states from statecoutny table
 @app.get("/get_states/")
 async def get_states():
-    cursor = connection.cursor()
-    cursor.execute("SELECT DISTINCT state FROM schools")
-    states = cursor.fetchall()
-    if states:
-        state_names = sorted([state[0] for state in states])
-        return state_names
-    cursor.close()
+    db = SessionLocal()
+    try:
+        states = db.query(School.state).distinct().all()
+        return [state[0] for state in states]
+    finally:
+        db.close()
 
 #api gets the names of the counties in the desired state
 @app.get("/get_counties/{state}")
 async def get_counties(state: str):
+    db = SessionLocal()
     try:
-        cursor = connection.cursor()
-        query = "SELECT DISTINCT county FROM schools WHERE state = ?"
-        cursor.execute(query, (state,))
-        counties = cursor.fetchall()
+        query = select(School.county).distinct().where(School.state == state)
+        result = db.execute(query)
+        counties = result.fetchall()
         if counties:
             county_names = sorted([county[0] for county in counties])
             return county_names
         else:
             return {"message": f"No counties found for state: {state}"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
     finally:
-        cursor.close()
+        db.close()
 
 #api gets the names of the school districts in the desired county and state
 @app.get("/get_districts/{state}/{county}")
 async def get_districts(state: str, county: str):
+    db = SessionLocal()
     try:
-        cursor = connection.cursor()
-        query = "SELECT DISTINCT district FROM schools WHERE state = ? AND county = ?"
-        cursor.execute(query, (state, county))
-        counties = cursor.fetchall()
-        if counties:
-            county_names = sorted([county[0] for county in counties])
-            return county_names
+        query = select(School.district).distinct().where((School.state == state) & (School.county == county))
+        result = db.execute(query)
+        districts = result.fetchall()
+        if districts:
+            district_names = sorted([district[0] for district in districts])
+            return district_names
         else:
-            return {"message": f"No counties found for state: {state}"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+            return {"message": f"No districts found for state: {state} and county: {county}"}
     finally:
-        cursor.close()
+        db.close()
 
 #api gets the names of the school in the desired district, coutny, and state
 @app.get("/get_schools/{state}/{county}/{district}")
 async def get_schools(state: str, county: str, district: str):
+    db = SessionLocal()
     try:
-        cursor = connection.cursor()
-        query = "SELECT DISTINCT school_name FROM schools WHERE state = ? AND county = ? AND district = ?"
-        cursor.execute(query, (state, county, district))
-        counties = cursor.fetchall()
-        if counties:
-            county_names = sorted([county[0] for county in counties])
-            return county_names
+        query = select(School.school_name).distinct().where((School.state == state) & (School.county == county) & (School.district == district))
+        result = db.execute(query)
+        schools = result.fetchall()
+        if schools:
+            school_names = sorted([school[0] for school in schools])
+            return school_names
         else:
-            return {"message": f"No counties found for state: {state}"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+            return {"message": f"No schools found for state: {state}, county: {county}, and district: {district}"}
     finally:
-        cursor.close()
+        db.close()
 
 #api for forgotten password reset, currently does not do anything exceptional
 @app.post("/forgot_password/")
