@@ -54,17 +54,19 @@
             </select><br><br>
             
             <label for="county">County:</label>
-            <select id="county" name="county" required>
+            <select id="county" name="county" onchange="populateDistrictsDropdown()" required>
                 <option value="" disabled selected>Choose county</option>
             </select><br><br>
         
             <label for="district">School District:</label>
-            <smallerlabel>E.g. Medical Lake School District, Seattle Public Schools</smallerlabel><p></p>
-            <input type="text" id="district" name="district" required><br><br>
+            <select id="district" name="district" onchange="populateSchoolsDropdown()" required>
+                <option value="" disabled selected>Choose district</option>
+            </select><br><br>
         
             <label for="school">School:</label>
-            <smallerlabel>E.g. Medical Lake High School, Decatur Elementary School</smallerlabel><p></p>
-            <input type="text" id="school" name="school" required><br><br>
+            <select id="school" name="school" required>
+                <option value="" disabled selected>Choose school</option>
+            </select><br><br>
 
             <label for="aboutMe">About Me:</label>
             <textarea id="aboutMe" name="aboutMe" maxlength="250" rows="4" cols="50" oninput="updateCharacterCount()" required></textarea>
@@ -146,6 +148,46 @@
                 alert("Not a vlid option.");
             }
         }
+
+        async function populateDistrictsDropdown() {
+            try {
+                const selectedState = document.getElementById("state").value;
+                const selectedCounty = document.getElementById("county").value;
+                const response = await fetch(`/get_districts/${selectedState}/${selectedCounty}`);
+                const districts = await response.json();
+                const districtDropdown = document.getElementById("district");
+                districtDropdown.innerHTML = "";
+                const chooseDistrictOption = new Option("Choose district", "");
+                districtDropdown.add(chooseDistrictOption);
+                districts.forEach(district => {
+                    const option = new Option(district, district);
+                    districtDropdown.add(option);
+                });
+            } catch (error) {
+                alert("Not a valid option.");
+            }
+        }
+
+        async function populateSchoolsDropdown() {
+            try {
+                const selectedState = document.getElementById("state").value;
+                const selectedCounty = document.getElementById("county").value;
+                const selectedDistrict = document.getElementById("district").value;
+                const response = await fetch(`/get_schools/${selectedState}/${selectedCounty}/${selectedDistrict}`);
+                const schools = await response.json();
+                const schoolDropdown = document.getElementById("school");
+                schoolDropdown.innerHTML = "";
+                const chooseSchoolOption = new Option("Choose school", "");
+                schoolDropdown.add(chooseSchoolOption);
+                schools.forEach(school => {
+                    const option = new Option(school, school);
+                    schoolDropdown.add(option);
+                });
+            } catch (error) {
+                alert("Not a valid option.");
+            }
+        }
+        
         async function logout() {
             try {
                 const response = await fetch(`/logout/`, {
