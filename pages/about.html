@@ -57,6 +57,15 @@
             <h2>How Do We Do That?</h2>
             <p>At Hometown Heroes, we facilitate a streamlined process for teachers to create profiles and curate wishlists of essential classroom supplies sourced from Amazon. Our platform empowers community members to directly support teachers by selecting items from their wishlists and having them shipped directly to their classrooms. By eliminating intermediaries, we ensure that every contribution goes directly toward enhancing the learning environment for students. Together, we make a meaningful impact on education, one classroom at a time.</p>
         </section>
+        
+        <button id="termsButton" onclick="openTermsConditions()">Terms and Conditions</button>
+        
+        <div id="termsConditionsModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeTermsConditions()">&times;</span>
+            <iframe src="/pages/terms_conditions.html" width="100%" height="500px"></iframe>
+        </div>
+        </div>
 
         <section class="team">
             <h2>Meet the Team</h2>
@@ -116,6 +125,16 @@
                 console.error('Error:', error);
                 window.location.href = '/';
             }
+        }
+
+                // Function to open the T&C modal
+        function openTermsConditions() {
+        document.getElementById('termsConditionsModal').style.display = 'block';
+        }
+
+        // Function to close the T&C modal
+        function closeTermsConditions() {
+        document.getElementById('termsConditionsModal').style.display = 'none';
         }
     </script>
     <footer>
