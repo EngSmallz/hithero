@@ -753,7 +753,7 @@ async def get_states():
     db = SessionLocal()
     try:
         states = db.query(School.state).distinct().all()
-        return [state[0] for state in states]
+        return sorted([state[0] for state in states])
     finally:
         db.close()
 
