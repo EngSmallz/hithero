@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Request, Form, Depends, Body, APIRouter, File, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel
-import os, logging, smtplib, secrets, string, pyodbc, time, ssl
+import os, logging, smtplib, secrets, string, pyodbc, time, ssl, schedule, threading, datetime
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -15,6 +15,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import select, cast, delete, insert, update
+from datetime import date
+
 
 
 app = FastAPI()
@@ -86,6 +88,17 @@ class TeacherList(Base):
     wishlist_url = Column(String)
     about_me = Column(String)
     image_data = Column(String)
+
+class Spotlight(Base):
+    __tablename__ = "spotlight"
+
+    id = Column(Integer, primary_key=True)
+    token = Column(String)
+    name = Column(String)
+    state = Column(String)
+    county = Column(String)
+    district = Column(String)
+    school = Column(String)
 
 
 # Create database tables
@@ -164,7 +177,94 @@ def update_temp_password(db: Session, email: str, new_password: str):
         print(f"Error updating password: {e}")
         raise
 
-        
+# Function to fetch a random teacher from the database
+def fetch_random_teacher():
+    db = SessionLocal()
+    try:
+        query = select(TeacherList).order_by(func.newid()).limit(1)
+        result = db.execute(query)
+        random_teacher = result.fetchone()
+        return random_teacher
+    except Exception as e:
+        print(f"Error fetching random teacher: {e}")
+    finally:
+        db.close()
+
+def store_spotlight(teacher_info: dict, token: str):
+    db = SessionLocal()
+    try:
+        delete_query = delete(Spotlight).where(cast(Spotlight.token, String) == cast(token, String))
+        db.execute(delete_query)
+        if token == "teacher":
+            spotlight_entry = Spotlight(state=teacher_info["state"],county=teacher_info["county"],district=teacher_info["district"],school=teacher_info["school"],name=teacher_info["name"],token=token)
+        elif token == "district":
+            spotlight_entry = Spotlight(state=teacher_info["state"],county=teacher_info["county"],district=teacher_info["district"],token=token)
+        elif token == "county":
+            spotlight_entry = Spotlight(state=teacher_info["state"],county=teacher_info["county"],token=token)
+        db.add(spotlight_entry)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise e
+    finally:
+        db.close()
+
+def daily_job():
+    print('daily')
+    random_teacher = fetch_random_teacher()
+    if random_teacher:
+        teacher_info = {
+            "name": random_teacher[0].name,
+            "state": random_teacher[0].state,
+            "county": random_teacher[0].county,
+            "district": random_teacher[0].district,
+            "school": random_teacher[0].school,
+        }
+        store_spotlight(teacher_info, "teacher")
+    else:
+        print("No random teacher found.")
+
+def monday_job():
+    random_teacher = fetch_random_teacher()
+    if random_teacher:
+        teacher_info = {
+            "state": random_teacher[0].state,
+            "county": random_teacher[0].county,
+            "district": random_teacher[0].district,
+        }
+        store_spotlight(teacher_info, "district")
+    else:
+        print("No random teacher found.")
+
+def first_of_month_job():
+    if date.today().day == 1:
+        random_teacher = fetch_random_teacher()
+        if random_teacher:
+            teacher_info = {
+                "state": random_teacher[0].state,
+                "county": random_teacher[0].county
+            }
+            store_spotlight(teacher_info, "county")
+        else:
+            print("No random teacher found.")
+    else:
+        print('Not the first.')
+
+def schedule_jobs():
+    schedule.every().day.at('06:00').do(daily_job)
+    schedule.every().monday.at("06:00").do(monday_job)
+    schedule.every().day.at("06:00").do(first_of_month_job)
+
+    # Run the schedule in a separate thread
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
+
+# Start scheduling the jobs
+schedule_thread = threading.Thread(target=schedule_jobs)
+schedule_thread.start()
+
+
 
 #######apis#######
 ###api used to register a new user (and only a new user) into the new_user list
@@ -293,9 +393,7 @@ async def create_teacher_profile(name: str = Form(...), state: str = Form(...), 
 async def get_random_teacher(request: Request):
     db = SessionLocal()
     try:
-        query = select(TeacherList).order_by(func.newid()).limit(1)
-        result = db.execute(query)
-        random_teacher = result.fetchone()
+        random_teacher = fetch_random_teacher()
         if random_teacher:
             data = {
                 "name": random_teacher[0].name,
@@ -730,7 +828,30 @@ async def forgot_password(email: str = Form(...)):
     finally:
         db.close()
 
-
+#api that gets spotlight data based on token
+@app.get("/spotlight/{token}")
+async def get_spotlight_info(request: Request, token: str):
+    db = SessionLocal()
+    try:
+        query = select(Spotlight).where(cast(Spotlight.token, String) == cast(token, String))
+        result = db.execute(query)
+        spotlight_info = result.fetchone()
+        if spotlight_info:
+            data = spotlight_info[0]
+            request.session['state'] = data.state
+            request.session['county'] = data.county
+            if data.district:
+                request.session['district'] = data.district
+            if data.school:
+                request.session['school'] = data.school
+                request.session['teacher'] = data.name
+            return data
+        else:
+            raise HTTPException(status_code=404, detail="Spotlight info not found for the given token")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
+    finally:
+        db.close()
 
 if __name__ == "__main__":
     import uvicorn

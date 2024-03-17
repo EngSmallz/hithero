@@ -364,3 +364,9 @@ footer {
     padding: 10px;
     margin-top: auto;
 }
+
+.team-member img {
+	border-radius: 50%;
+	width: 150px; /* Adjust the size as needed */
+	height: 150px; /* Adjust the size as needed */
+}

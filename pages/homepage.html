@@ -25,7 +25,10 @@
             document.getElementById('loginButton').style.display = 'block';
         });
     }
-    window.onload = checkAuthentication;
+    window.onload = function() {
+        checkAuthentication();
+        getTeacherDay("teacher");
+        };
 </script>
 <body>
     <header>
@@ -56,6 +59,11 @@
         </section>
 
         <section>
+            <h2>Teacher of the Day</h2>
+            <div id="teacherDay">
+        </section>
+
+        <section>
             <h2>Find a Random Teacher</h2>
             <p>Discover a teacher at random and make a positive impact on their classroom.</p>
             <button id="teacherButton" class="btn" onclick="randomTeacher()">Find Random Teacher</button><p>
@@ -67,6 +75,7 @@
             <h2>Are You a Teacher?</h2>
             <p>If you're an educator in need of support, register to create your profile.</p>
             <button id="teacherButton" onclick="redirectTo('/pages/register.html')">Register</button>
+            <p></p>
         </section>
 
     </main>
@@ -98,7 +107,7 @@
                     randomTeacherInfo.appendChild(button);
                 } else {
                     const randomTeacherInfo = document.getElementById('randomTeacherInfo');
-                    randomTeacherInfo.innerHTML = "Unable to fetch random teacher information.";
+                    randomTeacherInfo.innerHTML = "Unable to fetch random teacher information. We are sorry.";
                 }
             } catch (error) {
                 console.error('Error fetching random teacher:', error);
@@ -117,6 +126,38 @@
                 window.location.href = '/';
             } catch (error) {
                 console.error('Error:', error);
+            }
+        }
+
+        async function teacherDay() {
+            try {
+                const response = await fetch(`/spotlight/teacher`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+                window.location.href = '/pages/teacher.html';
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        async function getTeacherDay() {
+            try {
+                const response = await fetch('/spotlight/teacher');
+                const data = await response.json();
+
+                if (response.ok) {
+                    const teacherDay = document.getElementById('teacherDay');
+                    teacherDay.innerHTML = `<h3>${data.name} from ${data.school} in ${data.county}, ${data.state}</h3><button id="teacherButton" onclick="teacherDay()">Go To Teacher</button>`;
+                    teacherDay.appendChild(button);
+                } else {
+                    const teacherDay = document.getElementById('teacherDay');
+                    teacherDay.innerHTML = "Unable to fetch teacher of the day. We are sorry.";
+                }
+            } catch (error) {
+                console.error('Error fetching random teacher:', error);
             }
         }
 
