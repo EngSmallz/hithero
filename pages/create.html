@@ -74,7 +74,13 @@
                                   
 
             <label for="wishlist">Amazon Wishlist URL: </label>
-            <smallerlabel>Copy the "View Only" link from your wishlist on Amazon</smallerlabel><p></p>
+            <p><button id="wishlistButton" onclick="openWishlistSetup()">How to Get Link</button></p>
+            <div id="wishlistModal" class="modal">
+                <div class="modal-content">
+                    <span class="close" onclick="closeWishlistSetup()">&times;</span>
+                    <iframe src="/pages/wishlist_setup.html" width="100%" height="500px"></iframe>
+                </div>
+                </div>
             <input type="text" id="wishlist" name="wishlist" required><br><br>
         
             <p><button id="submitButton" onclick="create()">Submit</button></p>
@@ -223,12 +229,21 @@
         }
 
         function updateCharacterCount() {
-            var maxLength = 250;
+            var maxLength = 500;
             var currentLength = document.getElementById("aboutMe").value.length;
             var charsRemaining = maxLength - currentLength;
             var countElement = document.getElementById("charCount");
             countElement.textContent = charsRemaining + " characters remaining";
             }
+        // Function to open the modal
+        function openWishlistSetup() {
+            document.getElementById('wishlistModal').style.display = 'block';
+        }
+
+        // Function to close the modal
+        function closeWishlistSetup() {
+            document.getElementById('wishlistModal').style.display = 'none';
+        }
     </script>
     <footer>
         <p>&copy; 2023 Hometown Heroes</p>
