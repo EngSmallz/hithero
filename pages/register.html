@@ -71,7 +71,10 @@
                 <iframe src="/pages/terms_conditions.html" width="100%" height="500px"></iframe>
             </div>
             </div>
-        
+
+            <p><input type="checkbox" id="termsCheckbox" style="display: none" name="termsCheckbox"  onclick="showSubmit()" required></p>
+            <label for="termsCheckbox">I have read the Terms and Conditions</label><br>
+
             <p><button id="submitButton" style="display: none">Submit</button></p>
             <p><button id="registerButton" onclick="redirectTo('/pages/login.html')">Login</button></p>
 
@@ -189,12 +192,16 @@
         // Function to open the T&C modal
         function openTermsConditions() {
         document.getElementById('termsConditionsModal').style.display = 'block';
-        document.getElementById('submitButton').style.display = 'block';
+        document.getElementById('termsCheckbox').style.display = 'block'
         }
 
         // Function to close the T&C modal
         function closeTermsConditions() {
         document.getElementById('termsConditionsModal').style.display = 'none';
+        }
+
+        function showSubmit() {
+        document.getElementById('submitButton').style.display = 'block';
         }
 
         window.onload = populateStatesDropdown();
