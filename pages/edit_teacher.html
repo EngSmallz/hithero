@@ -57,8 +57,9 @@
                 <label for="wishlist">Amazon Wishlist:</label>
                 <input type="text" id="wishlist" name="wishlist" required>
     
-                <label for="aboutMe">About Me (max 250 characters):</label>
-                <textarea id="aboutMe" name="aboutMe" maxlength="250" required></textarea>
+                <label for="aboutMe">About Me:</label>
+                <textarea id="aboutMe" name="aboutMe" maxlength="500" rows="4" cols="50" oninput="updateCharacterCount()" required></textarea>
+                <div id="charCount">500 characters remaining</div><br><br>
 
                 <p><button id="submitButton" onclick="update()">Submit</button>
                 <p></p>
@@ -67,6 +68,14 @@
     </main>
 
     <script>
+        function updateCharacterCount() {
+            var maxLength = 500;
+            var currentLength = document.getElementById("aboutMe").value.length;
+            var charsRemaining = maxLength - currentLength;
+            var countElement = document.getElementById("charCount");
+            countElement.textContent = charsRemaining + " characters remaining";
+            }
+
         function redirectTo(url) {
                 window.location.href = url;
             }
