@@ -362,7 +362,7 @@ async def create_teacher_profile(name: str = Form(...), state: str = Form(...), 
             result = db.execute(query)
             create_count = result.scalar()
             if create_count == 0 or role == 'admin':
-                aa_link = wishlist + "?&_encoding=UTF8&tag=hometownheroe-20"
+                aa_link = wishlist + "?&_encoding=UTF8&tag=Homeroomheroe-20"
                 insert_query = insert(TeacherList).values(
                     name=name,
                     state=state,
@@ -432,7 +432,7 @@ async def get_user_profile(email: str = Depends(get_current_email), role: str = 
 ##api used to send contact us email from /contact.html
 @app.post('/contact_us/')
 async def contact_us(name: str = Form(...), email: str = Form(...), subject: str = Form(...), message: str = Form(...)):
-    recipient_email = 'hometown.heroes.contactus@gmail.com'
+    recipient_email = 'Homeroom.heroes.contactus@gmail.com'
     full_message = f"{name}\n{email}\n{message}"
     try:
         result = send_email(recipient_email, subject, full_message)
@@ -582,7 +582,7 @@ async def edit_teacher_info(request: Request, wishlist: str = Form(...), aboutMe
             name = get_index_cookie('teacher', request)
             update_query = update(TeacherList)
             if wishlist:
-                aa_link = wishlist + "?&_encoding=UTF8&tag=hometownheroe-20"
+                aa_link = wishlist + "?&_encoding=UTF8&tag=Homeroomheroe-20"
                 update_query = update_query.values(wishlist_url=aa_link)
             if aboutMe:
                 update_query = update_query.values(about_me=aboutMe)
@@ -852,6 +852,37 @@ async def get_spotlight_info(request: Request, token: str):
         raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
     finally:
         db.close()
+
+@app.post("/send_cold_email/")
+async def send_teacher_email(name: str = Form(...), email: str = Form(...)):
+    subject = "Introducing Homerown Heroes: A New Way to Support Your Classroom Needs"
+    message = f"""
+    Dear {name},
+
+    I hope this email finds you well. My name is Justin Brundage, and I'm the founder of Homeroom Heroes, a platform designed to empower and support teachers like you.
+
+    Understanding the challenges teachers face in securing resources for their classrooms, I created Homeroom Heroes to bridge the gap between educators and their needs. Our platform allows teachers to host a wishlist of classroom supplies, making it easier for community members, parents, and supporters to directly contribute and fulfill these needs.
+
+    We believe that every classroom should have the essential resources it needs to foster a positive learning environment. By leveraging the power of community support, Homeroom Heroes aims to revolutionize the way educators access the tools and supplies vital for their students' success.
+
+    I would be honored if you could take a moment to visit our website at www.HelpTeachers.net to learn more about what we offer and how you can benefit from our platform.
+
+    If you have any questions or would like further information, please don't hesitate to reply to this email. We are here to assist and support you in any way we can.
+
+    Thank you for your dedication to education, and I look forward to potentially collaborating with you through Homeroom Heroes.
+
+    Warm regards,
+
+    Justin Brundage
+    Founder, Homeroom Heroes
+    Homeroom.heroes.main@gmail.com
+    """
+
+    try:
+        send_email(email, subject, message)
+        return JSONResponse(content={"message": "Email sent successfully"}, status_code=200)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
