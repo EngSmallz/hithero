@@ -149,7 +149,7 @@ def store_my_cookies(request: Request, id: int = Depends(get_current_id)):
 
 def send_email(recipient_email: str, subject: str, message: str):
     try:
-        sender = 'noReply.htheroes@gmail.com'
+        sender = 'homeroom.heroes.noReply@gmail.com'
         msg = MIMEMultipart()
         msg['Subject'] = subject
         msg['From'] = sender
@@ -432,7 +432,7 @@ async def get_user_profile(email: str = Depends(get_current_email), role: str = 
 ##api used to send contact us email from /contact.html
 @app.post('/contact_us/')
 async def contact_us(name: str = Form(...), email: str = Form(...), subject: str = Form(...), message: str = Form(...)):
-    recipient_email = 'Homeroom.heroes.contactus@gmail.com'
+    recipient_email = 'Homeroom.heroes.contact@gmail.com'
     full_message = f"{name}\n{email}\n{message}"
     try:
         result = send_email(recipient_email, subject, full_message)
