@@ -149,7 +149,7 @@ def store_my_cookies(request: Request, id: int = Depends(get_current_id)):
 
 def send_email(recipient_email: str, subject: str, message: str):
     try:
-        sender = 'homeroom.heroes.noReply@gmail.com'
+        sender = 'homeroom.heroes.contact@gmail.com'
         msg = MIMEMultipart()
         msg['Subject'] = subject
         msg['From'] = sender
