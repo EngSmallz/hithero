@@ -192,7 +192,7 @@ def store_spotlight(teacher_info: dict, token: str):
         delete_query = delete(Spotlight).where(cast(Spotlight.token, String) == cast(token, String))
         db.execute(delete_query)
         if token == "teacher":
-            spotlight_entry = Spotlight(state=teacher_info["state"],county=teacher_info["county"],district=teacher_info["district"],school=teacher_info["school"],name=teacher_info["name"],token=token)
+            spotlight_entry = Spotlight(state=teacher_info["state"],county=teacher_info["county"],district=teacher_info["district"],school=teacher_info["school"],name=teacher_info["name"],token=token,image_data=teacher_info["image_data"] )
         elif token == "district":
             spotlight_entry = Spotlight(state=teacher_info["state"],county=teacher_info["county"],district=teacher_info["district"],token=token)
         elif token == "county":
@@ -206,21 +206,15 @@ def store_spotlight(teacher_info: dict, token: str):
         db.close()
 
 def daily_job():
-    print('daily')
     random_teacher = fetch_random_teacher()
     if random_teacher:
-        if random_teacher[0].image_data:
-            image_data = base64.b64encode(random_teacher[0].image_data).decode('utf-8')
-        else:
-            image_data = None
-        
         teacher_info = {
             "name": random_teacher[0].name,
             "state": random_teacher[0].state,
             "county": random_teacher[0].county,
             "district": random_teacher[0].district,
             "school": random_teacher[0].school,
-            "image_data": image_data
+            "image_data": random_teacher[0].image_data
         }
         
         store_spotlight(teacher_info, "teacher")
@@ -254,7 +248,7 @@ def first_of_month_job():
         print('Not the first.')
 
 def schedule_jobs():
-    schedule.every().day.at('06:00').do(daily_job)
+    schedule.every().day.at('13:37').do(daily_job)
     schedule.every().monday.at("06:00").do(monday_job)
     schedule.every().day.at("06:00").do(first_of_month_job)
 
@@ -557,7 +551,10 @@ async def get_teacher_info(request: Request):
         result = db.execute(query)
         teacher_info = result.fetchone()
         if teacher_info:
-            image_data = base64.b64encode(teacher_info[0].image_data).decode('utf-8')
+            if teacher_info[0].image_data:
+                image_data = base64.b64encode(teacher_info[0].image_data).decode('utf-8')
+            else:
+                image_data = None
             data = {
                 "state": teacher_info[0].state,
                 "county": teacher_info[0].county,
