@@ -615,7 +615,7 @@ async def edit_teacher_info(request: Request, wishlist: str = Form(...), aboutMe
 async def edit_teacher_image(request: Request, role: str = Depends(get_current_role), image: UploadFile = Form(...)):
     db: Session = SessionLocal()
     try:
-        if image.content_length > MAX_FILE_SIZE:
+        if image.size > MAX_FILE_SIZE:
             raise HTTPException(status_code=400, detail="File size exceeds the allowed limit")
         if role:
             state = get_index_cookie('state', request)
