@@ -10,7 +10,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from passlib.hash import sha256_crypt
-from sqlalchemy import create_engine, Column, Integer, String, func
+from sqlalchemy import create_engine, Column, Integer, String, func, LargeBinary
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -87,7 +87,7 @@ class TeacherList(Base):
     regUserID = Column(Integer)
     wishlist_url = Column(String)
     about_me = Column(String)
-    image_data = Column(String)
+    image_data = Column(LargeBinary)
 
 class Spotlight(Base):
     __tablename__ = "spotlight"

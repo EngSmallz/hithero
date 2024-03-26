@@ -371,6 +371,25 @@ footer {
 	height: 150px; /* Adjust the size as needed */
 }
 
+.teacher-info img {
+	border-radius: 50%;
+	width: 250px; /* Adjust the size as needed */
+	height: 250px; /* Adjust the size as needed */
+}
+
+#teacherDay img {
+	border-radius: 50%;
+	width: 100px; /* Adjust the size as needed */
+	height: 100px; /* Adjust the size as needed */
+}
+
+#randomTeacherInfo img {
+	border-radius: 50%;
+	width: 100px; /* Adjust the size as needed */
+	height: 100px; /* Adjust the size as needed */
+}
+
+
 /* Style the T&C modal */
 .modal {
 	display: none; /* Hidden by default */

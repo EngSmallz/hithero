@@ -3,6 +3,7 @@
 <head>
     <title>Homeroom Heroes - Support Teachers</title>
     <link rel="stylesheet" type="text/css" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <script>
     function checkAuthentication() {
@@ -52,10 +53,10 @@
             <h2>Contact Information</h2>
             <p>If you have any questions, feedback, or need assistance, please feel free to reach out to us:</p>
             <ul>
-                <li>Instagram: <a href="https://www.instagram.com/homeroom_heroes/" target="_blank">@homeroom_heroes</a></li>
-                <li>X: <a href="https://www.twitter.com/Homeroom_Heroes" target="_blank">@homeroom_heroes</a></li>
-                <li>LinkedIn: <a href="https://www.linkedin.com/company/homeroom-heroes/" target="_blank">Homeroom Heroes</a></li>
-                <li>Facebook: <a href="https://www.facebook.com/profile.php?id=61557539257533" target="_blank">Homeroom Heroes</a></li>
+                <li><i class="fab fa-instagram"></i> Instagram: <a href="https://www.instagram.com/homeroom_heroes/" target="_blank">@Homeroom_Heroes</a></li>
+                <li><i class="fab fa-twitter"></i> Twitter: <a href="https://www.twitter.com/Homeroom_Heroes" target="_blank">@Homeroom_Heroes</a></li>
+                <li><i class="fab fa-linkedin"></i> LinkedIn: <a href="https://www.linkedin.com/company/homeroom-heroes/" target="_blank">Homeroom Heroes</a></li>
+                <li><i class="fab fa-facebook"></i> Facebook: <a href="https://www.facebook.com/profile.php?id=61557539257533" target="_blank">Homeroom Heroes</a></li>                
             </ul>
         </section>
 
@@ -71,7 +72,8 @@
                 <label for="subject">Subject:</label><br>
                 <input type="text" id="subject" name="subject"><br><br>
                 <label for="message">Message:</label><br>
-                <textarea id="message" name="message" rows="4" cols="50"></textarea><br><br>
+                <textarea id="message" name="message" maxlength="250" rows="4" cols="50" oninput="updateCharacterCount()" required></textarea>
+                <div id="charCount">250 characters remaining</div><br><br>
 
                 <button id="submitButton">Submit</button>
             </form>
@@ -83,6 +85,14 @@
     <script>
         function redirectTo(url) {
                 window.location.href = url;
+            }
+
+        function updateCharacterCount() {
+            var maxLength = 250;
+            var currentLength = document.getElementById("message").value.length;
+            var charsRemaining = maxLength - currentLength;
+            var countElement = document.getElementById("charCount");
+            countElement.textContent = charsRemaining + " characters remaining";
             }
         
         document.addEventListener("DOMContentLoaded", function () {
