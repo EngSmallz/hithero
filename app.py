@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Request, Form, Depends, Body, APIRouter, File, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel
-import os, logging, smtplib, secrets, string, pyodbc, time, ssl, schedule, threading, datetime
+import os, logging, smtplib, secrets, string, pyodbc, time, ssl, schedule, threading, datetime, base64
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -99,6 +99,7 @@ class Spotlight(Base):
     county = Column(String)
     district = Column(String)
     school = Column(String)
+    image_data = Column(LargeBinary)
 
 
 # Create database tables
@@ -117,14 +118,6 @@ def get_current_email(request: Request):
 
 def get_index_cookie(index: str, request: Request):
     return request.session.get(index, None)
-
-def decode_image(hex_string):
-    try:
-        # Convert hex string to bytes
-        image_bytes = bytes.fromhex(hex_string)
-        return StreamingResponse(io.BytesIO(image_bytes), media_type="image/jpeg")
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
 
 def store_my_cookies(request: Request, id: int = Depends(get_current_id)):
     db = SessionLocal()
@@ -213,13 +206,20 @@ def daily_job():
     print('daily')
     random_teacher = fetch_random_teacher()
     if random_teacher:
+        if random_teacher[0].image_data:
+            image_data = base64.b64encode(random_teacher[0].image_data).decode('utf-8')
+        else:
+            image_data = None
+        
         teacher_info = {
             "name": random_teacher[0].name,
             "state": random_teacher[0].state,
             "county": random_teacher[0].county,
             "district": random_teacher[0].district,
             "school": random_teacher[0].school,
+            "image_data": image_data
         }
+        
         store_spotlight(teacher_info, "teacher")
     else:
         print("No random teacher found.")
@@ -395,12 +395,17 @@ async def get_random_teacher(request: Request):
     try:
         random_teacher = fetch_random_teacher()
         if random_teacher:
+            if random_teacher[0].image_data:
+                image_data = base64.b64encode(random_teacher[0].image_data).decode('utf-8')
+            else:
+                image_data = None
             data = {
                 "name": random_teacher[0].name,
                 "state": random_teacher[0].state,
                 "county": random_teacher[0].county,
                 "district": random_teacher[0].district,
-                "school": random_teacher[0].school
+                "school": random_teacher[0].school,
+                "image_data": image_data
             }
             request.session["state"] = data["state"]
             request.session["county"] = data["county"]
@@ -549,6 +554,7 @@ async def get_teacher_info(request: Request):
         result = db.execute(query)
         teacher_info = result.fetchone()
         if teacher_info:
+            image_data = base64.b64encode(teacher_info[0].image_data).decode('utf-8')
             data = {
                 "state": teacher_info[0].state,
                 "county": teacher_info[0].county,
@@ -557,7 +563,7 @@ async def get_teacher_info(request: Request):
                 "name": teacher_info[0].name,
                 "wishlist_url": teacher_info[0].wishlist_url,
                 "about_me": teacher_info[0].about_me,
-                #"image_data": teacher_info[0].image_data
+                "image_data": image_data
             }
             return data
         else:
@@ -615,8 +621,8 @@ async def edit_teacher_image(request: Request, role: str = Depends(get_current_r
             district = get_index_cookie('district', request)
             school = get_index_cookie('school', request)
             name = get_index_cookie('teacher', request)
-            image_data = image.file.read()
-            update_query = update(TeacherList).values(image_data=image_data).where(
+            new_image_data = image.file.read()
+            update_query = update(TeacherList).values(image_data = new_image_data).where(
                 (cast(TeacherList.state, String) == state) &
                 (cast(TeacherList.county, String) == county) &
                 (cast(TeacherList.district, String) == district) &
@@ -838,6 +844,10 @@ async def get_spotlight_info(request: Request, token: str):
         spotlight_info = result.fetchone()
         if spotlight_info:
             data = spotlight_info[0]
+            if data.image_data:
+                image_data = base64.b64encode(data.image_data).decode('utf-8')
+            else:
+                image_data = None
             request.session['state'] = data.state
             request.session['county'] = data.county
             if data.district:
@@ -845,7 +855,15 @@ async def get_spotlight_info(request: Request, token: str):
             if data.school:
                 request.session['school'] = data.school
                 request.session['teacher'] = data.name
-            return data
+            data_dict = {
+                "state": data.state,
+                "county": data.county,
+                "district": data.district,
+                "school": data.school,
+                "name": data.name,
+                "image_data": image_data
+            }
+            return data_dict
         else:
             raise HTTPException(status_code=404, detail="Spotlight info not found for the given token")
     except Exception as e:

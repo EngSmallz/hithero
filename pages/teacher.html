@@ -102,7 +102,7 @@
                     document.getElementById('about-me').innerText = data.about_me;
                     const teacherImage = document.getElementById('teacher-image');
                     if (data.image_data){
-                        teacherImage.src=data.image_data
+                        teacherImage.src = `data:image/jpeg;base64,${data.image_data}`;
                     }else{
                         teacherImage.src="/static/images/apple.jpg"
                     }
