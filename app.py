@@ -42,6 +42,9 @@ engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
+# Maximum allowed file size in bytes (e.g., 1MB)
+MAX_FILE_SIZE = 1 * 1024 * 1024
+
 # Define SQLAlchemy models
 class School(Base):
     __tablename__ = "schools"
@@ -613,8 +616,10 @@ async def edit_teacher_info(request: Request, wishlist: str = Form(...), aboutMe
 ###api used to update the logged in users teacher page image
 @app.post("/update_teacher_image/")
 async def edit_teacher_image(request: Request, role: str = Depends(get_current_role), image: UploadFile = Form(...)):
-    db = SessionLocal()
+    db: Session = SessionLocal()
     try:
+        if image.content_length > MAX_FILE_SIZE:
+            raise HTTPException(status_code=400, detail="File size exceeds the allowed limit")
         if role:
             state = get_index_cookie('state', request)
             county = get_index_cookie('county', request)
@@ -622,7 +627,7 @@ async def edit_teacher_image(request: Request, role: str = Depends(get_current_r
             school = get_index_cookie('school', request)
             name = get_index_cookie('teacher', request)
             new_image_data = image.file.read()
-            update_query = update(TeacherList).values(image_data = new_image_data).where(
+            update_query = update(TeacherList).values(image_data=new_image_data).where(
                 (cast(TeacherList.state, String) == state) &
                 (cast(TeacherList.county, String) == county) &
                 (cast(TeacherList.district, String) == district) &
@@ -634,6 +639,8 @@ async def edit_teacher_image(request: Request, role: str = Depends(get_current_r
             return {"message": "Information updated."}
         else:
             return {"message": "Permission denied."}
+    except HTTPException as he:
+        raise he
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
     finally:
