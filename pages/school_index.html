@@ -50,11 +50,9 @@
      <main_index>
         <h1 id="schoolHeader"></h1>
         <ul id="schoolList"></ul>
-
+        <h2 id="schoolHeader2"></h2>
     </main_index>
-    <main>
-        <p>If your school is missing, contact your local teachers to sign up today!</p>
-    </main>
+    
     <script>
         function redirectTo(url) {
                 window.location.href = url;
@@ -115,6 +113,9 @@
                 } else {
                     console.error('404 Error: List error');
                 }
+
+                const schoolHeader2 = document.getElementById('schoolHeader2');
+                schoolHeader2.textContent = `If your School is missing, contact your local teachers to sign up today!`;
             } catch (error) {
                 console.error('Error:', error);
             }

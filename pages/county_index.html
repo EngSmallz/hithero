@@ -51,12 +51,9 @@
     <main_index>
         <h1 id="countyHeader"></h1>
         <ul id="countyList"></ul>
-        
-
+        <h2 id="countyHeader2"></h2>
     </main_index>
-    <main>
-        <p>If your county is missing, contact your local teachers to sign up today!</p>
-    </main>
+
     <script>
         function redirectTo(url) {
                 window.location.href = url;
@@ -104,6 +101,9 @@
                         }
                     })
                     .catch(error => console.error('Error:', error));
+
+                const countyHeader2 = document.getElementById('countyHeader2');    
+                countyHeader2.textContent = `If your County is missing, contact your local teachers to sign up today!`;
             } else {
                 console.error('404 Error: State cookie not found');
                 window.location.href = '/pages/404.html';

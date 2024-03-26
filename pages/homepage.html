@@ -97,7 +97,7 @@
                 if (response.ok) {
                     const button = document.createElement('button');
                     button.id = 'teacherButton';
-                    button.textContent = "View Teacher Profile";
+                    button.textContent = "View Random Teacher";
                     button.addEventListener('click', function() {
                         window.location.href = '/pages/teacher.html';
                     });
@@ -150,7 +150,7 @@
 
                 if (response.ok) {
                     const teacherDay = document.getElementById('teacherDay');
-                    teacherDay.innerHTML = `<img src="/static/images/apple.jpg" alt="Teacher Image"><h3>${data.name} from ${data.school} in ${data.county}, ${data.state}</h3><button id="teacherButton" onclick="teacherDay()">Go To Teacher</button>`;
+                    teacherDay.innerHTML = `<img src="/static/images/apple.jpg" alt="Teacher Image"><h3>${data.name} from ${data.school} in ${data.county}, ${data.state}</h3><button id="teacherButton" onclick="teacherDay()">Go To Teacher of the Day</button>`;
                     teacherDay.appendChild(button);
                 } else {
                     const teacherDay = document.getElementById('teacherDay');

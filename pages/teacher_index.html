@@ -51,11 +51,11 @@
     <main_index>
         <h1 id="teacherHeader"></h1>
         <ul id="teacherList"></ul>
+        <h2 id="teacherHeader2"></h2>
         
     </main_index>
-    <main>
-    <p>If your teacher is missing, contact them to sign up today!</p>
-    </main>
+
+    
     <script>
         function redirectTo(url) {
             window.location.href = url;
@@ -111,6 +111,8 @@
                 } else {
                     console.error('404 Error: List error');
                 }
+                const teacherHeader2 = document.getElementById('teacherHeader2');
+                teacherHeader2.textContent = `If your Teacher is missing, contact them to sign up today!`;
             } catch (error) {
                 console.error('Error:', error);
             }

@@ -51,11 +51,10 @@
     <main_index>
         <h1 id="districtHeader"></h1>
         <ul id="districtList"></ul>
+        <h2 id="districtHeader2"></h2>
 
     </main_index>
-    <main>
-        <p>If your district is missing, contact your local teachers to sign up today!</p>
-    </main>
+
     <script>
         function redirectTo(url) {
                 window.location.href = url;
@@ -95,10 +94,8 @@
                     console.error('404 Error: State cookie not found');
                     return;
                 }
-
                 const districtHeader = document.getElementById('districtHeader');
-                districtHeader.textContent = `List of Districts in ${countyData.cookie}, ${stateData.cookie}`;
-
+                districtHeader.textContent = `List of  School Districts in ${countyData.cookie}, ${stateData.cookie}`;
                 const indexListResponse = await fetch('/get_index_list/county');
                 const indexListData = await indexListResponse.json();
 
@@ -116,6 +113,8 @@
                 } else {
                     console.error('404 Error: List error');
                 }
+                const districtHeader2 = document.getElementById('districtHeader2');
+                districtHeader2.textContent = `If your School District is missing, contact your local teachers to sign up today!`;
             } catch (error) {
                 console.error('Error:', error);
             }
