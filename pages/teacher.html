@@ -163,6 +163,8 @@
             }
         }
 
+        const MAX_FILE_SIZE_MB = 1;  // Maximum allowed file size in MB
+
         async function updateImage() {
             try {
                 const fileInput = document.createElement('input');
@@ -172,9 +174,12 @@
                 fileInput.addEventListener('change', async (event) => {
                     const selectedFile = event.target.files[0];
                     if (selectedFile) {
+                        if (selectedFile.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+                            alert(`File size exceeds the allowed limit of ${MAX_FILE_SIZE_MB}MB. Please upload a smaller image.`);
+                            return;
+                        }
                         const formData = new FormData();
                         formData.append('image', selectedFile);
-
                         try {
                             const response = await fetch('/update_teacher_image/', {
                                 method: 'POST',
@@ -182,22 +187,23 @@
                             });
                             if (response.ok) {
                                 location.reload();
+                            } else if (response.status === 400) {
+                                const responseData = await response.json();
+                                throw new Error(responseData.detail);
                             } else {
-                                const errorMessage = `Error updating teacher image: ${response.status}`;
-                                console.error(errorMessage);
+                                throw new Error(`Error updating teacher image: ${response.status}`);
                             }
                         } catch (error) {
-                            const errorMessage = `Error updating teacher image: ${error.message}`;
-                            console.error(errorMessage);
+                            console.error(`Error updating teacher image: ${error.message}`);
+                            alert(`Error updating teacher image: ${error.message}`);
                         }
                     }
                 });
             } catch (error) {
-                const errorMessage = `Error opening file explorer: ${error.message}`;
-                console.error(errorMessage);
+                console.error(`Error opening file explorer: ${error.message}`);
+                alert(`Error opening file explorer: ${error.message}`);
             }
         }
-
     </script>
 
     <footer>
