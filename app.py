@@ -91,6 +91,7 @@ class TeacherList(Base):
     wishlist_url = Column(String)
     about_me = Column(String)
     image_data = Column(LargeBinary)
+    url_id = Column(String)
 
 class Spotlight(Base):
     __tablename__ = "spotlight"
@@ -905,6 +906,52 @@ async def send_teacher_email(name: str = Form(...), email: str = Form(...)):
         return JSONResponse(content={"message": "Email sent successfully"}, status_code=200)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+###api to get a link for the url to your page to share
+@app.get("/teacher_url/")
+async def get_teacher_url(request: Request):
+    db = SessionLocal()
+    try:
+        state = get_index_cookie('state', request)
+        county = get_index_cookie('county', request)
+        district = get_index_cookie('district', request)
+        school = get_index_cookie('school', request)
+        name = get_index_cookie('teacher', request)
+        query = select(TeacherList.url_id).where(
+            (cast(TeacherList.state, String) == state) &
+            (cast(TeacherList.county, String) == county) &
+            (cast(TeacherList.district, String) == district) &
+            (cast(TeacherList.school, String) == school) &
+            (cast(TeacherList.name, String) == name)
+        )
+        result = db.execute(query)
+        token = result.fetchone()
+        if not token:
+            raise HTTPException(status_code=404, detail="No matching teacher found")
+        url = "localhost:8000/teacher/" + token[0]
+        return {"url": url}  # Return as JSON
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+
+##this api gets the token, gets the data, sets the data, then redirects
+@app.get("/teacher/{url_id}")
+async def get_teacher_info(url_id: str, request: Request):
+    db = SessionLocal()
+    try:
+        query = select(TeacherList).where(cast(TeacherList.url_id, String) == url_id)
+        result = db.execute(query)
+        teacher_info = result.fetchone()
+        if not teacher_info:
+            return RedirectResponse(url="/pages/404.html")
+        request.session['state'] = teacher_info[0].state
+        request.session['county'] = teacher_info[0].county
+        request.session['district'] = teacher_info[0].district
+        request.session['school'] = teacher_info[0].school
+        request.session['teacher'] = teacher_info[0].name
+
+        return RedirectResponse(url="/pages/teacher.html")
+    except Exception as e:
+        return RedirectResponse(url="/pages/404.html")
 
 if __name__ == "__main__":
     import uvicorn

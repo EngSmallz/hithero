@@ -84,6 +84,7 @@
 
         <button id="editButton" style="display: none" onclick="redirectTo('/pages/edit_teacher.html')">Edit Info</button><p></p>
         <button id="updateButton" style="display: none" onclick="redirectTo('/pages/update_password.html')">Update Password</button><p></p>
+        <button id="shareButton" onclick="getTeacherURL()">Share Page</button><p></p>
 
     </main>
 
@@ -204,6 +205,30 @@
                 alert(`Error opening file explorer: ${error.message}`);
             }
         }
+
+        async function getTeacherURL() {
+            try {
+                const response = await fetch('/teacher_url/', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (response.ok) {
+                    const data = await response.json();  // Parse as JSON
+                    await navigator.clipboard.writeText(data.url);
+                    alert("Teacher URL has been copied to clipboard!");
+                } else {
+                    console.error('Error:', response.status);
+                    alert(`Error: ${response.statusText}`);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert(`Error: ${error.message}`);
+            }
+        }
+
     </script>
 
     <footer>
