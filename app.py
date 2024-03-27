@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Request, Form, Depends, Body, APIRouter, File, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel
-import os, logging, smtplib, secrets, string, pyodbc, time, ssl, schedule, threading, datetime, base64
+import os, logging, smtplib, secrets, string, pyodbc, time, ssl, schedule, threading, datetime, base64, random
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -352,7 +352,7 @@ async def move_user(user_email: str):
 
 ##this api allows a logged in user to create an item in the table teacher_list in the hithero database if they have not created a user already
 @app.post("/create_teacher_profile/")
-async def create_teacher_profile(name: str = Form(...), state: str = Form(...), county: str = Form(...), district: str = Form(...), school: str = Form(...), aboutMe: str = Form(...), wishlist: str = Form(...), id: int = Depends(get_current_id), role: str = Depends(get_current_role)):
+async def create_teacher_profile(request: Request, name: str = Form(...), state: str = Form(...), county: str = Form(...), district: str = Form(...), school: str = Form(...), aboutMe: str = Form(...), wishlist: str = Form(...), id: int = Depends(get_current_id), role: str = Depends(get_current_role)):
     db = SessionLocal()
     try:
         if role:
@@ -361,6 +361,14 @@ async def create_teacher_profile(name: str = Form(...), state: str = Form(...), 
             create_count = result.scalar()
             if create_count == 0 or role == 'admin':
                 aa_link = wishlist + "?&_encoding=UTF8&tag=Homeroomheroe-20"
+                email = get_current_email(request)
+                first_part_email = email.split('@')[0]
+                random_number = random.randint(1, 9999)
+                auto_url_id = f"{first_part_email}{random_number}"
+                while db.execute(select(TeacherList).where(cast(TeacherList.url_id, String) == cast(auto_url_id, String))).first():
+                    random_number = random.randint(1, 9999)
+                    auto_url_id = f"{first_part_email}{random_number}"
+
                 insert_query = insert(TeacherList).values(
                     name=name,
                     state=state,
@@ -369,13 +377,14 @@ async def create_teacher_profile(name: str = Form(...), state: str = Form(...), 
                     school=school,
                     regUserID=id,
                     about_me=aboutMe,
-                    wishlist_url=aa_link
+                    wishlist_url=aa_link,
+                    url_id=auto_url_id
                 )
                 db.execute(insert_query)
                 update_query = update(RegisteredUsers).where(RegisteredUsers.id == id).values(createCount=RegisteredUsers.createCount + 1)
                 db.execute(update_query)
                 db.commit()
-                return {"message": "Teacher created successfully"}
+                return {"message": "Teacher created successfully", "role": role}
             else:
                 return {"message": "Unable to create new profile. Profile already created."}
         else:
