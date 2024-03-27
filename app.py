@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Request, Form, Depends, Body, APIRouter, File, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel
-import os, logging, smtplib, secrets, string, pyodbc, time, ssl, schedule, threading, datetime, base64
+import os, logging, smtplib, secrets, string, pyodbc, time, ssl, schedule, threading, datetime, base64, random
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -91,6 +91,7 @@ class TeacherList(Base):
     wishlist_url = Column(String)
     about_me = Column(String)
     image_data = Column(LargeBinary)
+    url_id = Column(String)
 
 class Spotlight(Base):
     __tablename__ = "spotlight"
@@ -351,7 +352,7 @@ async def move_user(user_email: str):
 
 ##this api allows a logged in user to create an item in the table teacher_list in the hithero database if they have not created a user already
 @app.post("/create_teacher_profile/")
-async def create_teacher_profile(name: str = Form(...), state: str = Form(...), county: str = Form(...), district: str = Form(...), school: str = Form(...), aboutMe: str = Form(...), wishlist: str = Form(...), id: int = Depends(get_current_id), role: str = Depends(get_current_role)):
+async def create_teacher_profile(request: Request, name: str = Form(...), state: str = Form(...), county: str = Form(...), district: str = Form(...), school: str = Form(...), aboutMe: str = Form(...), wishlist: str = Form(...), id: int = Depends(get_current_id), role: str = Depends(get_current_role)):
     db = SessionLocal()
     try:
         if role:
@@ -360,6 +361,14 @@ async def create_teacher_profile(name: str = Form(...), state: str = Form(...), 
             create_count = result.scalar()
             if create_count == 0 or role == 'admin':
                 aa_link = wishlist + "?&_encoding=UTF8&tag=Homeroomheroe-20"
+                email = get_current_email(request)
+                first_part_email = email.split('@')[0]
+                random_number = random.randint(1, 9999)
+                auto_url_id = f"{first_part_email}{random_number}"
+                while db.execute(select(TeacherList).where(cast(TeacherList.url_id, String) == cast(auto_url_id, String))).first():
+                    random_number = random.randint(1, 9999)
+                    auto_url_id = f"{first_part_email}{random_number}"
+
                 insert_query = insert(TeacherList).values(
                     name=name,
                     state=state,
@@ -368,13 +377,14 @@ async def create_teacher_profile(name: str = Form(...), state: str = Form(...), 
                     school=school,
                     regUserID=id,
                     about_me=aboutMe,
-                    wishlist_url=aa_link
+                    wishlist_url=aa_link,
+                    url_id=auto_url_id
                 )
                 db.execute(insert_query)
                 update_query = update(RegisteredUsers).where(RegisteredUsers.id == id).values(createCount=RegisteredUsers.createCount + 1)
                 db.execute(update_query)
                 db.commit()
-                return {"message": "Teacher created successfully"}
+                return {"message": "Teacher created successfully", "role": role}
             else:
                 return {"message": "Unable to create new profile. Profile already created."}
         else:
@@ -615,7 +625,7 @@ async def edit_teacher_info(request: Request, wishlist: str = Form(...), aboutMe
 async def edit_teacher_image(request: Request, role: str = Depends(get_current_role), image: UploadFile = Form(...)):
     db: Session = SessionLocal()
     try:
-        if image.content_length > MAX_FILE_SIZE:
+        if image.size > MAX_FILE_SIZE:
             raise HTTPException(status_code=400, detail="File size exceeds the allowed limit")
         if role:
             state = get_index_cookie('state', request)
@@ -905,6 +915,52 @@ async def send_teacher_email(name: str = Form(...), email: str = Form(...)):
         return JSONResponse(content={"message": "Email sent successfully"}, status_code=200)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+###api to get a link for the url to your page to share
+@app.get("/teacher_url/")
+async def get_teacher_url(request: Request):
+    db = SessionLocal()
+    try:
+        state = get_index_cookie('state', request)
+        county = get_index_cookie('county', request)
+        district = get_index_cookie('district', request)
+        school = get_index_cookie('school', request)
+        name = get_index_cookie('teacher', request)
+        query = select(TeacherList.url_id).where(
+            (cast(TeacherList.state, String) == state) &
+            (cast(TeacherList.county, String) == county) &
+            (cast(TeacherList.district, String) == district) &
+            (cast(TeacherList.school, String) == school) &
+            (cast(TeacherList.name, String) == name)
+        )
+        result = db.execute(query)
+        token = result.fetchone()
+        if not token:
+            raise HTTPException(status_code=404, detail="No matching teacher found")
+        url = "localhost:8000/teacher/" + token[0]
+        return {"url": url}  # Return as JSON
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+
+##this api gets the token, gets the data, sets the data, then redirects
+@app.get("/teacher/{url_id}")
+async def get_teacher_info(url_id: str, request: Request):
+    db = SessionLocal()
+    try:
+        query = select(TeacherList).where(cast(TeacherList.url_id, String) == url_id)
+        result = db.execute(query)
+        teacher_info = result.fetchone()
+        if not teacher_info:
+            return RedirectResponse(url="/pages/404.html")
+        request.session['state'] = teacher_info[0].state
+        request.session['county'] = teacher_info[0].county
+        request.session['district'] = teacher_info[0].district
+        request.session['school'] = teacher_info[0].school
+        request.session['teacher'] = teacher_info[0].name
+
+        return RedirectResponse(url="/pages/teacher.html")
+    except Exception as e:
+        return RedirectResponse(url="/pages/404.html")
 
 if __name__ == "__main__":
     import uvicorn
