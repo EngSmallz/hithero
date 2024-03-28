@@ -12,7 +12,10 @@ header {
     background-color: #054e05;
     color: #e4dcdc;
     text-align: center;
-    padding: 20px;
+    padding: 0px;
+	height: 150px;
+	width: 100%;
+    margin: 0 auto;
 }
 
 nav {
@@ -392,12 +395,6 @@ footer {
     text-align: center;
     padding: 10px;
     margin-top: auto;
-}
-
-header {
-    height: 130px; /* Set the width to your desired length */
-	width: 100%;
-    margin: 0 auto; /* Center the header on the page */
 }
 
 .team-member img {
