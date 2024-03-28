@@ -286,7 +286,7 @@ async def register_user(name: str = Form(...), email: str = Form(...), phone_num
         new_user = NewUsers(name=name, email=email, state=state, county=county, district=district, school=school, phone_number=phone_number, password=hashed_password, role=role)
         db.add(new_user)
         db.commit()
-        send_email(email, "Registration successful",  f"Dear {email},\n\nThank you for registering with us! Once you are validated by a fellow teacher in your district or one of us here at HTHeroes, you will be able to create your profile and start receiving support.\n\nBest regards,\nHTHeroes Team")
+        send_email(email, "Registration successful",  f"Dear {email},\n\nThank you for registering with us! Once you are validated by a fellow teacher in your district or one of us here at Homeroom Heroes, you will be able to create your profile and start receiving support.\n\nBest regards,\nHomeroom Heroes Team")
         return {"message": "User registered successfully. You should recieve and email shortly."}
     except Exception as e:
         return {"message": "Registration unsuccessful", "error": str(e)}
@@ -342,7 +342,7 @@ async def move_user(user_email: str):
         delete_query = delete(NewUsers).where(cast(NewUsers.email, String) == cast(user_email, String))
         db.execute(delete_query)
         db.commit()
-        send_email(user[0].email, "Validation Notification", f"Dear {user[0].email},\n\nWe are pleased to inform you that your registration with us has been successfully validated! You may now log in and create your profile to start receiving support.\n\nIf you have any questions or need assistance, please do not hesitate to contact us.\n\nBest regards,\nHTHeroes Team")
+        send_email(user[0].email, "Validation Notification", f"Dear {user[0].email},\n\nWe are pleased to inform you that your registration with us has been successfully validated! You may now log in and create your profile to start receiving support.\n\nIf you have any questions or need assistance, please do not hesitate to contact us.\n\nBest regards,\nHomeroom Heroes Team")
         return {"message": "User validated."}
     except Exception as e:
         db.rollback()
@@ -836,7 +836,7 @@ async def forgot_password(email: str = Form(...)):
         if user:
             recipient_email = email
             temp_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(10))
-            full_message = f"Dear {email},\n\nWe have received a request for a password reset for your account. Here is your new temporary password: {temp_password}. Please use this password the next time you login and update it immediately.\n\nIf you did not request this password reset or have any concerns, please contact our support team.\n\nBest regards,\nHTHeroes Team"
+            full_message = f"Dear {email},\n\nWe have received a request for a password reset for your account. Here is your new temporary password: {temp_password}. Please use this password the next time you login and update it immediately.\n\nIf you did not request this password reset or have any concerns, please contact our support team.\n\nBest regards,\nHomeroom Heroes Team"
             send_email(recipient_email, 'Forgot Password', full_message)
             update_temp_password(db, recipient_email, temp_password)
         else:
@@ -961,6 +961,7 @@ async def get_teacher_info(url_id: str, request: Request):
         return RedirectResponse(url="/pages/teacher.html")
     except Exception as e:
         return RedirectResponse(url="/pages/404.html")
+
 
 if __name__ == "__main__":
     import uvicorn
