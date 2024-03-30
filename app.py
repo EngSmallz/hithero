@@ -267,7 +267,7 @@ schedule_thread.start()
 #######apis#######
 ###api used to register a new user (and only a new user) into the new_user list
 @app.post("/register/")
-async def register_user(name: str = Form(...), email: str = Form(...), phone_number: str = Form(...), password: str = Form(...), confirm_password: str = Form(...), state: str = Form(...),county: str = Form(...),district: str = Form(...), school: str = Form(...), role: str = Form(...)):
+async def register_user(name: str = Form(...), email: str = Form(...), phone_number: str = Form(...), password: str = Form(...), confirm_password: str = Form(...), state: str = Form(...),county: str = Form(...),district: str = Form(...), school: str = Form(...)):
     db = SessionLocal()
     try:
         query = select(RegisteredUsers.id).where(cast(RegisteredUsers.email, String) == cast(email, String))
@@ -283,6 +283,7 @@ async def register_user(name: str = Form(...), email: str = Form(...), phone_num
         if password != confirm_password:
             return {"message": "Password do not match."}
         hashed_password = sha256_crypt.hash(password)
+        role = 'teacher'
         new_user = NewUsers(name=name, email=email, state=state, county=county, district=district, school=school, phone_number=phone_number, password=hashed_password, role=role)
         db.add(new_user)
         db.commit()
