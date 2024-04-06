@@ -746,7 +746,7 @@ async def validation_page(request: Request, role: str = Depends(get_current_role
             query = select(NewUsers)
             result = db.execute(query)
             new_users = result.fetchall()
-            return {"new_users": [{"name": user[0].name, "email": user[0].email, "district": user[0].district, "school": user[0].school, "phone_number": user[0].phone_number} for user in new_users]}
+            return {"new_users": [{"name": user[0].name, "email": user[0].email, "state": user[0].state, "district": user[0].district, "school": user[0].school, "phone_number": user[0].phone_number} for user in new_users]}
         if role == 'teacher':
             store_my_cookies(request, id)
             state = get_index_cookie('state', request)
@@ -759,7 +759,7 @@ async def validation_page(request: Request, role: str = Depends(get_current_role
             )
             result = db.execute(query)
             new_users = result.fetchall()
-            return {"new_users": [{"name": user[0].name, "email": user[0].email, "district": user[0].district, "school": user[0].school, "phone_number": user[0].phone_number} for user in new_users]}
+            return {"new_users": [{"name": user[0].name, "email": user[0].email, "state": user[0].state, "district": user[0].district, "school": user[0].school, "phone_number": user[0].phone_number} for user in new_users]}
         else:
             raise HTTPException(status_code=403, detail="You don't have permission to access this page.")
     except Exception as e:
