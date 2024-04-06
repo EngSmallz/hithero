@@ -49,7 +49,7 @@ MAX_FILE_SIZE = 1 * 1024 * 1024
 class School(Base):
     __tablename__ = "schools"
 
-    school_id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True)
     school_name = Column(String)
     district = Column(String)
     county = Column(String)
