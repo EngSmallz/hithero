@@ -938,7 +938,7 @@ async def get_teacher_url(request: Request):
         token = result.fetchone()
         if not token:
             raise HTTPException(status_code=404, detail="No matching teacher found")
-        url = "www.HelpTeachers.net/teacher/" + token[0]
+        url = "localhost:8000/teacher/" + token[0]
         return {"url": url}  # Return as JSON
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
