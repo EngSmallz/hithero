@@ -288,7 +288,7 @@ async def register_user(name: str = Form(...), email: str = Form(...), phone_num
         db.add(new_user)
         db.commit()
         send_email(email, "Registration successful",  f"Dear {email},\n\nThank you for registering with us! Once you are validated by a fellow teacher in your district or one of us here at Homeroom Heroes, you will be able to create your profile and start receiving support.\n\nBest regards,\nHomeroom Heroes Team")
-        return {"message": "User registered successfully. You should recieve and email shortly."}
+        return {"message": "User registered successfully. You should recieve an email shortly. Please check your spam folder"}
     except Exception as e:
         return {"message": "Registration unsuccessful", "error": str(e)}
 
@@ -938,7 +938,7 @@ async def get_teacher_url(request: Request):
         token = result.fetchone()
         if not token:
             raise HTTPException(status_code=404, detail="No matching teacher found")
-        url = "localhost:8000/teacher/" + token[0]
+        url = "www.HelpTeachers.net/teacher/" + token[0]
         return {"url": url}  # Return as JSON
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
