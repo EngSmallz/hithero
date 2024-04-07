@@ -83,12 +83,17 @@
                         listItem.appendChild(validateButton);
                         const space = document.createTextNode(' ');
                         listItem.appendChild(space);
-                        if (data.role === 'admin'){
+                        if (data.role === 'admin'){  
                             const deleteButton = document.createElement("button");
                             deleteButton.textContent = "Delete";
                             deleteButton.id = "registerButton";
                             deleteButton.addEventListener("click", () => deleteUser(user.email));
                             listItem.appendChild(deleteButton);
+                            if (user.report === 1){
+                            const userReport = document.createElement("span");
+                            userReport.textContent = ` REPORTED `;
+                            listItem.appendChild(userReport);
+                            } 
                         }else{
                             const reportButton = document.createElement("button");
                             reportButton.textContent = "Report";
@@ -113,13 +118,13 @@
                 });
 
                 if (validateResponse.ok) {
-                    console.log(`Validation successful for user: ${email}`);
+                    alert(`Validation successful for user: ${email}`);
                     window.location.reload();
                 } else {
-                    console.error(`Validation failed for user: ${email}`);
+                    alert(`Validation failed for user: ${email}`);
                 }
             } catch (error) {
-                console.error('Error validating user:', error);
+                alert('Error validating user:', error);
             }
         }
 
@@ -133,13 +138,13 @@
                 });
 
                 if (deleteResponse.ok) {
-                    console.log(`Delete successful for user: ${email}`);
+                    alert(`Delete successful for user: ${email}`);
                     window.location.reload();
                 } else {
-                    console.error(`Delete failed for user: ${email}`);
+                    alert(`Delete failed for user: ${email}`);
                 }
             } catch (error) {
-                console.error('Error deleting user:', error);
+                alert('Error deleting user:', error);
             }
         }
 
@@ -153,13 +158,12 @@
                 });
 
                 if (reportResponse.ok) {
-                    console.log(`Report successful for user: ${email}`);
-                    window.location.reload();
+                    alert(`Report successful for user: ${email}`);
                 } else {
-                    console.error(`Report failed for user: ${email}`);
+                    alert(`Report failed for user: ${email}`);
                 }
             } catch (error) {
-                console.error('Error reporting user:', error);
+                alert('Error reporting user:', error);
             }
         }
         
