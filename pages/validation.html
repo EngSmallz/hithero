@@ -75,6 +75,21 @@
                         validateButton.addEventListener("click", () => validate(user.email));
                         listItem.appendChild(userInfoSpan);
                         listItem.appendChild(validateButton);
+                        const space = document.createTextNode(' ');
+                        listItem.appendChild(space);
+                        if (data.role === 'admin'){
+                            const deleteButton = document.createElement("button");
+                            deleteButton.textContent = "Delete";
+                            deleteButton.id = "registerButton";
+                            deleteButton.addEventListener("click", () => deleteUser(user.email));
+                            listItem.appendChild(deleteButton);
+                        }else{
+                            const reportButton = document.createElement("button");
+                            reportButton.textContent = "Report";
+                            reportButton.id = "registerButton";
+                            reportButton.addEventListener("click", () => reportUser(user.email));
+                            listItem.appendChild(reportButton);
+                        }
                         validationList.appendChild(listItem);
                         validationList.appendChild(endItem)
                     });
@@ -102,6 +117,45 @@
             }
         }
 
+        async function deleteUser(email) {
+            try {
+                const deleteResponse = await fetch(`/delete_user/${email}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (deleteResponse.ok) {
+                    console.log(`Delete successful for user: ${email}`);
+                    window.location.reload();
+                } else {
+                    console.error(`Delete failed for user: ${email}`);
+                }
+            } catch (error) {
+                console.error('Error deleting user:', error);
+            }
+        }
+
+        async function reportUser(email) {
+            try {
+                const reportResponse = await fetch(`/report_user/${email}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (reportResponse.ok) {
+                    console.log(`Report successful for user: ${email}`);
+                    window.location.reload();
+                } else {
+                    console.error(`Report failed for user: ${email}`);
+                }
+            } catch (error) {
+                console.error('Error reporting user:', error);
+            }
+        }
         
         async function logout() {
                 try {
