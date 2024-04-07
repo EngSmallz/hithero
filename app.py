@@ -19,7 +19,7 @@ from datetime import date
 
 
 
-app = FastAPI()
+app = FastAPI(docs_url=None, redoc_url=None)
 load_dotenv()
 logger = logging.getLogger(__name__)
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY"))
