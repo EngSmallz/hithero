@@ -19,7 +19,7 @@ from datetime import date
 
 
 
-app = FastAPI(docs_url=None, redoc_url=None)
+app = FastAPI()
 load_dotenv()
 logger = logging.getLogger(__name__)
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY"))
@@ -285,7 +285,7 @@ async def register_user(name: str = Form(...), email: str = Form(...), phone_num
             return {"message": "Password do not match."}
         hashed_password = sha256_crypt.hash(password)
         role = 'teacher'
-        new_user = NewUsers(name=name, email=email, state=state, county=county, district=district, school=school, phone_number=phone_number, password=hashed_password, role=role)
+        new_user = NewUsers(name=name, email=email, state=state, county=county, district=district, school=school, phone_number=phone_number, password=hashed_password, role=role, report=0)
         db.add(new_user)
         db.commit()
         send_email(email, "Registration successful",  f"Dear {email},\n\nThank you for registering with us! Once you are validated by a fellow teacher in your district or one of us here at Homeroom Heroes, you will be able to create your profile and start receiving support.\n\nBest regards,\nHomeroom Heroes Team")
