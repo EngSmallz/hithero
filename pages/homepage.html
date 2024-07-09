@@ -32,16 +32,16 @@
         };
 </script>
 <body>
-    <header>
-        <h1>Welcome to Homeroom Heroes</h1>
-        <p>Supporting Teachers and Students</p>
-    </header>
-
     <nav>
         <ul>
-            <li><a href="/pages/homepage.html">Home</a></li>
+            <li>
+                <a href="/pages/homepage.html">
+                    <img src="\static\images\logo_transparent.png" alt="Logo" style="height: 75px; vertical-align: middle;">
+                </a>
+            </li>
             <li><a href="/pages/about.html">About</a></li>
             <li><a href="/pages/contact.html">Contact</a></li>
+            <li><a href="/pages/register.html">Sign Up</a></li>
         </ul>
     </nav>
 
@@ -104,12 +104,20 @@
                     });
 
                     const randomTeacherInfo = document.getElementById('randomTeacherInfo');
+                    let img_text;
                     if (data.image_data) {
                         img_text = `<img src="data:image/jpeg;base64,${data.image_data}" alt="Teacher Image">`;
                     } else {
                         img_text = '<img src="/static/images/apple.jpg" alt="Teacher Image">';
                     }
-                    randomTeacherInfo.innerHTML = `${img_text} <h3>${data.name} from ${data.school} in ${data.county}, ${data.state}</h3>`;
+                    randomTeacherInfo.innerHTML = `
+                        <div class="teacher-home">
+                            ${img_text}
+                            <div class="teacher-details">
+                                <strong>${data.name}</strong>
+                                <p>from ${data.school} in ${data.county}, ${data.state}</p>
+                            </div>
+                        </div><p>`;
                     randomTeacherInfo.appendChild(button);
                 } else {
                     const randomTeacherInfo = document.getElementById('randomTeacherInfo');
@@ -120,7 +128,7 @@
             }
         }
 
-        
+
         async function logout() {
             try {
                 const response = await fetch(`/logout/`, {
@@ -156,13 +164,21 @@
 
                 if (response.ok) {
                     const teacherDay = document.getElementById('teacherDay');
+                    let img_text;
                     if (data.image_data) {
                         img_text = `<img src="data:image/jpeg;base64,${data.image_data}" alt="Teacher Image">`;
                     } else {
                         img_text = '<img src="/static/images/apple.jpg" alt="Teacher Image">';
                     }
-                    teacherDay.innerHTML = `${img_text}<h3>${data.name} from ${data.school} in ${data.county}, ${data.state}</h3><button id="teacherButton" onclick="teacherDay()">View Teacher of the Day</button>`;
-                    teacherDay.appendChild(button);
+                    teacherDay.innerHTML = `
+                        <div class="teacher-home">
+                            ${img_text}
+                            <div class="teacher-details">
+                                <h3>${data.name}</h3>
+                                <p>From ${data.school} in ${data.county}, ${data.state}</p>
+                            </div>
+                        </div><p>
+                        <button id="teacherButton" onclick="teacherDay()">View Teacher of the Day</button>`;
                 } else {
                     const teacherDay = document.getElementById('teacherDay');
                     teacherDay.innerHTML = "Unable to fetch teacher of the day. We are sorry.";
@@ -171,6 +187,7 @@
                 console.error('Error fetching random teacher:', error);
             }
         }
+
 
         async function mypage() {
             try {
