@@ -56,114 +56,79 @@ nav a:hover {
     color: #ff0000; /* Optional: Change the color when hovering over links */
 }
 
+/*hamburger menu button styles*/
+.menu-items {
+    display: none; /* Initially hide the menu items */
+    position: absolute;
+    top: 100%; 
+    right: 0;
+    background: none;
+    border: none;
+}
 
-#logoutButton {
-    box-shadow: inset 0px 1px 0px 0px #cf866c;
-    background: linear-gradient(to bottom, #d0451b 5%, #bc3315 100%);
-    background-color: #d0451b;
-    border-radius: 3px;
-    border: 1px solid #942911;
+.listButton {
+    /* Adjust styles as per your design */
+    box-shadow: inset 0px 1px 0px 0px #9fb4f2;
+    background: linear-gradient(to bottom, #7892c2 5%, #476e9e 100%);
+    background-color: #7892c2;
+    border-radius: 6px;
+    border: 1px solid #4e6096;
+    display: none;
     cursor: pointer;
     color: #ffffff;
     font-family: Arial;
-    font-size: 13px;
+    font-size: 15px;
+    font-weight: bold;
     padding: 6px 24px;
     text-decoration: none;
-    text-shadow: 0px 1px 0px #854629;
-
-    /* Position the button on the right side */
-    position: absolute;
-    top: 10px; /* Adjust the distance from the top */
-    right: 10px; /* Adjust the distance from the right */
-    z-index: 999; /* Ensure the button is above other elements */
+    text-shadow: 0px 1px 0px #283966;
+    margin-top: 5px; /* Adjust as needed */
 }
 
-#loginButton {
-    box-shadow: inset 0px 1px 0px 0px #cf866c;
-    background: linear-gradient(to bottom, #d0451b 5%, #bc3315 100%);
-    background-color: #d0451b;
-    border-radius: 3px;
-    border: 1px solid #942911;
-    cursor: pointer;
-    color: #ffffff;
-    font-family: Arial;
-    font-size: 13px;
-    padding: 6px 24px;
-    text-decoration: none;
-    text-shadow: 0px 1px 0px #854629;
-
-    /* Position the button on the right side */
-    position: absolute;
-    top: 10px; /* Adjust the distance from the top */
-    right: 10px; /* Adjust the distance from the right */
-    z-index: 999; /* Ensure the button is above other elements */
+.listButton:hover {
+    background: linear-gradient(to bottom, #476e9e 5%, #7892c2 100%);
+    background-color: #476e9e;
 }
 
-#mypageButton {
-    box-shadow: inset 0px 1px 0px 0px #6c73cf;
-    background: linear-gradient(to bottom, #1e1bd0 5%, #1815bc 100%);
-    background-color: #1b27d0;
-    border-radius: 3px;
-    border: 1px solid #111e94;
-    cursor: pointer;
-    color: #ffffff;
-    font-family: Arial;
-    font-size: 13px;
-    padding: 6px 24px;
-    text-decoration: none;
-    text-shadow: 0px 1px 0px #292b85;
-
-    /* Position the button on the right side */
-    position: absolute;
-    top: 110px; /* Adjust the distance from the top */
-    right: 10px; /* Adjust the distance from the right */
-    z-index: 999; /* Ensure the button is above other elements */
+.listButton:active {
+    position: relative;
+    top: 1px;
 }
 
-#validationButton {
-	box-shadow:inset 0px 1px 0px 0px #fff6af;
-	background:linear-gradient(to bottom, #ffec64 5%, #ffab23 100%);
-	background-color:#ffec64;
-	border-radius:3px;
-	border:1px solid #ffaa22;
+.hamburger-menu {
+    position: fixed;
+    top: 20px; /* Adjust as needed */
+    right: 20px; /* Adjust as needed */
+    z-index: 1000; /* Ensure it's above other content */
+}
+
+#hamburgerButton {
+	box-shadow:inset 0px 1px 0px 0px #ffffff;
+	background:linear-gradient(to bottom, #fff7ff 5%, #9e9e9e 100%);
+	background-color:#fff7ff;
+	border-radius:6px;
+	border:1px solid #000000;
 	display:inline-block;
 	cursor:pointer;
-	color:#333333;
+	color:#666666;
 	font-family:Arial;
-	font-size:13px;
-	padding:6px 24px;
+	font-size:15px;
+	font-weight:bold;
+	padding:10px 12px;
 	text-decoration:none;
-	text-shadow:0px 1px 0px #ffee66;
-
-    /* Position the button on the right side */
-    position: absolute;
-    top: 60px; /* Adjust the distance from the top */
-    right: 10px; /* Adjust the distance from the right */
-    z-index: 999; /* Ensure the button is above other elements */
+	text-shadow:0px 1px 0px #ffffff;
+}
+#hamburgerButton:hover {
+	background:linear-gradient(to bottom, #9e9e9e 5%, #fff7ff 100%);
+	background-color:#9e9e9e;
+}
+#hamburgerButton:active {
+	position:relative;
+	top:1px;
 }
 
-#createButton {
-	box-shadow:inset 0px 1px 0px 0px #e184f3;
-	background:linear-gradient(to bottom, #c123de 5%, #a20dbd 100%);
-	background-color:#c123de;
-	border-radius:3px;
-	border:1px solid #a511c0;
-	display:inline-block;
-	cursor:pointer;
-	color:#ffffff;
-	font-family:Arial;
-	font-size:13px;
-	padding:6px 24px;
-	text-decoration:none;
-	text-shadow:0px 1px 0px #9b14b3;
 
-    /* Position the button on the right side */
-    position: absolute;
-    top: 110px; /* Adjust the distance from the top */
-    right: 10px; /* Adjust the distance from the right */
-    z-index: 999; /* Ensure the button is above other elements */
-}
-
+/* other buttons*/
 #updateButton {
 	box-shadow:inset 0px 1px 0px 0px #e184f3;
 	background:linear-gradient(to bottom, #c123de 5%, #a20dbd 100%);
@@ -532,3 +497,5 @@ footer {
 	position:relative;
 	top:1px;
 }
+
+

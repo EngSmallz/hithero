@@ -24,6 +24,10 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY"))
 
+# Disable documentation routes
+app.openapi_url = None
+app.redoc_url = None
+
 # Determine the path to the directory
 app.mount("/pages", StaticFiles(directory="pages"), name="pages")
 app.mount("/static", StaticFiles(directory="static"), name="static")

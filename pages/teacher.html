@@ -6,14 +6,11 @@
     <link rel="shortcut icon" type="image/x-icon" href="/static/images/favicon.ico" />
 </head>
 <script>
-    function checkAuthentication() {
+    function checkTeacher() {
         fetch('/profile/')
             .then(response => response.json())
             .then(data => {
                 if (data.user_role === 'teacher') {
-                    document.getElementById('logoutButton').style.display = 'block';
-                    document.getElementById('mypageButton').style.display = 'block';
-                    document.getElementById('validationButton').style.display = 'block';
                     fetch('/check_access_teacher/')
                         .then(response => {
                             if (response.ok) {
@@ -26,20 +23,49 @@
                     document.getElementById('editButton').style.display = 'block';
                     document.getElementById('updateButton').style.display = 'block';
                     document.getElementById('updateImgBtn').style.display = 'block';
-                    document.getElementById('logoutButton').style.display = 'block';
-                    document.getElementById('validationButton').style.display = 'block';
-                    document.getElementById('createButton').style.display = 'block';
                 } else {
                     throw new Error('Unknown role');
                 }
             })
             .catch(error => {
                 console.error('Error checking authentication:', error);
-                document.getElementById('loginButton').style.display = 'block';
             });
     }
 
-    window.onload = checkAuthentication;
+    window.onload = checkTeacher;
+
+    function checkAuthentication() {
+        fetch('/profile/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.user_role === 'teacher') {
+                    document.getElementById('logoutButton').style.display = 'block';
+                    document.getElementById('mypageButton').style.display = 'block';
+                    document.getElementById('validationButton').style.display = 'block';
+                } else if (data.user_role === 'admin') {
+                    document.getElementById('logoutButton').style.display = 'block';
+                    document.getElementById('validationButton').style.display = 'block';
+                    document.getElementById('createButton').style.display = 'block';
+                } else {
+                    document.getElementById('loginButton').style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching user profile:', error);
+                document.getElementById('loginButton').style.display = 'block';
+                // Handle error if necessary
+            });
+    }
+    
+    function toggleMenu() {
+        var menuItems = document.getElementById('menuItems');
+        if (menuItems.style.display === 'block') {
+            menuItems.style.display = 'none';
+        } else {
+            menuItems.style.display = 'block';
+            checkAuthentication();
+        }
+    }
 </script>
 <body>
     <nav>
@@ -49,18 +75,24 @@
                     <img src="\static\images\logo_transparent.png" alt="Logo" style="height: 75px; vertical-align: middle;">
                 </a>
             </li>
+            <li><a href="/pages/homepage.html">Home</a></li>
+            <li><a href="/pages/register.html">Sign Up</a></li>
             <li><a href="/pages/about.html">About</a></li>
             <li><a href="/pages/contact.html">Contact</a></li>
-            <li><a href="/pages/register.html">Sign Up</a></li>
         </ul>
     </nav>
+ 
+    <div class="hamburger-menu">
+        <button id="hamburgerButton" onclick="toggleMenu()">☰</button>
+        <div class="menu-items" id="menuItems">
+            <button id="loginButton" class="listButton" onclick="redirectTo('/pages/login.html')">Login</button>
+            <button id="logoutButton" class="listButton" onclick="logout()">Logout</button>
+            <button id="mypageButton" class="listButton" onclick="mypage()">My Page</button>
+            <button id="validationButton" class="listButton" onclick="redirectTo('/pages/validation.html')">Validation</button>
+            <button id="createButton" class="listButton" onclick="redirectTo('/pages/create.html')">Create</button>
+        </div>
+    </div>
     
-    <button id="logoutButton" style="display: none" onclick="logout()">Logout</button>
-    <button id="loginButton" style="display: none" onclick="redirectTo('/pages/login.html')">Login</button>
-    <button id="mypageButton" style="display: none" onclick="mypage()">My Page</button>
-    <button id="validationButton" style="display: none" onclick="redirectTo('/pages/validation.html')">Validation</button>
-    <button id="createButton" style="display: none" onclick="redirectTo('/pages/create.html')">Create Profile</button>
-
      <main id="main-container" style="display: none;">
         <section class="profile" id="profile-section">
             <div class="teacher-info" id="teacher-info">
