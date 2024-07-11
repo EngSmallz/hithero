@@ -89,6 +89,14 @@ h4 {
     text-align: center;
 }
 
+h5 {
+    font-family: 'Arial', sans-serif;
+    font-size: 1em;
+    color: #000000;
+    margin: 0.5em 0;
+    text-align: left;
+}
+
 /*hamburger menu button styles*/
 .menu-items {
     display: none; /* Initially hide the menu items */
