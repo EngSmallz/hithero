@@ -56,6 +56,39 @@ nav a:hover {
     color: #ff0000; /* Optional: Change the color when hovering over links */
 }
 
+/* General styling for h1, h2, and h3 elements */
+h1 {
+    font-family: 'Arial', sans-serif;
+    font-size: 2em;
+    color: #000000;
+    margin: 0.5em 0;
+    text-align: left;
+}
+
+h2 {
+    font-family: 'Arial', sans-serif;
+    font-size: 1.5em;
+    color: #000000;
+    margin: 0.5em 0;
+    text-align: left;
+}
+
+h3 {
+    font-family: 'Arial', sans-serif;
+    font-size: 1em;
+    color: #000000;
+    margin: 0.5em 0;
+    text-align: center;
+}
+
+h4 {
+    font-family: 'Arial', sans-serif;
+    font-size: 3em;
+    color: #000000;
+    margin: 0.5em 0;
+    text-align: center;
+}
+
 /*hamburger menu button styles*/
 .menu-items {
     display: none; /* Initially hide the menu items */
