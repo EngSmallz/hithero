@@ -366,7 +366,7 @@ async def create_teacher_profile(request: Request, name: str = Form(...), state:
             result = db.execute(query)
             create_count = result.scalar()
             if create_count == 0 or role == 'admin':
-                aa_link = wishlist + "?&_encoding=UTF8&tag=Homeroomheroe-20"
+                aa_link = wishlist + "?&_encoding=UTF8&tag=homeroomhero-20"
                 email = get_current_email(request)
                 first_part_email = email.split('@')[0]
                 random_number = random.randint(1, 9999)
@@ -604,7 +604,7 @@ async def edit_teacher_info(request: Request, wishlist: str = Form(...), aboutMe
             name = get_index_cookie('teacher', request)
             update_query = update(TeacherList)
             if wishlist:
-                aa_link = wishlist + "?&_encoding=UTF8&tag=Homeroomheroe-20"
+                aa_link = wishlist + "?&_encoding=UTF8&tag=homeroomhero-20"
                 update_query = update_query.values(wishlist_url=aa_link)
             if aboutMe:
                 update_query = update_query.values(about_me=aboutMe)
