@@ -66,21 +66,34 @@
     </div>
      
     <main>
-        <section class="update-form">
-            <h2>Edit Your Info</h2>
-            <h3>Only filled areas will update.</h3>
-            <form id="update-form" method="post" enctype="multipart/form-data">
-                <label for="wishlist">Amazon Wishlist:</label>
-                <input type="text" id="wishlist" name="wishlist" required>
-    
-                <label for="aboutMe">About Me:</label>
-                <textarea id="aboutMe" name="aboutMe" maxlength="500" rows="4" cols="50" oninput="updateCharacterCount()" required></textarea>
-                <div id="charCount">500 characters remaining</div><br><br>
-
-                <p><button id="submitButton" onclick="update()">Submit</button>
-                <p></p>
-            </form>
-        </section>
+        <p></p>
+        <form id="update-info-form" method="post">
+            <h3>Update Info</h3>
+            <label for="aboutMe">About Me:</label>
+            <textarea id="aboutMe" name="aboutMe" maxlength="500" rows="4" cols="50" oninput="updateCharacterCount()" required></textarea>
+            <div id="charCount">500 characters remaining</div>
+            <p></p>
+            <button type="button" id="submitInfoButton">Update Wishlist</button>
+        </form>
+        <br><br>
+        <form id="update-wishlist-form" method="post">
+            <h3>Update Wishlist</h3>
+            <label for="wishlist">Amazon Wishlist:</label>
+            <input type="text" id="wishlist" name="wishlist" required>
+            <p></p>
+            <button type="button" id="submitWishlistButton">Update Wishlist</button>
+        </form>
+        <br><br>
+        
+        <h3>Update URL ID</h3>
+        <p>The URL ID is your unique marker for your page when using the <button id="shareButton">Share</button> button.</p>
+        <p>The format is: www.HelpTeachers.net/teacher/{url id}</p>
+        <form id="update-urlid-form" method="post">
+            <label for="url_id">URL ID:</label>
+            <input type="text" id="url_id" name="url_id" required>
+            <p></p>
+            <button type="button" id="submitUrlIdButton">Update URL ID</button>
+        </form>
     </main>
 
     <script>
@@ -95,36 +108,6 @@
         function redirectTo(url) {
                 window.location.href = url;
             }
-            
-        document.addEventListener("DOMContentLoaded", function () {
-            const updateForm = document.getElementById("update-form");
-            const updateButton = document.getElementById("submitButton");
-
-            updateButton.addEventListener("click", async function (event) {
-                event.preventDefault();
-                const formData = new FormData(updateForm);
-
-                try {
-                    const response = await fetch("/update_teacher_info/", {
-                        method: "POST",
-                        body: formData,
-                    });
-
-                    if (response.ok) {
-                        alert('Profile updated successfully!');
-                        window.location.href = '/pages/teacher.html';
-                    } else {
-                        alert('Failed to update profile. Please try again.');
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                    alert('An error occurred. Please try again.');
-                    window.location.reload();
-                }
-            });
-        });
-
-
 
         async function logout() {
             try {
@@ -159,6 +142,92 @@
                 window.location.href = '/';
             }
         }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const updateInfoForm = document.getElementById("update-info-form");
+            const updateWishlistForm = document.getElementById("update-wishlist-form");
+            const updateUrlIdForm = document.getElementById("update-urlid-form");
+
+            document.getElementById("submitInfoButton").addEventListener("click", async function (event) {
+                event.preventDefault();
+                const formData = new FormData(updateInfoForm);
+
+                try {
+                    const response = await fetch("/update_info/", {
+                        method: "POST",
+                        body: formData
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        alert(data.message);
+                        window.location.href = '/pages/teacher.html';
+                    } else {
+                        const errorData = await response.json();
+                        alert(errorData.detail || 'Failed to update info. Please try again.');
+                        window.location.reload();
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('An error occurred. Please try again.');
+                    window.location.reload();
+                }
+            });
+
+            document.getElementById("submitWishlistButton").addEventListener("click", async function (event) {
+                event.preventDefault();
+                const formData = new FormData(updateWishlistForm);
+
+                try {
+                    const response = await fetch("/update_wishlist/", {
+                        method: "POST",
+                        body: formData
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        alert(data.message);
+                        window.location.href = '/pages/teacher.html';
+                    } else {
+                        const errorData = await response.json();
+                        alert(errorData.detail || 'Failed to update wishlist. Please try again.');
+                        window.location.reload();
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('An error occurred. Please try again.');
+                    window.location.reload();
+                }
+            });
+
+            document.getElementById("submitUrlIdButton").addEventListener("click", async function (event) {
+                event.preventDefault();
+                const formData = new FormData(updateUrlIdForm);
+
+                try {
+                    const response = await fetch("/update_url_id/", {
+                        method: "POST",
+                        body: formData
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        alert(data.message);
+                        window.location.href = '/pages/teacher.html';
+                    } else {
+                        const errorData = await response.json();
+                        alert(errorData.detail || 'Failed to update URL ID. Please try again.');
+                        window.location.reload();
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('An error occurred. Please try again.');
+                    window.location.reload();
+                }
+            });
+        });
+
+
     </script>
     
     <footer>

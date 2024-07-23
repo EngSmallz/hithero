@@ -400,7 +400,6 @@ async def create_teacher_profile(request: Request, name: str = Form(...), state:
     finally:
         db.close()
 
-
 ##api gets a random teacher from the list teacher_list in the hithero data base
 @app.get("/random_teacher/")
 async def get_random_teacher(request: Request):
@@ -589,37 +588,59 @@ async def get_teacher_info(request: Request):
     finally:
         db.close()
 
-
-
-###api used to update the logged in users teacher page. only info inpoutted is updated
-@app.post("/update_teacher_info/")
-async def edit_teacher_info(request: Request, wishlist: str = Form(...), aboutMe: str = Form(...), role: str = Depends(get_current_role)):
+##api that updates about me info
+@app.post("/update_info/")
+async def update_info(request: Request, aboutMe: str = Form(...), id: int = Depends(get_current_id), role: str = Depends(get_current_role)):
     db = SessionLocal()
     try:
         if role:
-            state = get_index_cookie('state', request)
-            county = get_index_cookie('county', request)
-            district = get_index_cookie('district', request)
-            school = get_index_cookie('school', request) 
-            name = get_index_cookie('teacher', request)
-            update_query = update(TeacherList)
-            if wishlist:
-                aa_link = wishlist + "?&_encoding=UTF8&tag=homeroomhero-20"
-                update_query = update_query.values(wishlist_url=aa_link)
-            if aboutMe:
-                update_query = update_query.values(about_me=aboutMe)
-            update_query = update_query.where(
-                (cast(TeacherList.state, String) == state) &
-                (cast(TeacherList.county, String) == county) &
-                (cast(TeacherList.district, String) == district) &
-                (cast(TeacherList.school, String) == school) &
-                (cast(TeacherList.name, String) == name)
-            )
-            result = db.execute(update_query)
+            update_query = update(TeacherList).where(TeacherList.regUserID == id).values(about_me=aboutMe)
+            db.execute(update_query)
             db.commit()
-            return {"message": "Information updated."}
+            return {"message": "Info updated."}
         else:
-            return {"message": "Permission denied."}
+            raise HTTPException(status_code=403, detail="Permission denied.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    finally:
+        db.close()
+
+##api to update wishlist
+@app.post("/update_wishlist/")
+async def update_wishlist(request: Request, wishlist: str = Form(...), id: int = Depends(get_current_id), role: str = Depends(get_current_role)):
+    db = SessionLocal()
+    try:
+        if role:
+            aa_link = wishlist + "?&_encoding=UTF8&tag=homeroomhero-20"
+            update_query = update(TeacherList).where(TeacherList.regUserID == id).values(wishlist_url=aa_link)
+            db.execute(update_query)
+            db.commit()
+            return {"message": "Wishlist updated."}
+        else:
+            raise HTTPException(status_code=403, detail="Permission denied.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    finally:
+        db.close()
+
+
+#api that update the url of a teachers page
+@app.post("/update_url_id/")
+async def update_url_id(request: Request, url_id: str = Form(...), id: int = Depends(get_current_id), role: str = Depends(get_current_role)):
+    db = SessionLocal()
+    try:
+        if role:
+            existing_teacher = db.query(TeacherList).where(cast(TeacherList.url_id, String) == cast(url_id, String)).first()
+            if existing_teacher:
+                raise HTTPException(status_code=409, detail="URL ID already in use.")
+            update_query = update(TeacherList).where(TeacherList.regUserID == id).values(url_id=url_id)
+            db.execute(update_query)
+            db.commit()
+            return {"message": "URL ID updated successfully."}
+        else:
+            raise HTTPException(status_code=403, detail="Permission denied.")
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
     finally:
@@ -921,6 +942,41 @@ async def send_teacher_email(name: str = Form(...), email: str = Form(...)):
         return JSONResponse(content={"message": "Email sent successfully"}, status_code=200)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+##admin page api to send update emails
+@app.post("/send_update_email/")
+async def send_update_email(request: Request,updates: str = Form(...)):
+    db = SessionLocal()
+    subject = "Important Updates from Homeroom Heroes"
+    message_body = f"""
+    We have some important updates to share with you regarding Homeroom Heroes:
+
+    {updates}
+
+    We hope you find these updates valuable and look forward to continuing to support you in your teaching journey.
+
+    If you have any questions or need further information, please feel free to reply to this email.
+
+    Best regards,
+
+    Justin Brundage
+    Founder, Homeroom Heroes
+    Homeroom.heroes.main@gmail.com
+    """
+
+    try:
+        # Fetch all email addresses from the database
+        emails = db.query(registered_users.email).all()
+        for email_tuple in emails:
+            email = email_tuple[0]
+            send_email(email, subject, message_body)
+
+        return JSONResponse(content={"message": "Update emails sent successfully"}, status_code=200)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    finally:
+        db.close()
 
 ###api to get a link for the url to your page to share
 @app.get("/teacher_url/")
