@@ -366,7 +366,7 @@ async def create_teacher_profile(request: Request, name: str = Form(...), state:
             result = db.execute(query)
             create_count = result.scalar()
             if create_count == 0 or role == 'admin':
-                aa_link = wishlist + "&tag=homeroomhero-20"
+                aa_link = wishlist + "&tag=homeroomhe70-20"
                 email = get_current_email(request)
                 first_part_email = email.split('@')[0]
                 random_number = random.randint(1, 9999)
@@ -952,7 +952,15 @@ async def send_update_email(request: Request,updates: str = Form(...)):
     message_body = f"""
     We have some important updates to share with you regarding Homeroom Heroes:
 
-    {updates}
+    Update Page:
+    -Uptade sections independently
+    -Update your unique URL ID
+
+    Create Page:
+    -Fix for error after successful creation
+
+    Profile Image:
+    -File size adjustment
 
     We hope you find these updates valuable and look forward to continuing to support you in your teaching journey.
 
@@ -961,13 +969,14 @@ async def send_update_email(request: Request,updates: str = Form(...)):
     Best regards,
 
     Justin Brundage
-    Founder, Homeroom Heroes
-    Homeroom.heroes.main@gmail.com
+    Founder & CEO
+    Homeroom Heroes
+    www.HelpTeacehers.net
     """
 
     try:
         # Fetch all email addresses from the database
-        emails = db.query(registered_users.email).all()
+        emails = db.query(RegisteredUsers.email).all()
         for email_tuple in emails:
             email = email_tuple[0]
             send_email(email, subject, message_body)
