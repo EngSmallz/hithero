@@ -4,6 +4,7 @@
     <title>Homeroom Heroes - Support Teachers</title>
     <link rel="stylesheet" type="text/css" href="/static/css/style.css">
     <link rel="shortcut icon" type="image/x-icon" href="/static/images/favicon.ico" />
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 </head>
 
 <body>
@@ -76,6 +77,8 @@
             <p><input type="checkbox" id="termsCheckbox" style="display: none" name="termsCheckbox"  onclick="showSubmit()" required></p>
             <label for="termsCheckbox">I have read the Terms and Conditions</label><br>
 
+            <div class="g-recaptcha" data-sitekey="6Lf4uiIqAAAAAIsVDvcSCgREs06oONDuSl9fbkOL"></div>
+
             <p><button id="submitButton" style="display: none">Submit</button></p>
             <p><button id="registerButton" onclick="redirectTo('/pages/login.html')">Login</button></p>
 
@@ -89,6 +92,10 @@
             registrationButton.addEventListener("click", async function (event) {
                 event.preventDefault();
                 const formData = new FormData(registrationForm);
+
+                // Include the reCAPTCHA response in your form data
+                const recaptchaResponse = document.querySelector('.g-recaptcha-response').value;
+                formData.append('recaptcha_response', recaptchaResponse);
 
                 try {
                     const response = await fetch("/register/", {

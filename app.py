@@ -282,7 +282,11 @@ schedule_thread.start()
 #######apis#######
 ###api used to register a new user (and only a new user) into the new_user list
 @app.post("/register/")
-async def register_user(name: str = Form(...), email: str = Form(...), phone_number: str = Form(...), password: str = Form(...), confirm_password: str = Form(...), state: str = Form(...),county: str = Form(...),district: str = Form(...), school: str = Form(...)):
+async def register_user(name: str = Form(...), email: str = Form(...), phone_number: str = Form(...), password: str = Form(...), confirm_password: str = Form(...), state: str = Form(...),county: str = Form(...),district: str = Form(...), school: str = Form(...), recaptcha_response: str = Form(...)):
+    # Verify reCAPTCHA
+    if not verify_recaptcha(recaptcha_response):
+        raise HTTPException(status_code=400, detail="reCAPTCHA verification failed. Please try again.")
+
     db = SessionLocal()
     try:
         query = select(RegisteredUsers.id).where(cast(RegisteredUsers.email, String) == cast(email, String))
