@@ -573,4 +573,38 @@ footer {
 	top:1px;
 }
 
+/* Style for the sponsor section */
+.sponsors-list {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 20px;
+}
+
+.sponsors-list .sponsor {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+.sponsors-list .sponsor h3 {
+    margin-bottom: 10px;
+}
+
+.sponsors-list .sponsor img {
+    max-height: 75px;
+    max-width: 100%;
+}
+
+/* General container styling */
+.container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+
 
