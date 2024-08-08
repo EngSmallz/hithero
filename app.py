@@ -612,7 +612,7 @@ async def update_wishlist(request: Request, wishlist: str = Form(...), id: int =
     db = SessionLocal()
     try:
         if role:
-            aa_link = wishlist + "?&_encoding=UTF8&tag=homeroomhero-20"
+            aa_link = wishlist + "&tag=h0mer00mher0-20"
             update_query = update(TeacherList).where(TeacherList.regUserID == id).values(wishlist_url=aa_link)
             db.execute(update_query)
             db.commit()
