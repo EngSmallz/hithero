@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Request, Form, Depends, Body, APIRouter, File, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel
-import os, logging, smtplib, secrets, string, pyodbc, time, ssl, schedule, threading, datetime, base64, random
+import os, logging, smtplib, secrets, string, pyodbc, time, ssl, schedule, threading, datetime, base64, random, requests
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -264,6 +264,15 @@ def schedule_jobs():
         schedule.run_pending()
         time.sleep(1)
 
+def verify_recaptcha(recaptcha_response: str):
+    """Verifies the reCAPTCHA response with Google's servers."""
+    url = "https://www.google.com/recaptcha/api/siteverify"
+    params = {"secret": RECAPTCHA_SECRET_KEY, "response": recaptcha_response}
+    response = requests.post(url, params=params)
+    data = response.json()
+    return data["success"]
+
+
 # Start scheduling the jobs
 schedule_thread = threading.Thread(target=schedule_jobs)
 schedule_thread.start()
@@ -449,14 +458,18 @@ async def get_user_profile(email: str = Depends(get_current_email), role: str = 
 
 ##api used to send contact us email from /contact.html
 @app.post('/contact_us/')
-async def contact_us(name: str = Form(...), email: str = Form(...), subject: str = Form(...), message: str = Form(...)):
+async def contact_us(name: str = Form(...), email: str = Form(...), subject: str = Form(...), message: str = Form(...), recaptcha_response: str = Form(...)):
+
+    # reCAPTCHA verification
+    is_valid = verify_recaptcha(recaptcha_response)
+    if not is_valid:
+        return HTTPException(status_code=400, content={"message": "Invalid reCAPTCHA"})
+    
     recipient_email = 'Homeroom.heroes.contact@gmail.com'
     full_message = f"{name}\n{email}\n{message}"
     try:
         result = send_email(recipient_email, subject, full_message)
         return {"message": result}
-    except HTTPException as e:
-        raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 

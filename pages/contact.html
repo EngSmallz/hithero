@@ -5,6 +5,7 @@
     <link rel="stylesheet" type="text/css" href="/static/css/style.css">
     <link rel="shortcut icon" type="image/x-icon" href="/static/images/favicon.ico" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://www.google.com/recaptcha/api.js"></script>
 </head>
 <script>
     function checkAuthentication() {
@@ -91,7 +92,9 @@
                 <label for="message">Message:</label><br>
                 <textarea id="message" name="message" maxlength="250" rows="4" cols="50" oninput="updateCharacterCount()" required></textarea>
                 <div id="charCount">250 characters remaining</div><br><br>
-
+                <br>
+                <div class="g-recaptcha" data-sitekey="6Ld3DyIqAAAAAAIeQokcODoXq-EtFE_l2q2gamR3"></div>
+                <br>
                 <button id="submitButton">Submit</button>
             </form>
             <p>
@@ -100,6 +103,10 @@
         </section>
     </main>
     <script>
+        function onSubmit(token) {
+            document.getElementById('contact-form').submit();
+            }
+
         function redirectTo(url) {
                 window.location.href = url;
             }
