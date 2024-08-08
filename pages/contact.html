@@ -5,7 +5,7 @@
     <link rel="stylesheet" type="text/css" href="/static/css/style.css">
     <link rel="shortcut icon" type="image/x-icon" href="/static/images/favicon.ico" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <script src="https://www.google.com/recaptcha/api.js"></script>
+    <script src="https://www.google.com/recaptcha/api.js?render=6LdRsyIqAAAAADOcYVN7cejjdl3wIDgiurb8B0s_"></script>
 </head>
 <script>
     function checkAuthentication() {
@@ -93,7 +93,7 @@
                 <textarea id="message" name="message" maxlength="250" rows="4" cols="50" oninput="updateCharacterCount()" required></textarea>
                 <div id="charCount">250 characters remaining</div><br><br>
                 <br>
-                <div class="g-recaptcha" data-sitekey="6LdRsyIqAAAAADOcYVN7cejjdl3wIDgiurb8B0s_"></div>
+                <div class="g-recaptcha" data-sitekey="6LdRsyIqAAAAADOcYVN7cejjdl3wIDgiurb8B0s_" data-callback='onSubmit' data-action='submit'></div>
                 <br>
                 <button id="submitButton">Submit</button>
             </form>
@@ -103,10 +103,6 @@
         </section>
     </main>
     <script>
-        function onSubmit(token) {
-            document.getElementById('contact-form').submit();
-            }
-
         function redirectTo(url) {
                 window.location.href = url;
             }
@@ -122,10 +118,15 @@
         document.addEventListener("DOMContentLoaded", function () {
             const contactForm = document.getElementById("contact-form");
             const contactButton = document.getElementById("submitButton");
-
             contactButton.addEventListener("click", async function (event) {
                 event.preventDefault();
                 const formData = new FormData(contactForm);
+
+                // Trigger reCAPTCHA v3
+                const token = await grecaptcha.execute('YOUR_SITE_KEY', { action: 'submit' });
+
+                formData.append('recaptcha_token', token);
+
                 try {
                     const response = await fetch("/contact_us/", {
                         method: "POST",
@@ -134,7 +135,7 @@
 
                     if (response.ok) {
                         const data = await response.json();
-                        alert("Message sent successfully."); // Use alert for success
+                        alert("Message sent successfully.");
                         window.location.href = '/pages/homepage.html';
                     } else {
                         alert("Message unsuccessful");
