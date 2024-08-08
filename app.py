@@ -23,6 +23,7 @@ app = FastAPI()
 load_dotenv()
 logger = logging.getLogger(__name__)
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY"))
+RECAPTCHA_SECRET_KEY=os.getenv("SERVER_KEY_CAPTCHA")
 
 # Disable documentation routes
 app.openapi_url = None
