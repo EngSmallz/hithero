@@ -123,7 +123,7 @@
                 const formData = new FormData(contactForm);
 
                 // Trigger reCAPTCHA v3
-                const token = await grecaptcha.execute('YOUR_SITE_KEY', { action: 'submit' });
+                const token = await grecaptcha.execute('6LdRsyIqAAAAADOcYVN7cejjdl3wIDgiurb8B0s_', { action: 'submit' });
 
                 formData.append('recaptcha_token', token);
 
@@ -134,7 +134,6 @@
                     });
 
                     if (response.ok) {
-                        const data = await response.json();
                         alert("Message sent successfully.");
                         window.location.href = '/pages/homepage.html';
                     } else {
