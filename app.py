@@ -380,7 +380,7 @@ async def create_teacher_profile(request: Request, name: str = Form(...), state:
             result = db.execute(query)
             create_count = result.scalar()
             if create_count == 0 or role == 'admin':
-                aa_link = wishlist + "&tag=homeroomhe70-20"
+                aa_link = wishlist + "&tag=h0mer00mher0-20" 
                 email = get_current_email(request)
                 first_part_email = email.split('@')[0]
                 random_number = random.randint(1, 9999)
