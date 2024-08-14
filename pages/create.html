@@ -246,6 +246,26 @@
         function closeWishlistSetup() {
             document.getElementById('wishlistModal').style.display = 'none';
         }
+
+        async function mypage() {
+            try {
+                const response = await fetch('/myinfo/', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+                if (response.ok) {
+                    window.location.href = '/pages/teacher.html';
+                } else {
+                    console.error('Error:', response.status);
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                window.location.href = '/';
+            }
+        }
     </script>
     <footer>
         <p>&copy; 2023 Homeroom Heroes</p>
