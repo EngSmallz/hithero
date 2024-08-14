@@ -496,74 +496,6 @@ async def forbidden(request: Request, exc: HTTPException):
         content = file.read()
     return HTMLResponse(content=content, status_code=403)
 
-##api is used to store the selected name as a cookie named index
-##index is: state, county, district, school, teacher
-@app.post("/store_cookie/{index}/{name}")
-async def store_cookie(name: str, index: str, request: Request):
-    try:
-        request.session[index] = name
-        return {"message": "String saved as a session cookie"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
-    
-
-##api gets the wanted cookie
-@app.get("/get_cookie/{index}")
-async def get_cookie(index: str, request: Request):
-    try:
-        cookie = {
-            'cookie': get_index_cookie(index, request)
-        }
-        return JSONResponse(content=cookie)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
-
-
-###api gets a list from the database table teacher_list
-@app.get("/get_index_list/{index}")
-async def get_index_list(index: str, request: Request):
-    db = SessionLocal()
-    try:
-        if index == "state":
-            state = get_index_cookie(index, request)
-            query = select(TeacherList.county).where(cast(TeacherList.state, String) == state)
-        elif index == "county":
-            state = get_index_cookie('state', request)
-            county = get_index_cookie(index, request)
-            query = select(TeacherList.district).where(
-                (cast(TeacherList.state, String) == state) & (cast(TeacherList.county, String) == county)
-            )
-        elif index == "district":
-            state = get_index_cookie('state', request)
-            county = get_index_cookie('county', request)
-            district = get_index_cookie(index, request)
-            query = select(TeacherList.school).where(
-                (cast(TeacherList.state, String) == state) &
-                (cast(TeacherList.county, String) == county) &
-                (cast(TeacherList.district, String) == district)
-            )
-        elif index == "school":
-            state = get_index_cookie('state', request)
-            county = get_index_cookie('county', request)
-            district = get_index_cookie('district', request)
-            school = get_index_cookie(index, request)
-            query = select(TeacherList.name).where(
-                (cast(TeacherList.state, String) == state) &
-                (cast(TeacherList.county, String) == county) &
-                (cast(TeacherList.district, String) == district) &
-                (cast(TeacherList.school, String) == school)
-            )
-        result = db.execute(query)
-        rows = result.fetchall()
-        unique = set(row[0] for row in rows)
-        result_list = list(unique)
-        return result_list
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
-    finally:
-        db.close()
-
-
 ###api gets a teacher data from teacher_list table
 @app.get("/get_teacher_info/")
 async def get_teacher_info(request: Request):
@@ -930,38 +862,6 @@ async def get_spotlight_info(request: Request, token: str):
     finally:
         db.close()
 
-@app.post("/send_cold_email/")
-async def send_teacher_email(name: str = Form(...), email: str = Form(...)):
-    subject = "Introducing Homerown Heroes: A New Way to Support Your Classroom Needs"
-    message = f"""
-    Dear {name},
-
-    I hope this email finds you well. My name is Justin Brundage, and I'm the founder of Homeroom Heroes, a platform designed to empower and support teachers like you.
-
-    Understanding the challenges teachers face in securing resources for their classrooms, I created Homeroom Heroes to bridge the gap between educators and their needs. Our platform allows teachers to host a wishlist of classroom supplies, making it easier for community members, parents, and supporters to directly contribute and fulfill these needs.
-
-    We believe that every classroom should have the essential resources it needs to foster a positive learning environment. By leveraging the power of community support, Homeroom Heroes aims to revolutionize the way educators access the tools and supplies vital for their students' success.
-
-    I would be honored if you could take a moment to visit our website at www.HelpTeachers.net to learn more about what we offer and how you can benefit from our platform.
-
-    If you have any questions or would like further information, please don't hesitate to reply to this email. We are here to assist and support you in any way we can.
-
-    Thank you for your dedication to education, and I look forward to potentially collaborating with you through Homeroom Heroes.
-
-    Warm regards,
-
-    Justin Brundage
-    Founder, Homeroom Heroes
-    Homeroom.heroes.main@gmail.com
-    """
-
-    try:
-        send_email(email, subject, message)
-        return JSONResponse(content={"message": "Email sent successfully"}, status_code=200)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
 ##admin page api to send update emails
 @app.post("/send_update_email/")
 async def send_update_email(request: Request,updates: str = Form(...)):
@@ -1089,6 +989,97 @@ async def report_user(user_email: str):
     finally:
         db.close()
 
+
+#api gets a list of states from statecoutny table
+@app.get("/index_states/")
+async def index_states():
+    db = SessionLocal()
+    try:
+        states = db.query(cast(TeacherList.state, String)).distinct().all()
+        return sorted([state[0] for state in states])
+    finally:
+        db.close()
+
+#api gets the names of the counties in the desired state
+@app.get("/index_counties/{state}")
+async def index_counties(state: str):
+    db = SessionLocal()
+    try:
+        query = select(cast(TeacherList.county, String)).distinct().where(cast(TeacherList.state, String) == state)
+        result = db.execute(query)
+        counties = result.fetchall()
+        if counties:
+            county_names = sorted([county[0] for county in counties])
+            return county_names
+        else:
+            return {"message": f"No counties found for state: {state}"}
+    finally:
+        db.close()
+
+#api gets the names of the school districts in the desired county and state
+@app.get("/index_districts/{state}/{county}")
+async def index_districts(state: str, county: str):
+    db = SessionLocal()
+    try:
+        query = select(cast(TeacherList.district, String)).distinct().where((cast(TeacherList.state, String) == state) & (cast(TeacherList.county, String) == county))
+        result = db.execute(query)
+        districts = result.fetchall()
+        if districts:
+            district_names = sorted([district[0] for district in districts])
+            return district_names
+        else:
+            return {"message": f"No districts found for state: {state} and county: {county}"}
+    finally:
+        db.close()
+
+#api gets the names of the school in the desired district, coutny, and state
+@app.get("/index_schools/{state}/{county}/{district}")
+async def index_schools(state: str, county: str, district: str):
+    db = SessionLocal()
+    try:
+        query = select(cast(TeacherList.school, String)).distinct().where((cast(TeacherList.state, String) == state) & (cast(TeacherList.county, String) == county) & (cast(TeacherList.district, String) == district))       
+        result = db.execute(query)
+        schools = result.fetchall()
+        if schools:
+            school_names = sorted([school[0] for school in schools])
+            return school_names
+        else:
+            return {"message": f"No schools found for state: {state}, county: {county}, and district: {district}"}
+    finally:
+        db.close()
+
+###api gets the teachers and their url_id for the index
+@app.get("/index_teachers/{state}/{county}/{district}/{school_name}")
+async def index_teachers(state: str, county: str, district: str, school_name: str):
+    db: Session = SessionLocal()
+    try:
+        # Construct the query to select both name and url_id
+        query = select(
+            TeacherList.name,
+            TeacherList.url_id
+        ).where(
+            (cast(TeacherList.state, String) == state) &
+            (cast(TeacherList.county, String) == county) &
+            (cast(TeacherList.district, String) == district) &
+            (cast(TeacherList.school, String) == school_name)
+        )
+        result = db.execute(query)
+        teachers = result.fetchall()
+        
+        if teachers:
+            # Format the result to include both name and url_id
+            teacher_list = [
+                {"name": teacher.name, "url_id": teacher.url_id} 
+                for teacher in teachers
+            ]
+            return teacher_list
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No teachers found for state: {state}, county: {county}, district: {district}, and school: {school_name}"
+            )
+    finally:
+        db.close()
 
 if __name__ == "__main__":
     import uvicorn

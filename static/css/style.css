@@ -424,7 +424,7 @@ main_index li {
 
 main {
     margin: 0 auto;
-    max-width: 500px;
+    max-width: 750px;
 }
 
 label {
@@ -607,4 +607,26 @@ footer {
     flex-direction: column;
 }
 
+/* Style for index form and dropdowns */
+#teacher-search-form {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	margin-bottom: 20px;
+}
+.form-row {
+	display: flex;
+	gap: 10px;
+}
+.form-row label {
+	margin: 0;
+	min-width: 100px;
+}
+.form-row select {
+	flex: 1;
+	max-width: 200px;
+}
+#teacher-search-form button {
+	margin-top: 10px;
+}
 

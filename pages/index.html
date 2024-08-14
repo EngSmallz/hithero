@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Homeroom Heroes - Support Teachers</title>
+    <link rel="stylesheet" type="text/css" href="/static/css/style.css">
+    <link rel="shortcut icon" type="image/x-icon" href="/static/images/favicon.ico">
+</head>
+<body>
+    <nav>
+        <ul>
+            <li>
+                <a href="/pages/homepage.html">
+                    <img src="/static/images/logo_transparent.png" alt="Logo" style="height: 75px; vertical-align: middle;">
+                </a>
+            </li>
+            <li><a href="/pages/homepage.html">Home</a></li>
+            <li><a href="/pages/register.html">Sign Up</a></li>
+            <li><a href="/pages/about.html">About</a></li>
+            <li><a href="/pages/contact.html">Contact</a></li>
+            <li><a href="/pages/sponsors.html">Sponsors</a></li>
+        </ul>
+    </nav>
+    
+    <div class="hamburger-menu">
+        <button id="hamburgerButton" onclick="toggleMenu()">☰</button>
+        <div class="menu-items" id="menuItems">
+            <button id="loginButton" class="listButton" onclick="redirectTo('/pages/login.html')">Login</button>
+            <button id="logoutButton" class="listButton" onclick="logout()">Logout</button>
+            <button id="mypageButton" class="listButton" onclick="mypage()">My Page</button>
+            <button id="validationButton" class="listButton" onclick="redirectTo('/pages/validation.html')">Validation</button>
+            <button id="createButton" class="listButton" onclick="redirectTo('/pages/create.html')">Create</button>
+        </div>
+    </div>
+
+    <main>
+        <h2>Find a Teacher</h2>
+        <form id="teacher-search-form">
+            <div class="form-row">
+                <label for="state">State:</label>
+                <select id="state" name="state" onchange="populateCountiesDropdown()" required>
+                    <option value="" disabled selected>Choose state</option>
+                </select>
+                
+                <label for="county">County:</label>
+                <select id="county" name="county" onchange="populateDistrictsDropdown()" required>
+                    <option value="" disabled selected>Choose county</option>
+                </select>
+            </div>
+
+            <div class="form-row">
+                <label for="district">School District:</label>
+                <select id="district" name="district" onchange="populateSchoolsDropdown()" required>
+                    <option value="" disabled selected>Choose district</option>
+                </select>
+                
+                <label for="school">School:</label>
+                <select id="school" name="school" required>
+                    <option value="" disabled selected>Choose school</option>
+                </select>
+            </div>
+
+            <button id="submitButton">Find Teachers</button>
+        </form>
+    </main>
+    <main_index>
+        <ul id="teacherList"></ul>
+    </main_index>
+
+    <footer>
+        <p>&copy; 2023 Homeroom Heroes</p>
+    </footer>
+
+    <script>
+        function redirectTo(url) {
+            window.location.href = url;
+        }
+
+        function checkAuthentication() {
+            fetch('/profile/')
+                .then(response => response.json())
+                .then(data => {
+                    const roleButtons = {
+                        teacher: ['logoutButton', 'mypageButton', 'validationButton'],
+                        admin: ['logoutButton', 'validationButton', 'createButton'],
+                        default: ['loginButton']
+                    };
+
+                    const buttonsToShow = roleButtons[data.user_role] || roleButtons.default;
+
+                    buttonsToShow.forEach(buttonId => {
+                        document.getElementById(buttonId).style.display = 'block';
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching user profile:', error);
+                    document.getElementById('loginButton').style.display = 'block';
+                });
+        }
+
+        function toggleMenu() {
+            const menuItems = document.getElementById('menuItems');
+            menuItems.style.display = (menuItems.style.display === 'block') ? 'none' : 'block';
+            if (menuItems.style.display === 'block') {
+                checkAuthentication();
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            populateStatesDropdown();
+            
+            document.getElementById('teacher-search-form').addEventListener('submit', function(event) {
+                event.preventDefault();
+                fetchTeachers();
+            });
+        });
+
+        async function populateStatesDropdown() {
+            try {
+                const response = await fetch("/index_states/");
+                const states = await response.json();
+                const stateDropdown = document.getElementById("state");
+                stateDropdown.innerHTML = "";
+                stateDropdown.add(new Option("Choose state", ""));
+                states.forEach(state => {
+                    stateDropdown.add(new Option(state, state));
+                });
+            } catch (error) {
+                alert("Error retrieving state information");
+            }
+        }
+
+        async function populateCountiesDropdown() {
+            try {
+                const selectedState = document.getElementById("state").value;
+                const response = await fetch(`/index_counties/${selectedState}`);
+                const counties = await response.json();
+                const countyDropdown = document.getElementById("county");
+                countyDropdown.innerHTML = "";
+                countyDropdown.add(new Option("Choose county", ""));
+                counties.forEach(county => {
+                    countyDropdown.add(new Option(county, county));
+                });
+            } catch (error) {
+                alert("Not a valid option.");
+            }
+        }
+
+        async function populateDistrictsDropdown() {
+            try {
+                const selectedState = document.getElementById("state").value;
+                const selectedCounty = document.getElementById("county").value;
+                const response = await fetch(`/index_districts/${selectedState}/${selectedCounty}`);
+                const districts = await response.json();
+                const districtDropdown = document.getElementById("district");
+                districtDropdown.innerHTML = "";
+                districtDropdown.add(new Option("Choose district", ""));
+                districts.forEach(district => {
+                    districtDropdown.add(new Option(district, district));
+                });
+            } catch (error) {
+                alert("Not a valid option.");
+            }
+        }
+
+        async function populateSchoolsDropdown() {
+            try {
+                const selectedState = document.getElementById("state").value;
+                const selectedCounty = document.getElementById("county").value;
+                const selectedDistrict = document.getElementById("district").value;
+                const response = await fetch(`/index_schools/${selectedState}/${selectedCounty}/${selectedDistrict}`);
+                const schools = await response.json();
+                const schoolDropdown = document.getElementById("school");
+                schoolDropdown.innerHTML = "";
+                schoolDropdown.add(new Option("Choose school", ""));
+                schools.forEach(school => {
+                    schoolDropdown.add(new Option(school, school));
+                });
+            } catch (error) {
+                alert("Not a valid option.");
+            }
+        }
+
+        async function fetchTeachers() {
+            try {
+                const state = document.getElementById('state').value;
+                const county = document.getElementById('county').value;
+                const district = document.getElementById('district').value;
+                const school = document.getElementById('school').value;
+
+                const response = await fetch(`/index_teachers/${state}/${county}/${district}/${school}`);
+                const teachers = await response.json();
+                const teacherList = document.getElementById('teacherList');
+                teacherList.innerHTML = "";
+
+                if (teachers.length > 0) {
+                    teachers.forEach(teacher => {
+                        const listItem = document.createElement('li');
+                        const button = document.createElement('button');
+                        button.id = 'indexButton';
+                        button.textContent = teacher.name; // Display teacher's name
+                        button.onclick = () => {
+                            window.location.href = `http://127.0.0.1:8000/teacher/${encodeURIComponent(teacher.url_id)}`;
+                        };
+                        listItem.appendChild(button);
+                        teacherList.appendChild(listItem);
+                    });
+                } else {
+                    teacherList.textContent = "No teachers found.";
+                }
+            } catch (error) {
+                alert("An error occurred while retrieving teachers.");
+            }
+        }
+    </script>
+</body>
+</html>
