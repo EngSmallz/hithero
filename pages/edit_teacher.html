@@ -80,9 +80,18 @@
         <form id="update-wishlist-form" method="post">
             <h3>Update Wishlist</h3>
             <label for="wishlist">Amazon Wishlist:</label>
+            <p>If you need help, please follow our directions below to ensure that your link works.</p>
+            <p>Registry links do not work.</p>
+            <p><button id="wishlistButton" type='button' onclick="openWishlistSetup()">How to Get Link</button></p>
+            <div id="wishlistModal" class="modal">
+                <div class="modal-content">
+                    <span class="close" onclick="closeWishlistSetup()">&times;</span>
+                    <iframe src="/pages/wishlist_setup.html" width="100%" height="500px"></iframe>
+                </div>
+                </div>
             <input type="text" id="wishlist" name="wishlist" required>
             <p></p>
-            <button type="button" id="submitWishlistButton">Update Wishlist</button>
+            <button type="submit" id="submitWishlistButton">Update Wishlist</button>
         </form>
         <br><br>
         
@@ -95,6 +104,7 @@
             <p></p>
             <button type="button" id="submitUrlIdButton">Update URL ID</button>
         </form>
+        <br>
     </main>
 
     <script>
@@ -228,6 +238,15 @@
             });
         });
 
+        // Function to open the modal
+        function openWishlistSetup() {
+            document.getElementById('wishlistModal').style.display = 'block';
+        }
+
+        // Function to close the modal
+        function closeWishlistSetup() {
+            document.getElementById('wishlistModal').style.display = 'none';
+        }
 
     </script>
     

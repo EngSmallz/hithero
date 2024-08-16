@@ -26,7 +26,7 @@
     <main>
         
         <h2>User Registration</h2>
-        <p>Please fill out the form below, read and agree to the Terms and Conditions, and then the Submit button will be present. If your school is not present in the list below, please go to the Contact page above and send us a message.</p>
+        <p>Please fill out the form below. If your school is not present in the list below, please go to the Contact page above and send us a message.</p>
         <p></p>
         <form id="registration-form" method="post" enctype="multipart/form-data">
             <label for="name">Name:</label>
@@ -65,7 +65,7 @@
             </select><br><br>
         
             <p></p>
-            <button id="termsButton" onclick="openTermsConditions()">Terms and Conditions</button>
+            <button id="termsButton" type="button" onclick="openTermsConditions()">Terms and Conditions</button>
             
             <div id="termsConditionsModal" class="modal">
             <div class="modal-content">
@@ -74,12 +74,14 @@
             </div>
             </div>
 
-            <p><input type="checkbox" id="termsCheckbox" style="display: none" name="termsCheckbox"  onclick="showSubmit()" required></p>
-            <label for="termsCheckbox">I have read the Terms and Conditions</label><br>
+            <p style="display: flex; align-items: center;">
+                <input type="checkbox" id="termsCheckbox" name="termsCheckbox" required>
+                <label for="termsCheckbox" style="margin-left: 8px;">I have read the Terms and Conditions</label>
+            </p>
 
             <div class="g-recaptcha" data-sitekey="6Lf9uiIqAAAAAMt19WMR4q0aO-JMqks9Du0yHHlL"></div>
 
-            <p><button id="submitButton" style="display: none">Submit</button></p>
+            <p><button id="submitButton" type="submit">Submit</button></p>
             <p><button id="registerButton" onclick="redirectTo('/pages/login.html')">Login</button></p>
 
         </form>
@@ -200,16 +202,11 @@
         // Function to open the T&C modal
         function openTermsConditions() {
         document.getElementById('termsConditionsModal').style.display = 'block';
-        document.getElementById('termsCheckbox').style.display = 'block'
         }
 
         // Function to close the T&C modal
         function closeTermsConditions() {
         document.getElementById('termsConditionsModal').style.display = 'none';
-        }
-
-        function showSubmit() {
-        document.getElementById('submitButton').style.display = 'block';
         }
 
         window.onload = populateStatesDropdown();

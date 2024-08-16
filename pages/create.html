@@ -93,7 +93,9 @@
                                   
 
             <label for="wishlist">Amazon Wishlist URL: </label>
-            <p><button id="wishlistButton" onclick="openWishlistSetup()">How to Get Link</button></p>
+            <p>If you need help, please follow our directions below to ensure that your link works.</p>
+            <p>Registry links do not work.</p>
+            <p><button id="wishlistButton" type="button" onclick="openWishlistSetup()">How to Get Link</button></p>
             <div id="wishlistModal" class="modal">
                 <div class="modal-content">
                     <span class="close" onclick="closeWishlistSetup()">&times;</span>
@@ -102,7 +104,7 @@
                 </div>
             <input type="text" id="wishlist" name="wishlist" required><br><br>
         
-            <p><button id="submitButton">Submit</button></p>
+            <p><button id="submitButton" type="submit">Submit</button></p>
         </form>
         
 
@@ -256,6 +258,7 @@
                     },
                 });
                 if (response.ok) {
+                    alert('Redirecting to your page. Please ensure the link works and your information is correct.');
                     window.location.href = '/pages/teacher.html';
                 } else {
                     console.error('Error:', response.status);
