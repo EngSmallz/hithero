@@ -482,6 +482,11 @@ async def contact_us(name: str = Form(...), email: str = Form(...), subject: str
 def read_root():
     return RedirectResponse("/pages/homepage.html")
 
+#index redirect
+@app.get("/pages/county_index.html")
+def redirect_to_index():
+    return RedirectResponse("/pages/index.html")
+
 # Custom 404 error handler
 @app.exception_handler(404)
 async def not_found(request: Request, exc: HTTPException):
