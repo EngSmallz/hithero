@@ -332,7 +332,7 @@ async def login_user(request: Request, email: str = Form(...), password: str = F
                 message = "Invalid password."
         else:
             message = "Invalid email."
-        return JSONResponse(content={"message": message}, status_code=400)
+        return JSONResponse(content={"message": message})
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
     finally:

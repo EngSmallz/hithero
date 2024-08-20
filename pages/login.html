@@ -52,25 +52,29 @@
                         body: formData,
                     });
 
-					if (response.ok) {
-						const data = await response.json();
-						alert(data.message);
-						if (data.createCount === 0 && data.role === 'teacher') {
-							window.location.href = '/pages/create.html';
-						} else {
-							window.location.href = '/pages/homepage.html';
-						}
-					} else {
-						alert(data.message);
-						window.location.reload();
-					}
+                    if (response.ok) {
+                        const data = await response.json();
+                        alert(data.message);
+
+                        if (data.createCount === 0 && data.role === 'teacher') {
+                            window.location.href = '/pages/create.html';
+                        } else if (data.role) { // Corrected from `role` to `data.role`
+                            window.location.href = '/pages/homepage.html';
+                        } else {
+                            window.location.reload();
+                        }
+                    } else {
+                        console.error('Login failed:', response.statusText);
+                        alert('Login failed. Please check your credentials and try again.');
+                    }
                 } catch (error) {
                     console.error('Error:', error);
-                    alert(data.message);
+                    alert('An error occurred. Please try again.');
                     window.location.reload();
                 }
             });
         });
+
 
         function redirectTo(url) {
                 window.location.href = url;
