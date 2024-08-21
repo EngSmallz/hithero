@@ -113,6 +113,15 @@
                         const space = document.createTextNode(' ');
                         listItem.appendChild(space);
                         if (data.role === 'admin'){  
+                            if (user.emailed === 0) {  // Check if the user has not been emailed
+                                const emailButton = document.createElement("button");
+                                emailButton.textContent = "Emailed User";
+                                emailButton.id = "submitButton";
+                                emailButton.addEventListener("click", () => emailUser(user.email));
+                                listItem.appendChild(emailButton);
+                                const space2 = document.createTextNode(' ');
+                                listItem.appendChild(space2);
+                            }
                             const deleteButton = document.createElement("button");
                             deleteButton.textContent = "Delete";
                             deleteButton.id = "registerButton";
@@ -193,6 +202,26 @@
                 }
             } catch (error) {
                 alert('Error reporting user:', error);
+            }
+        }
+
+        async function emailUser(email) {
+            try {
+                const emailResponse = await fetch(`/emailed_user/${email}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (emailResponse.ok) {
+                    alert(`email successful for user: ${email}`);
+                    window.location.reload();
+                } else {
+                    alert(`email failed for user: ${email}`);
+                }
+            } catch (error) {
+                alert('Error emailing user:', error);
             }
         }
         

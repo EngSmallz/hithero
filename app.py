@@ -74,6 +74,7 @@ class NewUsers(Base):
     password = Column(String)
     role = Column(String)
     report = Column(Integer)
+    emailed = Column(Integer)
 
 class RegisteredUsers(Base):
     __tablename__ = "registered_users"
@@ -303,7 +304,7 @@ async def register_user(name: str = Form(...), email: str = Form(...), phone_num
             return {"message": "Password do not match."}
         hashed_password = sha256_crypt.hash(password)
         role = 'teacher'
-        new_user = NewUsers(name=name, email=email, state=state, county=county, district=district, school=school, phone_number=phone_number, password=hashed_password, role=role, report=0)
+        new_user = NewUsers(name=name, email=email, state=state, county=county, district=district, school=school, phone_number=phone_number, password=hashed_password, role=role, report=0, emailed=0)
         db.add(new_user)
         db.commit()
         send_email(email, "Registration successful",  f"Dear {email},\n\nThank you for registering with us! Once you are validated by a fellow teacher in your district or one of us here at Homeroom Heroes, you will be able to create your profile and start receiving support.\n\nBest regards,\nHomeroom Heroes Team")
@@ -722,7 +723,7 @@ async def validation_page(request: Request, role: str = Depends(get_current_role
             query = select(NewUsers)
             result = db.execute(query)
             new_users = result.fetchall()
-            return {"new_users": [{"name": user[0].name, "email": user[0].email, "state": user[0].state, "district": user[0].district, "school": user[0].school, "phone_number": user[0].phone_number, "report": user[0].report} for user in new_users], "role": role}
+            return {"new_users": [{"name": user[0].name, "email": user[0].email, "state": user[0].state, "district": user[0].district, "school": user[0].school, "phone_number": user[0].phone_number, "report": user[0].report, "emailed": user[0].emailed} for user in new_users], "role": role}
         if role == 'teacher':
             store_my_cookies(request, id)
             state = get_index_cookie('state', request)
@@ -735,7 +736,7 @@ async def validation_page(request: Request, role: str = Depends(get_current_role
             )
             result = db.execute(query)
             new_users = result.fetchall()
-            return {"new_users": [{"name": user[0].name, "email": user[0].email, "state": user[0].state, "district": user[0].district, "school": user[0].school, "phone_number": user[0].phone_number, "report": user[0].report} for user in new_users], "role": role}
+            return {"new_users": [{"name": user[0].name, "email": user[0].email, "state": user[0].state, "district": user[0].district, "school": user[0].school, "phone_number": user[0].phone_number, "report": user[0].report, "emailed": user[0].emailed} for user in new_users], "role": role}
         else:
             raise HTTPException(status_code=403, detail="You don't have permission to access this page.")
     except Exception as e:
@@ -983,6 +984,21 @@ async def report_user(user_email: str):
         db.execute(update_query)
         db.commit()
         return {"message": "User reported."}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    finally:
+        db.close()
+
+# Endpoint to mark that a new users has been emailed
+@app.post("/emailed_user/{user_email}")
+async def emailed_user(user_email: str):
+    db = SessionLocal()
+    try:
+        update_query = update(NewUsers).where(cast(NewUsers.email, String) == cast(user_email, String)).values(emailed=1)
+        db.execute(update_query)
+        db.commit()
+        return {"message": "User emailed."}
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
