@@ -9,6 +9,8 @@ from starlette.applications import Starlette
 from starlette.middleware.sessions import SessionMiddleware
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
 from passlib.hash import sha256_crypt
 from sqlalchemy import create_engine, Column, Integer, String, func, LargeBinary
 from sqlalchemy.ext.declarative import declarative_base
@@ -171,6 +173,45 @@ def send_email(recipient_email: str, subject: str, message: str):
                 smtp.send_message(msg)
         except Exception as e:
             print(f'Error: {e}')
+    except Exception as e:
+        print(f'Error: {e}')
+
+def send_attachment(recipient_email: str, subject: str, message: str, attachment_path: str):
+    try:
+        sender = 'homeroom.heroes.contact@gmail.com'
+        msg = MIMEMultipart()
+        msg['Subject'] = subject
+        msg['From'] = sender
+        msg['To'] = recipient_email
+        
+        # Attach message body
+        msg.attach(MIMEText(message, 'plain'))
+
+        # Attach file
+        if os.path.exists(attachment_path):
+            with open(attachment_path, 'rb') as attachment_file:
+                part = MIMEBase('application', 'octet-stream')
+                part.set_payload(attachment_file.read())
+                encoders.encode_base64(part)
+                part.add_header(
+                    'Content-Disposition',
+                    f'attachment; filename={os.path.basename(attachment_path)}',
+                )
+                msg.attach(part)
+        else:
+            print(f"Attachment file {attachment_path} not found.")
+
+        # Send the email
+        smtp_server = 'smtp.sendgrid.net'
+        smtp_port = 465
+        try:
+            context = ssl.create_default_context()
+            with smtplib.SMTP_SSL(smtp_server, smtp_port, context=context) as smtp:
+                smtp.login('apikey', os.environ.get('SENDGRID_API_KEY'))
+                smtp.send_message(msg)
+                print("Email sent successfully!")
+        except Exception as e:
+            print(f'Error sending email: {e}')
     except Exception as e:
         print(f'Error: {e}')
 
@@ -1142,11 +1183,19 @@ async def generate_teacher_report(state: str = Form(...), county: str = Form(Non
         with open(file_path, "w") as file:
             file.write("\n".join(data))  # Write the data to the file
 
-        # Step 5: Return response with file download link
-        return {"message": f"Teacher report saved successfully at {file_path}"}
+        # Step 5: Send the email with the attachment
+        send_attachment(
+            recipient_email="homeroom.heroes.main@gmail.com",
+            subject="Teacher Report",
+            message="Please find the attached teacher report.",
+            attachment_path=file_path
+        )
+
+        # Step 6: Return response
+        return {"message": f"Teacher report saved and sent via email. The report is located at {file_path}"}
 
     except Exception as e:
-        raise e
+        raise HTTPException(status_code=500, detail=str(e))
 
     finally:
         db.close()
