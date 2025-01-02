@@ -1,5 +1,5 @@
-from fastapi import FastAPI, HTTPException, Request, Form, Depends, Body, APIRouter, File, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi import FastAPI, HTTPException, Request, Form, Depends, Body, File, UploadFile, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, FileResponse
 from pydantic import BaseModel
 import os, logging, smtplib, secrets, string, pyodbc, time, ssl, schedule, threading, datetime, base64, random, requests
 from dotenv import load_dotenv
@@ -16,6 +16,8 @@ from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import select, cast, delete, insert, update
 from datetime import date
+from typing import Optional
+
 
 
 
@@ -1066,37 +1068,91 @@ async def index_schools(state: str, county: str, district: str):
         db.close()
 
 ###api gets the teachers and their url_id for the index
-@app.get("/index_teachers/{state}/{county}/{district}/{school_name}")
-async def index_teachers(state: str, county: str, district: str, school_name: str):
+@app.post("/index_teachers/")
+async def index_teachers(state: str = Form(...),county: str = Form(None),district: str = Form(None),school_name: str = Form(None)):
     db: Session = SessionLocal()
     try:
-        # Construct the query to select both name and url_id
-        query = select(
-            TeacherList.name,
-            TeacherList.url_id
-        ).where(
-            (cast(TeacherList.state, String) == state) &
-            (cast(TeacherList.county, String) == county) &
-            (cast(TeacherList.district, String) == district) &
-            (cast(TeacherList.school, String) == school_name)
+        query = select(TeacherList.name, TeacherList.url_id).where(
+            (cast(TeacherList.state, String) == state)
         )
+
+        if county:
+            query = query.where(cast(TeacherList.county, String) == county)
+        if district:
+            query = query.where(cast(TeacherList.district, String) == district)
+        if school_name:
+            query = query.where(cast(TeacherList.school, String) == school_name)
+
         result = db.execute(query)
         teachers = result.fetchall()
-        
+
         if teachers:
-            # Format the result to include both name and url_id
-            teacher_list = [
-                {"name": teacher.name, "url_id": teacher.url_id} 
-                for teacher in teachers
-            ]
-            return teacher_list
+            return [{"name": teacher.name, "url_id": teacher.url_id} for teacher in teachers]
         else:
             raise HTTPException(
                 status_code=404,
-                detail=f"No teachers found for state: {state}, county: {county}, district: {district}, and school: {school_name}"
+                detail="No teachers found with the given criteria."
             )
     finally:
         db.close()
+
+@app.post("/generate_teacher_report/")
+async def generate_teacher_report(state: str = Form(...), county: str = Form(None), district: str = Form(None), school: str = Form(None)):
+    db: Session = SessionLocal()
+
+    try:
+        # Step 1: Dynamically filter TeacherList based on provided fields (excluding regUserID)
+        query = select(
+            TeacherList.name, TeacherList.school, TeacherList.regUserID
+        ).where(cast(TeacherList.state, String) == state)
+
+        if county:
+            query = query.where(cast(TeacherList.county, String) == county)
+        if district:
+            query = query.where(cast(TeacherList.district, String) == district)
+        if school:
+            query = query.where(cast(TeacherList.school, String) == school)
+
+        teachers = db.execute(query).fetchall()
+
+        if not teachers:
+            raise HTTPException(status_code=404, detail="No teachers found with the specified criteria.")
+
+        # Step 2: Fetch email and phone from RegisteredUsers using regUserID
+        reg_user_ids = [teacher.regUserID for teacher in teachers]
+        user_query = select(
+            RegisteredUsers.id,
+            RegisteredUsers.email,
+            RegisteredUsers.phone_number).where(RegisteredUsers.id.in_(reg_user_ids))
+        users = db.execute(user_query).fetchall()
+
+        # Step 3: Prepare data for the document
+        data = ["Name\tSchool\tEmail\tPhone"]  # Tab-separated headers
+
+        # Map teachers to their corresponding user data (email and phone)
+        user_dict = {user.id: {"email": user.email, "phone": user.phone_number} for user in users}
+        for teacher in teachers:
+            teacher_info = f"{teacher.name}\t{teacher.school}\t{user_dict.get(teacher.regUserID, {}).get('email', 'N/A')}\t{user_dict.get(teacher.regUserID, {}).get('phone', 'N/A')}"
+            data.append(teacher_info)
+
+        # Step 4: Save the data to a .txt file in the Downloads folder
+        downloads_folder = os.path.expanduser("~/Downloads")  # Get the Downloads folder path
+        file_path = os.path.join(downloads_folder, "teacher_report.txt")
+
+        with open(file_path, "w") as file:
+            file.write("\n".join(data))  # Write the data to the file
+
+        # Step 5: Return response with file download link
+        return {"message": f"Teacher report saved successfully at {file_path}"}
+
+    except Exception as e:
+        raise e
+
+    finally:
+        db.close()
+
+
+
 
 if __name__ == "__main__":
     import uvicorn
