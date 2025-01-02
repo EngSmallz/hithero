@@ -1176,19 +1176,16 @@ async def generate_teacher_report(state: str = Form(...), county: str = Form(Non
             teacher_info = f"{teacher.name}\t{teacher.school}\t{user_dict.get(teacher.regUserID, {}).get('email', 'N/A')}\t{user_dict.get(teacher.regUserID, {}).get('phone', 'N/A')}"
             data.append(teacher_info)
 
-        # Step 4: Save the data to a .txt file in the Downloads folder
-        downloads_folder = os.path.expanduser("~/Downloads")  # Get the Downloads folder path
-        file_path = os.path.join(downloads_folder, "teacher_report.txt")
+        # Step 4: Save the data to a file in memory (using StringIO)
+        file_content = "\n".join(data)  # Convert the data list to a string
 
-        with open(file_path, "w") as file:
-            file.write("\n".join(data))  # Write the data to the file
-
-        # Step 5: Send the email with the attachment
+        # Step 5: Send the email with the file as an attachment
         send_attachment(
             recipient_email="homeroom.heroes.main@gmail.com",
             subject="Teacher Report",
             message="Please find the attached teacher report.",
-            attachment_path=file_path
+            attachment_filename="teacher_report.txt",
+            attachment_content=file_content
         )
 
         # Step 6: Return response

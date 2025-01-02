@@ -180,7 +180,6 @@
         }
 
         document.addEventListener("DOMContentLoaded", function () {
-            populateStatesDropdown();
 
             const searchForm = document.getElementById("teacher-contact-form");
             const searchButton = document.getElementById("submitButton");
@@ -195,7 +194,17 @@
                         method: "POST",
                         body: formData,
                     });
-                    // Handle response here (like displaying teacher data)
+
+                    if (response.ok) {
+                        // Parse JSON response if it's successful
+                        const data = await response.json();
+
+                        // Display success message to the user
+                        alert(data.message);  // Show success message (e.g., email sent successfully)
+                    } else {
+                        // Handle server-side error
+                        alert("Failed to generate teacher report. Please try again.");
+                    }
                 } catch (error) {
                     console.error("Error:", error);
                     alert("An error occurred. Please try again.");
