@@ -1170,29 +1170,34 @@ async def generate_teacher_report(state: str = Form(...), county: str = Form(Non
         # Step 3: Prepare data for the document
         data = ["Name\tSchool\tEmail\tPhone"]  # Tab-separated headers
 
-        # Map teachers to their corresponding user data (email and phone)
+        # Step 4: Map teachers to their corresponding user data (email and phone)
         user_dict = {user.id: {"email": user.email, "phone": user.phone_number} for user in users}
         for teacher in teachers:
             teacher_info = f"{teacher.name}\t{teacher.school}\t{user_dict.get(teacher.regUserID, {}).get('email', 'N/A')}\t{user_dict.get(teacher.regUserID, {}).get('phone', 'N/A')}"
             data.append(teacher_info)
 
-        # Step 4: Save the data to a file in memory (using StringIO)
-        file_content = "\n".join(data)  # Convert the data list to a string
+        # Step 5: Prepare the file content as a string (convert list to newline-separated string)
+        file_content = "\n".join(data)  # Now file_content includes both headers and teacher data
 
-        # Step 5: Send the email with the file as an attachment
+        file_name = 'teacher_report.txt'
+        file_path = os.path.join('./', file_name)  # Specify the full path where the file will be saved
+
+        with open(file_path, 'w') as temp_file:
+            temp_file.write(file_content)  # Save your report data to the file
+
+        # Step 6: Send the attachment
         send_attachment(
             recipient_email="homeroom.heroes.main@gmail.com",
             subject="Teacher Report",
             message="Please find the attached teacher report.",
-            attachment_filename="teacher_report.txt",
-            attachment_content=file_content
+            attachment_path=file_path  # Use the specific file path
         )
 
-        # Step 6: Return response
+        # Step 7: Return response
         return {"message": f"Teacher report saved and sent via email. The report is located at {file_path}"}
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise e
 
     finally:
         db.close()
