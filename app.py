@@ -81,6 +81,7 @@ class RegisteredUsers(Base):
 
     id = Column(Integer, primary_key=True)
     email = Column(String)
+    phone_number = Column(String)
     password = Column(String)
     role = Column(String)
     createCount = Column(Integer)
@@ -358,7 +359,7 @@ async def move_user(user_email: str):
         user = result.fetchone()
         if not user:
             raise HTTPException(status_code=404, detail="User not found in new_users")
-        query = insert(RegisteredUsers).values(email=user[0].email, password=user[0].password, role=user[0].role)
+        query = insert(RegisteredUsers).values(email=user[0].email, password=user[0].password, role=user[0].role, phone_number = user[0].phone_number)
         db.execute(query)
         delete_query = delete(NewUsers).where(cast(NewUsers.email, String) == cast(user_email, String))
         db.execute(delete_query)
