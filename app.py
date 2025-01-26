@@ -1122,7 +1122,7 @@ async def index_teachers(state: str = Form(...),county: str = Form(None),distric
         if district:
             query = query.where(cast(TeacherList.district, String) == district)
         if school:
-            query = query.where(cast(TeacherList.school, String) == school_name)
+            query = query.where(cast(TeacherList.school, String) == school)
 
         result = db.execute(query)
         teachers = result.fetchall()
