@@ -1110,7 +1110,7 @@ async def index_schools(state: str, county: str, district: str):
 
 ###api gets the teachers and their url_id for the index
 @app.post("/index_teachers/")
-async def index_teachers(state: str = Form(...),county: str = Form(None),district: str = Form(None),school_name: str = Form(None)):
+async def index_teachers(state: str = Form(...),county: str = Form(None),district: str = Form(None),school: str = Form(None)):
     db: Session = SessionLocal()
     try:
         query = select(TeacherList.name, TeacherList.url_id).where(
@@ -1121,7 +1121,7 @@ async def index_teachers(state: str = Form(...),county: str = Form(None),distric
             query = query.where(cast(TeacherList.county, String) == county)
         if district:
             query = query.where(cast(TeacherList.district, String) == district)
-        if school_name:
+        if school:
             query = query.where(cast(TeacherList.school, String) == school_name)
 
         result = db.execute(query)
