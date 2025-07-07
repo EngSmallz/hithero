@@ -484,15 +484,22 @@
                     return; // Stop form submission
                 }
 
+                // Check terms and conditions checkbox
+                const termsCheckbox = document.getElementById('termsCheckbox');
+                if (!termsCheckbox.checked) {
+                    alert('You must agree to the Terms and Conditions.');
+                    return;
+                }
+
                 const formData = new FormData(registrationForm);
 
                 // Include the reCAPTCHA response in your form data
-                const recaptchaResponse = grecaptcha.getResponse(); // Use grecaptcha.getResponse()
+                const recaptchaResponse = grecaptcha.getResponse();
                 if (!recaptchaResponse) {
                     alert('Please complete the reCAPTCHA verification.');
                     return; // Stop form submission
                 }
-                formData.append('g-recaptcha-response', recaptchaResponse); // Correct field name for reCAPTCHA
+                formData.append('g-recaptcha-response', recaptchaResponse);
 
                 try {
                     const response = await fetch("/register/", {
@@ -500,20 +507,30 @@
                         body: formData,
                     });
 
-                    const data = await response.json(); // Always try to parse JSON for more details
+                    // Check if the response is JSON before parsing
+                    const contentType = response.headers.get("content-type");
+                    let data = {};
+                    if (contentType && contentType.indexOf("application/json") !== -1) {
+                        data = await response.json();
+                    } else {
+                        // If not JSON, get the response as text for a generic error
+                        data.message = await response.text();
+                    }
+
 
                     if (response.ok) {
-                        alert(data.message);
+                        alert(data.message || 'Registration successful!'); // Use a default message if none provided
                         window.location.href = '/pages/homepage.html';
                     } else {
                         // Display specific error message from the server if available
-                        alert(data.detail || data.message || 'Registration failed. Please try again.');
+                        alert(data.detail || data.message || `Registration failed with status: ${response.status}. Please try again.`);
                         // Reset reCAPTCHA after a failed attempt
                         grecaptcha.reset();
                     }
                 } catch (error) {
                     console.error('Error:', error);
-                    alert('An error occurred during registration. Please try again.');
+                    // Provide a more informative error message for the user
+                    alert(`An unexpected error occurred: ${error.message || error}. Please try again.`);
                     grecaptcha.reset(); // Reset reCAPTCHA on unhandled error
                 }
             });
