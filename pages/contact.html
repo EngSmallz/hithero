@@ -127,8 +127,8 @@
                 <div>
                     <label for="message" class="block text-lg font-medium text-gray-700 mb-2">Message:</label>
                     <textarea id="message" name="message" maxlength="250" rows="4"
-                              oninput="updateCharacterCount()" required
-                              class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-base bg-gray-50 text-gray-900 resize-y"></textarea>
+                                  oninput="updateCharacterCount()" required
+                                  class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-base bg-gray-50 text-gray-900 resize-y"></textarea>
                     <div id="charCount" class="text-sm text-gray-500 mt-1">250 characters remaining</div>
                 </div>
 
@@ -154,164 +154,137 @@
             window.location.href = url;
         }
 
-        // Toggles the visibility of the menu items using Tailwind's 'hidden' class
         function toggleMenu() {
             const menuItems = document.getElementById('menuItems');
-            menuItems.classList.toggle('hidden');
+            menuItems?.classList.toggle('hidden'); // Shorthand for if (menuItems) { ... }
         }
 
-        // Checks user authentication status and updates the visibility of menu buttons
         async function checkAuthentication() {
-            // All dynamic buttons are hidden by default and shown conditionally
             const buttons = [
                 'loginButton', 'logoutButton', 'mypageButton',
                 'validationButton', 'createButton', 'adminButton'
             ];
-            buttons.forEach(id => {
-                const button = document.getElementById(id);
-                if (button) {
-                    button.classList.add('hidden'); // Ensure it's hidden
-                    button.classList.remove('block'); // Remove block if it was there
-                }
-            });
+            buttons.forEach(id => document.getElementById(id)?.classList.add('hidden'));
 
             try {
                 const response = await fetch('/profile/');
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data && data.user_role) {
-                        // Logic to show buttons based on user role
-                        if (data.user_role === 'teacher') {
-                            document.getElementById('logoutButton')?.classList.remove('hidden');
-                            document.getElementById('logoutButton')?.classList.add('block');
-                            document.getElementById('mypageButton')?.classList.remove('hidden');
-                            document.getElementById('mypageButton')?.classList.add('block');
-                            document.getElementById('validationButton')?.classList.remove('hidden');
-                            document.getElementById('validationButton')?.classList.add('block');
-                        } else if (data.user_role === 'admin') {
-                            document.getElementById('logoutButton')?.classList.remove('hidden');
-                            document.getElementById('logoutButton')?.classList.add('block');
-                            document.getElementById('validationButton')?.classList.remove('hidden');
-                            document.getElementById('validationButton')?.classList.add('block');
-                            document.getElementById('createButton')?.classList.remove('hidden');
-                            document.getElementById('createButton')?.classList.add('block');
-                            document.getElementById('adminButton')?.classList.remove('hidden');
-                            document.getElementById('adminButton')?.classList.add('block');
-                        }
-                    } else {
-                        console.warn('User profile data or user_role is missing.');
-                        // If no user role, show login button (unauthenticated state)
-                        document.getElementById('loginButton')?.classList.remove('hidden');
-                        document.getElementById('loginButton')?.classList.add('block');
+                const data = await response.json();
+                if (response.ok && data?.user_role) {
+                    if (data.user_role === 'teacher') {
+                        document.getElementById('logoutButton')?.classList.remove('hidden');
+                        document.getElementById('mypageButton')?.classList.remove('hidden');
+                        document.getElementById('validationButton')?.classList.remove('hidden');
+                    } else if (data.user_role === 'admin') {
+                        document.getElementById('logoutButton')?.classList.remove('hidden');
+                        document.getElementById('validationButton')?.classList.remove('hidden');
+                        document.getElementById('createButton')?.classList.remove('hidden');
+                        document.getElementById('adminButton')?.classList.remove('hidden');
                     }
                 } else {
-                    console.error('Failed to fetch user profile. Status:', response.status);
-                    // If response not ok, means user is likely not logged in or session expired
                     document.getElementById('loginButton')?.classList.remove('hidden');
-                    document.getElementById('loginButton')?.classList.add('block');
                 }
             } catch (error) {
-                console.error('Network or parsing error fetching user profile:', error);
-                // In case of a network error, assume not authenticated
+                console.error('Auth check error:', error); // Keep this for debugging
                 document.getElementById('loginButton')?.classList.remove('hidden');
-                document.getElementById('loginButton')?.classList.add('block');
             }
         }
 
-        // Updates the character count for the message textarea
         function updateCharacterCount() {
-            var maxLength = 250;
-            var currentLength = document.getElementById("message").value.length;
-            var charsRemaining = maxLength - currentLength;
-            var countElement = document.getElementById("charCount");
-            countElement.textContent = charsRemaining + " characters remaining";
+            const messageElement = document.getElementById("message");
+            const countElement = document.getElementById("charCount");
+            if (messageElement && countElement) {
+                const charsRemaining = 250 - messageElement.value.length;
+                countElement.textContent = charsRemaining + " characters remaining";
+            }
         }
 
-        // Handles the contact form submission
         document.addEventListener("DOMContentLoaded", function () {
-            // Call checkAuthentication on page load to set initial button states
+            updateCharacterCount();
             checkAuthentication();
-            updateCharacterCount(); // Initialize character count on load
 
             const contactForm = document.getElementById("contact-form");
-            const contactButton = document.getElementById("submitButton");
+            const submitButton = document.getElementById("submitButton");
+            const contactMessageDiv = document.getElementById("contact-message");
 
-            if (contactForm && contactButton) { // Ensure elements exist
-                contactButton.addEventListener("click", async function (event) {
-                    event.preventDefault(); // Prevent default form submission
+            // --- THIS IS THE KEY DEBUGGING PART ---
+            if (!contactForm) {
+                console.error("DEBUG: 'contact-form' ID not found in HTML!");
+            }
+            if (!submitButton) {
+                console.error("DEBUG: 'submitButton' ID not found in HTML!");
+            }
+            // --- END KEY DEBUGGING PART ---
+
+            if (contactForm && submitButton) {
+                submitButton.addEventListener("click", async function (event) {
+                    event.preventDefault();
+
+                    contactMessageDiv.textContent = "Sending your message...";
+                    contactMessageDiv.style.color = '#10B981'; // Green
+                    submitButton.disabled = true;
 
                     const formData = new FormData(contactForm);
+                    let recaptchaResponse = '';
 
-                    // Get reCAPTCHA response and append to form data
-                    const recaptchaResponse = grecaptcha.getResponse();
-                    formData.append('g-recaptcha-response', recaptchaResponse); // Correct parameter name for backend
+                    // Check if reCAPTCHA is ready and get response
+                    if (typeof grecaptcha !== 'undefined' && grecaptcha.getResponse) {
+                        recaptchaResponse = grecaptcha.getResponse();
+                    }
+
+                    if (!recaptchaResponse) {
+                        contactMessageDiv.textContent = "Please complete the reCAPTCHA to send your message.";
+                        contactMessageDiv.style.color = 'orange';
+                        submitButton.disabled = false;
+                        grecaptcha.reset();
+                        return;
+                    }
+
+                    formData.append('g-recaptcha-response', recaptchaResponse);
 
                     try {
                         const response = await fetch("/contact_us/", {
                             method: "POST",
                             body: formData,
                         });
-
-                        const responseData = await response.json(); // Always parse JSON to get message
+                        const responseData = await response.json();
 
                         if (response.ok) {
-                            alert(responseData.message || "Message sent successfully.");
-                            contactForm.reset(); // Clear the form
-                            updateCharacterCount(); // Reset character count
-                            grecaptcha.reset(); // Reset reCAPTCHA
+                            contactMessageDiv.textContent = responseData.message || "Message sent successfully!";
+                            contactMessageDiv.style.color = '#10B981';
+                            contactForm.reset();
+                            updateCharacterCount();
+                            grecaptcha.reset();
                         } else {
-                            alert(responseData.message || "Message submission failed. Please try again.");
-                            grecaptcha.reset(); // Reset reCAPTCHA on failure
+                            contactMessageDiv.textContent = responseData.message || "Message submission failed. Please try again.";
+                            contactMessageDiv.style.color = 'red';
+                            grecaptcha.reset();
                         }
                     } catch (error) {
-                        console.error("Error submitting contact form:", error);
-                        alert("An error occurred while sending your message. Please try again.");
-                        grecaptcha.reset(); // Reset reCAPTCHA on error
+                        console.error("Error submitting form:", error); // Keep this for debugging
+                        contactMessageDiv.textContent = "An error occurred. Please try again.";
+                        contactMessageDiv.style.color = 'red';
+                        grecaptcha.reset();
+                    } finally {
+                        submitButton.disabled = false;
                     }
                 });
             }
         });
 
-        // Logout function
         async function logout() {
             try {
-                const response = await fetch(`/logout/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                });
-                if (response.ok) {
-                    window.location.href = '/'; // Redirect to root after successful logout
-                } else {
-                    console.error('Logout failed:', response.status);
-                    alert('Logout failed. Please try again.');
-                }
-            } catch (error) {
-                console.error('Error during logout:', error);
-                alert('An error occurred during logout. Please try again.');
-            }
+                const response = await fetch(`/logout/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }});
+                if (response.ok) { window.location.href = '/'; }
+                else { console.error('Logout failed:', response.status); alert('Logout failed.'); }
+            } catch (error) { console.error('Error during logout:', error); alert('An error occurred during logout.'); }
         }
 
-        // My Page function
         async function mypage() {
             try {
-                const response = await fetch('/myinfo/', {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                });
-                if (response.ok) {
-                    window.location.href = '/pages/teacher.html';
-                } else {
-                    console.error('Error fetching my page info:', response.status);
-                    window.location.href = '/'; // Redirect to homepage or login if error
-                }
-            } catch (error) {
-                console.error('Error fetching my page info:', error);
-                window.location.href = '/'; // Redirect to homepage or login if error
-            }
+                const response = await fetch('/myinfo/', { method: 'GET', headers: { 'Content-Type': 'application/json' }});
+                if (response.ok) { window.location.href = '/pages/teacher.html'; }
+                else { console.error('Error fetching my page info:', response.status); window.location.href = '/'; }
+            } catch (error) { console.error('Error fetching my page info:', error); window.location.href = '/'; }
         }
     </script>
 </body>
