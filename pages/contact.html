@@ -156,7 +156,7 @@
 
         function toggleMenu() {
             const menuItems = document.getElementById('menuItems');
-            menuItems?.classList.toggle('hidden'); // Shorthand for if (menuItems) { ... }
+            menuItems?.classList.toggle('hidden');
         }
 
         async function checkAuthentication() {
@@ -184,7 +184,7 @@
                     document.getElementById('loginButton')?.classList.remove('hidden');
                 }
             } catch (error) {
-                console.error('Auth check error:', error); // Keep this for debugging
+                console.error('Auth check error:', error);
                 document.getElementById('loginButton')?.classList.remove('hidden');
             }
         }
@@ -206,14 +206,13 @@
             const submitButton = document.getElementById("submitButton");
             const contactMessageDiv = document.getElementById("contact-message");
 
-            // --- THIS IS THE KEY DEBUGGING PART ---
+            // Debugging checks (useful to keep temporarily)
             if (!contactForm) {
                 console.error("DEBUG: 'contact-form' ID not found in HTML!");
             }
             if (!submitButton) {
                 console.error("DEBUG: 'submitButton' ID not found in HTML!");
             }
-            // --- END KEY DEBUGGING PART ---
 
             if (contactForm && submitButton) {
                 submitButton.addEventListener("click", async function (event) {
@@ -226,7 +225,7 @@
                     const formData = new FormData(contactForm);
                     let recaptchaResponse = '';
 
-                    // Check if reCAPTCHA is ready and get response
+                    // Get reCAPTCHA response
                     if (typeof grecaptcha !== 'undefined' && grecaptcha.getResponse) {
                         recaptchaResponse = grecaptcha.getResponse();
                     }
@@ -239,7 +238,9 @@
                         return;
                     }
 
-                    formData.append('g-recaptcha-response', recaptchaResponse);
+                    // --- THIS IS THE KEY CHANGE FOR THE 422 ERROR ---
+                    // Changed 'g-recaptcha-response' to 'recaptcha_response' to match backend parameter name
+                    formData.append('recaptcha_response', recaptchaResponse); 
 
                     try {
                         const response = await fetch("/contact_us/", {
@@ -255,12 +256,14 @@
                             updateCharacterCount();
                             grecaptcha.reset();
                         } else {
-                            contactMessageDiv.textContent = responseData.message || "Message submission failed. Please try again.";
+                            // Backend might send 'detail' instead of 'message' for errors
+                            const errorMessage = responseData.message || responseData.detail || "Message submission failed. Please try again.";
+                            contactMessageDiv.textContent = errorMessage;
                             contactMessageDiv.style.color = 'red';
                             grecaptcha.reset();
                         }
                     } catch (error) {
-                        console.error("Error submitting form:", error); // Keep this for debugging
+                        console.error("Error submitting form:", error);
                         contactMessageDiv.textContent = "An error occurred. Please try again.";
                         contactMessageDiv.style.color = 'red';
                         grecaptcha.reset();
