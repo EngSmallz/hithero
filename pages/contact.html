@@ -1,150 +1,278 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Homeroom Heroes - Support Teachers</title>
-    <link rel="stylesheet" type="text/css" href="/static/css/style.css">
-    <link rel="shortcut icon" type="image/x-icon" href="/static/images/favicon.ico" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">    <!-- Load reCAPTCHA v2 -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Homeroom Heroes - Contact Us</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="shortcut icon" type="image/x-icon" href="/static/images/favicon.ico">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://www.google.com/recaptcha/api.js" async defer></script>
-</head>
-<script>
-    function checkAuthentication() {
-        fetch('/profile/')
-            .then(response => response.json())
-            .then(data => {
-                if (data.user_role === 'teacher') {
-                    document.getElementById('logoutButton').style.display = 'block';
-                    document.getElementById('mypageButton').style.display = 'block';
-                    document.getElementById('validationButton').style.display = 'block';
-                } else if (data.user_role === 'admin') {
-                    document.getElementById('logoutButton').style.display = 'block';
-                    document.getElementById('validationButton').style.display = 'block';
-                    document.getElementById('createButton').style.display = 'block';
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching user profile:', error);
-                document.getElementById('loginButton').style.display = 'block';
-                // Handle error if necessary
-            });
-    }
-    
-    function toggleMenu() {
-        var menuItems = document.getElementById('menuItems');
-        if (menuItems.style.display === 'block') {
-            menuItems.style.display = 'none';
-        } else {
-            menuItems.style.display = 'block';
-            checkAuthentication();
+    <style>
+        /* Ensure the font is applied globally */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1f2937; /* Tailwind's bg-gray-800 */
+            color: #f9fafb; /* Tailwind's text-gray-50 */
         }
-    }
-</script>
-<body>
-    <nav>
-        <ul>
-            <li>
-                <a href="/pages/homepage.html">
-                    <img src="\static\images\logo_transparent.png" alt="Logo" style="height: 75px; vertical-align: middle;">
+        /* Custom styles for hamburger menu items */
+        .menu-items .listButton {
+            width: 100%;
+            text-align: left;
+            padding: 0.75rem 1rem;
+            color: white;
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            border-radius: 0.375rem; /* rounded-md */
+        }
+        .menu-items .listButton:hover {
+            background-color: rgba(255, 255, 255, 0.1); /* Light hover effect */
+        }
+        /* Positioning for the dropdown menu */
+        .menu-items {
+            flex-direction: column; /* Stacks buttons vertically */
+            position: absolute;
+            top: 100%; /* Position below the header or its relative parent */
+            right: 0;
+            background-color: #1a472a; /* Darker green for dropdown */
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 20;
+            min-width: 150px;
+            padding: 0.5rem;
+            /* The 'hidden' class from HTML/JS will control its visibility */
+        }
+    </style>
+</head>
+<body class="bg-gray-800 text-gray-50">
+    <header class="bg-gradient-to-r from-green-700 to-green-900 text-white shadow-lg py-4 md:py-6 relative">
+        <div class="container mx-auto px-4 flex justify-between items-center">
+            <div class="flex items-center">
+                <a href="/pages/homepage.html" class="flex items-center">
+                    <img src="/static/images/logo_transparent.png" alt="Homeroom Heroes Logo" class="h-16 md:h-20 mr-3">
                 </a>
-            </li>
-            <li><a href="/pages/homepage.html">Home</a></li>
-            <li><a href="/pages/register.html">Sign Up</a></li>
-            <li><a href="/pages/about.html">About</a></li>
-            <li><a href="/pages/contact.html">Contact</a></li>
-            <li><a href="/pages/partners.html">Radio Partners</a></li>
-        </ul>
-    </nav>
+                <nav class="hidden md:flex ml-4">
+                    <ul class="flex space-x-4 md:space-x-8 text-lg">
+                        <li><a href="/pages/homepage.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Home</a></li>
+                        <li><a href="/pages/register.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Sign Up</a></li>
+                        <li><a href="/pages/about.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">About</a></li>
+                        <li><a href="/pages/contact.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Contact</a></li>
+                        <li><a href="/pages/partners.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Radio Partners</a></li>
+                    </ul>
+                </nav>
+            </div>
 
-    <div class="hamburger-menu">
-        <button id="hamburgerButton" onclick="toggleMenu()">☰</button>
-        <div class="menu-items" id="menuItems">
-            <button id="loginButton" class="listButton" onclick="redirectTo('/pages/login.html')">Login</button>
-            <button id="logoutButton" class="listButton" onclick="logout()">Logout</button>
-            <button id="mypageButton" class="listButton" onclick="mypage()">My Page</button>
-            <button id="validationButton" class="listButton" onclick="redirectTo('/pages/validation.html')">Validation</button>
-            <button id="createButton" class="listButton" onclick="redirectTo('/pages/create.html')">Create</button>
+            <div class="relative">
+                <button id="hamburgerButton" class="text-white text-3xl focus:outline-none" onclick="toggleMenu()">☰</button>
+
+                <div class="menu-items absolute right-0 top-full mt-2 w-48 bg-green-800 rounded-md shadow-lg py-1 z-20 hidden" id="menuItems">
+                    <button id="loginButton" class="listButton hidden" onclick="redirectTo('/pages/login.html')">Login</button>
+                    <button id="logoutButton" class="listButton hidden" onclick="logout()">Logout</button>
+                    <button id="mypageButton" class="listButton hidden" onclick="mypage()">My Page</button>
+                    <button id="validationButton" class="listButton hidden" onclick="redirectTo('/pages/validation.html')">Validation</button>
+                    <button id="createButton" class="listButton hidden" onclick="redirectTo('/pages/create.html')">Create</button>
+                    <button id="adminButton" class="listButton hidden" onclick="redirectTo('/pages/admin.html')">Admin</button>
+                </div>
+            </div>
         </div>
-    </div>
-     
-    <main>
-        <section class="contact-info">
-            <h2>Contact Information</h2>
-            <p>If you have any questions, feedback, or need assistance, please feel free to reach out to us:</p>
-            <ul>
-                <li><i class="fab fa-instagram"></i> Instagram: <a href="https://www.instagram.com/homeroom_heroes/" target="_blank">@Homeroom_Heroes</a></li>
-                <li><i class="fab fa-twitter"></i> Twitter: <a href="https://www.twitter.com/Homeroom_Heroes" target="_blank">@Homeroom_Heroes</a></li>
-                <li><i class="fab fa-linkedin"></i> LinkedIn: <a href="https://www.linkedin.com/company/homeroom-heroes/" target="_blank">Homeroom Heroes</a></li>
-                <li><i class="fab fa-facebook"></i> Facebook: <a href="https://www.facebook.com/profile.php?id=61557539257533" target="_blank">Homeroom Heroes</a></li>                
+    </header>
+
+    <main class="container mx-auto px-4 py-8">
+        <section class="bg-white p-8 rounded-lg shadow-md text-gray-800 mb-8">
+            <h2 class="text-3xl font-bold text-green-800 mb-6 text-center">Contact Information</h2>
+            <p class="mb-4 text-center">If you have any questions, feedback, or need assistance, please feel free to reach out to us:</p>
+            <ul class="space-y-3 max-w-md mx-auto text-lg">
+                <li>
+                    <i class="fab fa-instagram text-green-600 w-8"></i> Instagram:
+                    <a href="https://www.instagram.com/homeroom_heroes/" target="_blank" class="text-green-600 hover:underline">@Homeroom_Heroes</a>
+                </li>
+                <li>
+                    <i class="fab fa-twitter text-green-600 w-8"></i> Twitter:
+                    <a href="https://www.twitter.com/Homeroom_Heroes" target="_blank" class="text-green-600 hover:underline">@Homeroom_Heroes</a>
+                </li>
+                <li>
+                    <i class="fab fa-linkedin text-green-600 w-8"></i> LinkedIn:
+                    <a href="https://www.linkedin.com/company/homeroom-heroes/" target="_blank" class="text-green-600 hover:underline">Homeroom Heroes</a>
+                </li>
+                <li>
+                    <i class="fab fa-facebook text-green-600 w-8"></i> Facebook:
+                    <a href="https://www.facebook.com/profile.php?id=61557539257533" target="_blank" class="text-green-600 hover:underline">Homeroom Heroes</a>
+                </li>
             </ul>
         </section>
 
-        <section class="contact-form">
-            <h2>Contact Form</h2>
-            <p>You can also send us a message using the contact form below:</p>
-            
-            <form id="contact-form" method="post" enctype="multipart/form-data">
-                <label for="name">Name:</label><br>
-                <input type="text" id="name" name="name"><br><br>
-                <label for="email">Email:</label><br>
-                <input type="email" id="email" name="email"><br><br>
-                <label for="subject">Subject:</label><br>
-                <input type="text" id="subject" name="subject"><br><br>
-                <label for="message">Message:</label><br>
-                <textarea id="message" name="message" maxlength="250" rows="4" cols="50" oninput="updateCharacterCount()" required></textarea>
-                <div id="charCount">250 characters remaining</div><br><br>
-                <!-- reCAPTCHA v2 widget -->
+        <section class="bg-white p-8 rounded-lg shadow-md text-gray-800">
+            <h2 class="text-3xl font-bold text-green-800 mb-6 text-center">Contact Form</h2>
+            <p class="mb-6 text-center">You can also send us a message using the contact form below:</p>
+
+            <form id="contact-form" method="post" enctype="multipart/form-data" class="space-y-6 max-w-lg mx-auto">
+                <div>
+                    <label for="name" class="block text-lg font-medium text-gray-700 mb-2">Name:</label>
+                    <input type="text" id="name" name="name"
+                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-base bg-gray-50 text-gray-900">
+                </div>
+                <div>
+                    <label for="email" class="block text-lg font-medium text-gray-700 mb-2">Email:</label>
+                    <input type="email" id="email" name="email"
+                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-base bg-gray-50 text-gray-900">
+                </div>
+                <div>
+                    <label for="subject" class="block text-lg font-medium text-gray-700 mb-2">Subject:</label>
+                    <input type="text" id="subject" name="subject"
+                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-base bg-gray-50 text-gray-900">
+                </div>
+                <div>
+                    <label for="message" class="block text-lg font-medium text-gray-700 mb-2">Message:</label>
+                    <textarea id="message" name="message" maxlength="250" rows="4"
+                              oninput="updateCharacterCount()" required
+                              class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-base bg-gray-50 text-gray-900 resize-y"></textarea>
+                    <div id="charCount" class="text-sm text-gray-500 mt-1">250 characters remaining</div>
+                </div>
+
                 <div class="g-recaptcha" data-sitekey="6Lf9uiIqAAAAAMt19WMR4q0aO-JMqks9Du0yHHlL"></div>
-                <br>
-                <button id="submitButton">Submit</button>
+                
+                <button id="submitButton" type="submit"
+                        class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md mt-6">
+                    Submit
+                </button>
             </form>
-            <p>
-            <div id="contact-message"></div>
-            <p>
+            <div id="contact-message" class="mt-4 text-center text-green-700 font-semibold"></div>
         </section>
     </main>
+
+    <footer class="bg-gray-800 text-white py-6 mt-8 rounded-t-lg shadow-inner text-center">
+        <div class="container mx-auto px-4 text-sm">
+            <p>&copy; 2024 Homeroom Heroes. All rights reserved.</p>
+        </div>
+    </footer>
+
     <script>
         function redirectTo(url) {
-                window.location.href = url;
-            }
+            window.location.href = url;
+        }
 
+        // Toggles the visibility of the menu items using Tailwind's 'hidden' class
+        function toggleMenu() {
+            const menuItems = document.getElementById('menuItems');
+            menuItems.classList.toggle('hidden');
+        }
+
+        // Checks user authentication status and updates the visibility of menu buttons
+        async function checkAuthentication() {
+            // All dynamic buttons are hidden by default and shown conditionally
+            const buttons = [
+                'loginButton', 'logoutButton', 'mypageButton',
+                'validationButton', 'createButton', 'adminButton'
+            ];
+            buttons.forEach(id => {
+                const button = document.getElementById(id);
+                if (button) {
+                    button.classList.add('hidden'); // Ensure it's hidden
+                    button.classList.remove('block'); // Remove block if it was there
+                }
+            });
+
+            try {
+                const response = await fetch('/profile/');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data && data.user_role) {
+                        // Logic to show buttons based on user role
+                        if (data.user_role === 'teacher') {
+                            document.getElementById('logoutButton')?.classList.remove('hidden');
+                            document.getElementById('logoutButton')?.classList.add('block');
+                            document.getElementById('mypageButton')?.classList.remove('hidden');
+                            document.getElementById('mypageButton')?.classList.add('block');
+                            document.getElementById('validationButton')?.classList.remove('hidden');
+                            document.getElementById('validationButton')?.classList.add('block');
+                        } else if (data.user_role === 'admin') {
+                            document.getElementById('logoutButton')?.classList.remove('hidden');
+                            document.getElementById('logoutButton')?.classList.add('block');
+                            document.getElementById('validationButton')?.classList.remove('hidden');
+                            document.getElementById('validationButton')?.classList.add('block');
+                            document.getElementById('createButton')?.classList.remove('hidden');
+                            document.getElementById('createButton')?.classList.add('block');
+                            document.getElementById('adminButton')?.classList.remove('hidden');
+                            document.getElementById('adminButton')?.classList.add('block');
+                        }
+                    } else {
+                        console.warn('User profile data or user_role is missing.');
+                        // If no user role, show login button (unauthenticated state)
+                        document.getElementById('loginButton')?.classList.remove('hidden');
+                        document.getElementById('loginButton')?.classList.add('block');
+                    }
+                } else {
+                    console.error('Failed to fetch user profile. Status:', response.status);
+                    // If response not ok, means user is likely not logged in or session expired
+                    document.getElementById('loginButton')?.classList.remove('hidden');
+                    document.getElementById('loginButton')?.classList.add('block');
+                }
+            } catch (error) {
+                console.error('Network or parsing error fetching user profile:', error);
+                // In case of a network error, assume not authenticated
+                document.getElementById('loginButton')?.classList.remove('hidden');
+                document.getElementById('loginButton')?.classList.add('block');
+            }
+        }
+
+        // Updates the character count for the message textarea
         function updateCharacterCount() {
             var maxLength = 250;
             var currentLength = document.getElementById("message").value.length;
             var charsRemaining = maxLength - currentLength;
             var countElement = document.getElementById("charCount");
             countElement.textContent = charsRemaining + " characters remaining";
-            }
-        
+        }
+
+        // Handles the contact form submission
         document.addEventListener("DOMContentLoaded", function () {
+            // Call checkAuthentication on page load to set initial button states
+            checkAuthentication();
+            updateCharacterCount(); // Initialize character count on load
+
             const contactForm = document.getElementById("contact-form");
             const contactButton = document.getElementById("submitButton");
-            contactButton.addEventListener("click", async function (event) {
-                event.preventDefault();
-                const formData = new FormData(contactForm);
 
-                // Include the reCAPTCHA response in your form data
-                const recaptchaResponse = document.querySelector('.g-recaptcha-response').value;
-                formData.append('recaptcha_response', recaptchaResponse);
+            if (contactForm && contactButton) { // Ensure elements exist
+                contactButton.addEventListener("click", async function (event) {
+                    event.preventDefault(); // Prevent default form submission
 
-                try {
-                    const response = await fetch("/contact_us/", {
-                        method: "POST",
-                        body: formData,
-                    });
+                    const formData = new FormData(contactForm);
 
-                    if (response.ok) {
-                        alert("Message sent successfully.");
-                        window.location.href = '/pages/homepage.html';
-                    } else {
-                        alert("Message unsuccessful");
-                        window.location.reload();
+                    // Get reCAPTCHA response and append to form data
+                    const recaptchaResponse = grecaptcha.getResponse();
+                    formData.append('g-recaptcha-response', recaptchaResponse); // Correct parameter name for backend
+
+                    try {
+                        const response = await fetch("/contact_us/", {
+                            method: "POST",
+                            body: formData,
+                        });
+
+                        const responseData = await response.json(); // Always parse JSON to get message
+
+                        if (response.ok) {
+                            alert(responseData.message || "Message sent successfully.");
+                            contactForm.reset(); // Clear the form
+                            updateCharacterCount(); // Reset character count
+                            grecaptcha.reset(); // Reset reCAPTCHA
+                        } else {
+                            alert(responseData.message || "Message submission failed. Please try again.");
+                            grecaptcha.reset(); // Reset reCAPTCHA on failure
+                        }
+                    } catch (error) {
+                        console.error("Error submitting contact form:", error);
+                        alert("An error occurred while sending your message. Please try again.");
+                        grecaptcha.reset(); // Reset reCAPTCHA on error
                     }
-                } catch (error) {
-                    alert("An error occurred");
-                }
-            });
+                });
+            }
         });
 
+        // Logout function
         async function logout() {
             try {
                 const response = await fetch(`/logout/`, {
@@ -153,12 +281,19 @@
                         'Content-Type': 'application/json',
                     },
                 });
-                window.location.href = '/';
+                if (response.ok) {
+                    window.location.href = '/'; // Redirect to root after successful logout
+                } else {
+                    console.error('Logout failed:', response.status);
+                    alert('Logout failed. Please try again.');
+                }
             } catch (error) {
-                console.error('Error:', error);
+                console.error('Error during logout:', error);
+                alert('An error occurred during logout. Please try again.');
             }
         }
 
+        // My Page function
         async function mypage() {
             try {
                 const response = await fetch('/myinfo/', {
@@ -170,17 +305,14 @@
                 if (response.ok) {
                     window.location.href = '/pages/teacher.html';
                 } else {
-                    console.error('Error:', response.status);
-                    window.location.href = '/';
+                    console.error('Error fetching my page info:', response.status);
+                    window.location.href = '/'; // Redirect to homepage or login if error
                 }
             } catch (error) {
-                console.error('Error:', error);
-                window.location.href = '/';
+                console.error('Error fetching my page info:', error);
+                window.location.href = '/'; // Redirect to homepage or login if error
             }
         }
     </script>
-    <footer>
-        <p>2024 Homeroom Heroes</p>
-    </footer>
 </body>
 </html>

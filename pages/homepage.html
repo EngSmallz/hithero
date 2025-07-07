@@ -1,222 +1,366 @@
-<!DOCTYPE html> 
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Homeroom Heroes - Support Teachers</title>
-    <link rel="stylesheet" type="text/css" href="/static/css/style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="shortcut icon" type="image/x-icon" href="/static/images/favicon.ico" />
-</head>
-<script>
-    function checkAuthentication() {
-        fetch('/profile/')
-            .then(response => response.json())
-            .then(data => {
-                if (data.user_role === 'teacher') {
-                    document.getElementById('logoutButton').style.display = 'block';
-                    document.getElementById('mypageButton').style.display = 'block';
-                    document.getElementById('validationButton').style.display = 'block';
-                } else if (data.user_role === 'admin') {
-                    document.getElementById('logoutButton').style.display = 'block';
-                    document.getElementById('validationButton').style.display = 'block';
-                    document.getElementById('createButton').style.display = 'block';
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching user profile:', error);
-                document.getElementById('loginButton').style.display = 'block';
-                // Handle error if necessary
-            });
-    }
-    
-    function toggleMenu() {
-        var menuItems = document.getElementById('menuItems');
-        if (menuItems.style.display === 'block') {
-            menuItems.style.display = 'none';
-        } else {
-            menuItems.style.display = 'block';
-            checkAuthentication();
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Ensure the font is applied globally */
+        body {
+            font-family: 'Inter', sans-serif;
+            /* Darker background color for the body */
+            background-color: #1f2937; /* Tailwind's bg-gray-800 */
+            color: #f9fafb; /* Tailwind's text-gray-50 for overall body text */
         }
-    }
-    
-    window.onload = function() {
-        getTeacherDay("teacher");
-    };
+        /* Override default listButton display for hamburger menu */
+        .menu-items .listButton {
+            /* REMOVED: display: block; */ /* <-- This was the problematic rule */
+            width: 100%;
+            text-align: left;
+            padding: 0.75rem 1rem;
+            color: white;
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            border-radius: 0.375rem; /* rounded-md */
+        }
+        .menu-items .listButton:hover {
+            background-color: rgba(255, 255, 255, 0.1); /* Light hover effect */
+        }
+        /* Ensure the menu items are positioned correctly relative to the hamburger button */
+        .menu-items {
+            /* Removed display: none; from here. Now relies solely on the 'hidden' class in HTML and JS. */
+            flex-direction: column; /* Stacks buttons vertically */
+            position: absolute;
+            top: 100%; /* Position below the header or its relative parent */
+            right: 0;
+            background-color: #1a472a; /* Darker green for dropdown */
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 20;
+            min-width: 150px;
+            padding: 0.5rem;
+        }
 
-</script>
-<body>
-    <nav>
-        <ul>
-            <li>
-                <a href="/pages/homepage.html">
-                    <img src="\static\images\logo_transparent.png" alt="Logo" style="height: 75px; vertical-align: middle;">
+        /* Styles for teacher-home display within sections */
+        .teacher-home {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            /* Background and shadow handled by parent section for consistency */
+        }
+
+        .teacher-home img {
+            width: 150px; /* Medium size */
+            height: 150px;
+            object-fit: cover;
+            border-radius: 9999px; /* rounded-full */
+            border: 2px solid #34d399; /* border-green-400 */
+            margin-bottom: 1rem;
+        }
+
+        .teacher-details h2 {
+            font-size: 1.875rem; /* text-3xl */
+            font-weight: 600; /* font-semibold */
+            color: #10b981; /* text-green-600 */
+            margin-bottom: 0.5rem;
+        }
+
+        .teacher-details p {
+            font-size: 1.125rem; /* text-lg */
+            color: #4b5563; /* text-gray-700 */
+        }
+    </style>
+</head>
+<body class="bg-gray-800 text-gray-50">
+    <header class="bg-gradient-to-r from-green-700 to-green-900 text-white shadow-lg py-4 md:py-6 relative">
+        <div class="container mx-auto px-4 flex justify-between items-center">
+            <div class="flex items-center">
+                <a href="/pages/homepage.html" class="flex items-center">
+                    <img src="/static/images/logo_transparent.png" alt="Homeroom Heroes Logo" class="h-16 md:h-20 mr-3">
                 </a>
-            </li>
-            <li><a href="/pages/homepage.html">Home</a></li>
-            <li><a href="/pages/register.html">Sign Up</a></li>
-            <li><a href="/pages/about.html">About</a></li>
-            <li><a href="/pages/contact.html">Contact</a></li>
-            <li><a href="/pages/partners.html">Radio Partners</a></li>
-        </ul>
-    </nav>
+                <nav class="hidden md:flex ml-4"> <ul class="flex space-x-4 md:space-x-8 text-lg">
+                        <li><a href="/pages/homepage.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Home</a></li>
+                        <li><a href="/pages/register.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Sign Up</a></li>
+                        <li><a href="/pages/about.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">About</a></li>
+                        <li><a href="/pages/contact.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Contact</a></li>
+                        <li><a href="/pages/partners.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Radio Partners</a></li>
+                    </ul>
+                </nav>
+            </div>
 
-    <div class="hamburger-menu">
-        <button id="hamburgerButton" onclick="toggleMenu()">☰</button>
-        <div class="menu-items" id="menuItems">
-            <button id="loginButton" class="listButton" onclick="redirectTo('/pages/login.html')">Login</button>
-            <button id="logoutButton" class="listButton" onclick="logout()">Logout</button>
-            <button id="mypageButton" class="listButton" onclick="mypage()">My Page</button>
-            <button id="validationButton" class="listButton" onclick="redirectTo('/pages/validation.html')">Validation</button>
-            <button id="createButton" class="listButton" onclick="redirectTo('/pages/create.html')">Create</button>
+            <div class="relative"> <button id="hamburgerButton" class="text-white text-3xl focus:outline-none" onclick="toggleMenu()">☰</button>
+
+                <div class="menu-items absolute right-0 top-full mt-2 w-48 bg-green-800 rounded-md shadow-lg py-1 z-20 hidden" id="menuItems">
+                    <button id="loginButton" class="listButton hidden" onclick="redirectTo('/pages/login.html')">Login</button>
+                    <button id="mypageButton" class="listButton hidden" onclick="mypage()">My Page</button>
+                    <button id="validationButton" class="listButton hidden" onclick="redirectTo('/pages/validation.html')">Validation</button>
+                    <button id="createButton" class="listButton hidden" onclick="redirectTo('/pages/create.html')">Create</button>
+                    <button id="adminButton" class="listButton hidden" onclick="redirectTo('/pages/admin.html')">Admin</button>
+                    <button id="logoutButton" class="listButton hidden" onclick="logout()">Logout</button>
+                </div>
+            </div>
         </div>
-    </div>
-    
-    <main>
+    </header>
 
-        <section>
-            <h2>Find a Teacher to Support</h2>
-            <p>Explore teachers from across America and make a difference in their classroom.</p>
-            <button id="teacherButton" onclick="redirectTo('/pages/index.html')">Find Teachers</button>
-        </section>
+    <main class="container mx-auto px-4 py-8">
 
-        <section>
-            <h2>Teacher of the Day</h2>
-            <div id="teacherDay">
-        </section>
-
-        <section>
-            <h2>Find a Random Teacher</h2>
-            <p>Discover a teacher at random and make a positive impact on their classroom.</p>
-            <button id="teacherButton" class="btn" onclick="randomTeacher()">Find Random Teacher</button><p>
-            <div id="randomTeacherInfo">
+        <section class="relative bg-cover bg-center h-96 flex items-center justify-center text-white rounded-lg shadow-lg mb-8"
+            style="background-image: url('/static/images/hero_border.jpg');">
+            <div class="absolute inset-0 bg-black opacity-50 rounded-lg"></div>
+            <div class="relative z-10 text-center p-4">
+                <h2 class="text-4xl md:text-6xl font-extrabold mb-4 drop-shadow-lg">Support Teachers, Empower Futures!</h2>
+                <p class="text-xl md:text-2xl font-light drop-shadow-md mb-8">Connecting generous donors with teachers in need of classroom supplies.</p>
+                <button onclick="redirectTo('/pages/index.html')" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-lg">
+                    Find Teachers to Support
+                </button>
             </div>
         </section>
 
-        <section>
-            <h2>Are You a Teacher?</h2>
-            <p>If you're an educator in need of support, register to create your profile.</p>
-            <button id="teacherButton" onclick="redirectTo('/pages/register.html')">Register</button>
-            <p></p>
-        </section>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            <section class="bg-white p-8 rounded-lg shadow-md text-center text-gray-800 relative overflow-hidden"
+                style="background-image: url('/static/images/tile_border_1.jpg'); background-size: cover; background-position: center;">
+                <div class="absolute inset-0 bg-white opacity-20"></div> <div class="relative z-10">
+                    <h2 class="text-3xl font-bold text-green-800 mb-4">Teacher of the Day</h2>
+                    <div id="teacherDay" class="flex flex-col items-center justify-center">
+                        <p class="text-gray-600">Loading teacher of the day...</p>
+                    </div>
+                </div>
+            </section>
 
-        <section>
-            <p></p>
-            <h2>Donate Directly to Us</h2>
-            <p>Click the button below if you would like to make a direct donation to Homeroom Heroes:</p>
-            <p><button id="donateButton" onclick="redirectTo('https://www.paypal.com/donate/?hosted_button_id=B8NRR79ZEV2PS')"> Donate</button></p>
-            <p></p>
-        </section>
+            <section class="bg-white p-8 rounded-lg shadow-md text-center text-gray-800 relative overflow-hidden"
+                style="background-image: url('/static/images/tile_border_3.jpg'); background-size: cover; background-position: center;">
+                <div class="absolute inset-0 bg-white opacity-20"></div> <div class="relative z-10">
+                    <h2 class="text-3xl font-bold text-green-800 mb-4">Are You a Teacher?</h2>
+                    <p class="text-lg leading-relaxed mb-6">If you're an educator in need of support, register to create your profile.</p>
+                    <button onclick="redirectTo('/pages/register.html')" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md">
+                        Register
+                    </button>
+                </div>
+            </section>
+
+            <section class="bg-white p-8 rounded-lg shadow-md text-center text-gray-800 relative overflow-hidden"
+                style="background-image: url('/static/images/tile_border_4.jpg'); background-size: cover; background-position: center;">
+                <div class="absolute inset-0 bg-white opacity-20"></div> <div class="relative z-10">
+                    <h2 class="text-3xl font-bold text-green-800 mb-4">Donate Directly to Us</h2>
+                    <p class="text-lg leading-relaxed mb-6">Click the button below if you would like to make a direct donation to Homeroom Heroes:</p>
+                    <button onclick="redirectTo('https://www.paypal.com/donate/?hosted_button_id=B8NRR79ZEV2PS')" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md">
+                        Donate
+                    </button>
+                </div>
+            </section>
+
+            <section class="bg-white p-8 rounded-lg shadow-md text-center text-gray-800 relative overflow-hidden"
+                style="background-image: url('/static/images/tile_border_2.jpg'); background-size: cover; background-position: center;">
+                <div class="absolute inset-0 bg-white opacity-20"></div> <div class="relative z-10">
+                    <h2 class="text-3xl font-bold text-green-800 mb-4">Find a Random Teacher</h2>
+                    <p class="text-lg leading-relaxed mb-6">Discover a teacher at random and make a positive impact on their classroom.</p>
+                    <button onclick="randomTeacher()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md">
+                        Find Random Teacher
+                    </button>
+                    <div id="randomTeacherInfo" class="flex flex-col items-center justify-center mt-6">
+                        </div>
+                </div>
+            </section>
+        </div>
 
     </main>
 
-    <footer>
-        <p>2024 Homeroom Heroes</p>
+    <footer class="bg-gray-800 text-white py-6 mt-8 rounded-t-lg shadow-inner text-center">
+        <div class="container mx-auto px-4 text-sm">
+            <p>&copy; 2024 Homeroom Heroes. All rights reserved.</p>
+        </div>
     </footer>
 
     <script>
+        // Helper function for redirection
         function redirectTo(url) {
-                window.location.href = url;
+            window.location.href = url;
+        }
+
+        // Function to toggle the mobile menu visibility
+        function toggleMenu() {
+            var menuItems = document.getElementById('menuItems');
+            // This method is robust for toggling Tailwind's 'hidden' class
+            menuItems.classList.toggle('hidden');
+        }
+
+        // Function to check user authentication role and display relevant buttons
+        async function checkAuthentication() {
+            // First, hide ALL dynamic buttons and remove any explicit display styles (like 'block')
+            // This ensures a clean slate before showing the correct ones.
+            const buttons = [
+                'loginButton', 'logoutButton', 'mypageButton',
+                'validationButton', 'createButton', 'adminButton'
+            ];
+
+            buttons.forEach(id => {
+                const button = document.getElementById(id);
+                if (button) {
+                    button.classList.add('hidden');
+                    button.classList.remove('block'); // Important: Remove 'block' if it was added
+                }
+            });
+
+            let userRole = null; // Default to no role
+
+            try {
+                const response = await fetch('/profile/');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data && data.user_role) {
+                        userRole = data.user_role;
+                    } else {
+                        console.warn('Profile data missing user_role or is null:', data);
+                    }
+                } else {
+                    console.error('Failed to fetch profile. Status:', response.status);
+                }
+            } catch (error) {
+                console.error('Network or parsing error fetching user profile:', error);
             }
-            
+
+            // Based on the determined role, show specific buttons by removing 'hidden' and adding 'block'
+            if (userRole === 'teacher') {
+                document.getElementById('mypageButton').classList.remove('hidden');
+                document.getElementById('mypageButton').classList.add('block'); // Make it display as a block
+                document.getElementById('validationButton').classList.remove('hidden');
+                document.getElementById('validationButton').classList.add('block'); // Make it display as a block
+                document.getElementById('logoutButton').classList.remove('hidden');
+                document.getElementById('logoutButton').classList.add('block'); // Make it display as a block
+            } else if (userRole === 'admin') {
+                document.getElementById('adminButton').classList.remove('hidden');
+                document.getElementById('adminButton').classList.add('block'); // Make it display as a block
+                document.getElementById('validationButton').classList.remove('hidden');
+                document.getElementById('validationButton').classList.add('block'); // Make it display as a block
+                document.getElementById('createButton').classList.remove('hidden');
+                document.getElementById('createButton').classList.add('block'); // Make it display as a block
+                document.getElementById('logoutButton').classList.remove('hidden');
+                document.getElementById('logoutButton').classList.add('block'); // Make it display as a block
+            } else {
+                // Default: show login if no specific role or an error occurred (unauthenticated)
+                document.getElementById('loginButton').classList.remove('hidden');
+                document.getElementById('loginButton').classList.add('block'); // Make it display as a block
+            }
+        }
+
+        // Function to fetch and display a random teacher
         async function randomTeacher() {
             try {
+                // Using root-relative path for API endpoint
                 const response = await fetch('/random_teacher/');
                 const data = await response.json();
 
+                const randomTeacherInfo = document.getElementById('randomTeacherInfo');
                 if (response.ok) {
-                    const button = document.createElement('button');
-                    button.id = 'teacherButton';
-                    button.textContent = "View Random Teacher";
-                    button.addEventListener('click', function() {
-                        window.location.href = '/pages/teacher.html';
-                    });
-
-                    const randomTeacherInfo = document.getElementById('randomTeacherInfo');
                     let img_text;
                     if (data.image_data) {
-                        img_text = `<img src="data:image/jpeg;base64,${data.image_data}" alt="Teacher Image">`;
+                        img_text = `<img src="data:image/jpeg;base64,${data.image_data}" alt="Teacher Image" class="w-36 h-36 object-cover rounded-full border-2 border-green-400 mb-4">`;
                     } else {
-                        img_text = '<img src="/static/images/apple.jpg" alt="Teacher Image">';
+                        img_text = '<img src="/static/images/apple.jpg" alt="Teacher Image" class="w-36 h-36 object-cover rounded-full border-2 border-green-400 mb-4">';
                     }
                     randomTeacherInfo.innerHTML = `
                         <div class="teacher-home">
                             ${img_text}
                             <div class="teacher-details">
-                                <h2>${data.name}</h2>
-                                <p> from ${data.school} in ${data.county}, ${data.state}</p>
+                                <h2 class="text-2xl font-semibold text-green-700">${data.name}</h2>
+                                <p class="text-lg text-gray-700"> from ${data.school} in ${data.county}, ${data.state}</p>
                             </div>
-                        </div><p>`;
-                    randomTeacherInfo.appendChild(button);
+                        </div>
+                        <button onclick="redirectTo('/pages/teacher.html')" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md mt-4">View Random Teacher</button>`;
                 } else {
-                    const randomTeacherInfo = document.getElementById('randomTeacherInfo');
-                    randomTeacherInfo.innerHTML = "Unable to fetch random teacher information. We are sorry.";
+                    randomTeacherInfo.innerHTML = "<p class='text-red-500'>Unable to fetch random teacher information. We are sorry.</p>";
                 }
             } catch (error) {
                 console.error('Error fetching random teacher:', error);
+                document.getElementById('randomTeacherInfo').innerHTML = "<p class='text-red-500'>Error fetching random teacher. Please try again later.</p>";
             }
         }
 
-
+        // Function to log out the user
         async function logout() {
             try {
+                // Using root-relative path for API endpoint
                 const response = await fetch(`/logout/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                 });
-                window.location.href = '/';
+                window.location.href = '/'; // Redirect to root after logout
             } catch (error) {
-                console.error('Error:', error);
+                console.error('Error during logout:', error);
             }
         }
 
+        // Function to redirect to teacher page (Teacher of the Day)
         async function teacherDay() {
             try {
+                // Using root-relative path for API endpoint
                 const response = await fetch(`/spotlight/teacher`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                 });
-                window.location.href = '/pages/teacher.html';
+                if (response.ok) {
+                    window.location.href = '/pages/teacher.html';
+                } else {
+                    console.error('Error:', response.status);
+                    const teacherDayElement = document.getElementById('teacherDay');
+                    teacherDayElement.innerHTML = "<p class='text-red-500'>Unable to view Teacher of the Day. Please try again later.</p>";
+                }
             } catch (error) {
-                console.error('Error:', error);
+                console.error('Error fetching teacher of the day for redirect:', error);
+                const teacherDayElement = document.getElementById('teacherDay');
+                teacherDayElement.innerHTML = "<p class='text-red-500'>Error viewing Teacher of the Day. Please try again later.</p>";
             }
         }
 
+        // Function to get and display Teacher of the Day on load
         async function getTeacherDay() {
             try {
+                // Using root-relative path for API endpoint
                 const response = await fetch('/spotlight/teacher');
                 const data = await response.json();
 
+                const teacherDayElement = document.getElementById('teacherDay');
                 if (response.ok) {
-                    const teacherDay = document.getElementById('teacherDay');
                     let img_text;
                     if (data.image_data) {
-                        img_text = `<img src="data:image/jpeg;base64,${data.image_data}" alt="Teacher Image">`;
+                        img_text = `<img src="data:image/jpeg;base64,${data.image_data}" alt="Teacher Image" class="w-36 h-36 object-cover rounded-full border-2 border-green-400 mb-4">`;
                     } else {
-                        img_text = '<img src="/static/images/apple.jpg" alt="Teacher Image">';
+                        img_text = '<img src="/static/images/apple.jpg" alt="Teacher Image" class="w-36 h-36 object-cover rounded-full border-2 border-green-400 mb-4">';
                     }
-                    teacherDay.innerHTML = `
+                    teacherDayElement.innerHTML = `
                         <div class="teacher-home">
                             ${img_text}
                             <div class="teacher-details">
-                                <h2>${data.name}</h2>
-                                <p> from ${data.school} in ${data.county}, ${data.state}</p>
+                                <h2 class="text-2xl font-semibold text-green-700">${data.name}</h2>
+                                <p class="text-lg text-gray-700"> from ${data.school} in ${data.county}, ${data.state}</p>
                             </div>
-                        </div><p>
-                        <button id="teacherButton" onclick="teacherDay()">View Teacher of the Day</button>`;
+                        </div>
+                        <button onclick="teacherDay()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md mt-4">View Teacher of the Day</button>`;
                 } else {
-                    const teacherDay = document.getElementById('teacherDay');
-                    teacherDay.innerHTML = "Unable to fetch teacher of the day. We are sorry.";
+                    teacherDayElement.innerHTML = "<p class='text-red-500'>Unable to fetch teacher of the day. We are sorry.</p>";
                 }
             } catch (error) {
-                console.error('Error fetching random teacher:', error);
+                console.error('Error fetching teacher of the day:', error);
+                document.getElementById('teacherDay').innerHTML = "<p class='text-red-500'>Error viewing Teacher of the Day. Please try again later.</p>";
             }
         }
 
-
+        // Function to redirect to my page
         async function mypage() {
             try {
+                // Using root-relative path for API endpoint
                 const response = await fetch('/myinfo/', {
                     method: 'GET',
                     headers: {
@@ -227,15 +371,19 @@
                     window.location.href = '/pages/teacher.html';
                 } else {
                     console.error('Error:', response.status);
-                    window.location.href = '/';
+                    window.location.href = '/'; // Redirect to home or login if error
                 }
             } catch (error) {
-                console.error('Error:', error);
-                window.location.href = '/';
+                console.error('Error fetching my page info:', error);
+                window.location.href = '/'; // Redirect to home or login on network error
             }
         }
+
+        // Call checkAuthentication on page load to set initial button visibility
+        window.onload = function() {
+            checkAuthentication();
+            getTeacherDay(); // Also load teacher of the day
+        };
     </script>
-    
-    
 </body>
 </html>
