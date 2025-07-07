@@ -17,31 +17,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python version
-        uses: actions/setup-python@v1
+      - name: Set up Python version and cache dependencies
+        uses: actions/setup-python@v5 # Updated to v5
         with:
           python-version: '3.12'
+          cache: 'pip' # Enable pip caching
 
-      - name: Create and start virtual environment
-        run: |
-          python -m venv venv
-          source venv/bin/activate
-      
       - name: Install dependencies
         run: pip install -r requirements.txt
         
       # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
+      # - name: Run tests
+      #   run: pytest
 
       - name: Zip artifact for deployment
         run: zip release.zip ./* -r
 
       - name: Upload artifact for deployment jobs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4 # Updated to v4
         with:
           name: python-app
           path: |
             release.zip
-            !venv/
+            !venv/ # Exclude the venv from the artifact if you're not deploying it directly
 
   deploy:
     runs-on: ubuntu-latest
@@ -52,16 +50,15 @@ jobs:
     
     steps:
       - name: Download artifact from build job
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4 # Updated to v4
         with:
           name: python-app
 
       - name: Unzip artifact for deployment
         run: unzip release.zip
-
       
       - name: 'Deploy to Azure Web App'
-        uses: azure/webapps-deploy@v2
+        uses: azure/webapps-deploy@v2 # Current latest stable version
         id: deploy-to-webapp
         with:
           app-name: 'hitheroApp'
