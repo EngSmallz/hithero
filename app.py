@@ -36,6 +36,12 @@ app.redoc_url = None
 # Determine the path to the directory
 app.mount("/pages", StaticFiles(directory="pages"), name="pages")
 app.mount("/static", StaticFiles(directory="static"), name="static")
+BASE_STATIC_DIR = "static" 
+
+# --- Configuration for Promotional Images Mapping ---
+PROMO_IMAGE_MAPPING = {
+    "SeattleWolf": "images/1007TheWolf.png"
+}
 
 
 # Load environment variables
@@ -1202,7 +1208,49 @@ async def generate_teacher_report(state: str = Form(...), county: str = Form(Non
     finally:
         db.close()
 
+# --- Modified API Endpoint for Promotional Items ---
+@app.get("/promo/{token}", response_class=HTMLResponse)
+async def get_promotional_page_with_hero(request: Request, token: str):
+    """
+    Sets a session variable with the promo token and redirects to the homepage.
+    The homepage's JavaScript will then pick up this token and display the promo hero.
+    """
+    relative_image_path = PROMO_IMAGE_MAPPING.get(token)
 
+    if not relative_image_path:
+        relative_image_path = PROMO_IMAGE_MAPPING.get("default")
+        if not relative_image_path:
+            raise HTTPException(status_code=404, detail="Promotional image not found and no default image available in mapping.")
+
+    full_filesystem_path = os.path.join(BASE_STATIC_DIR, relative_image_path)
+    if not os.path.exists(full_filesystem_path):
+        if token != "default":
+            default_relative_path = PROMO_IMAGE_MAPPING.get("default")
+            if default_relative_path and os.path.exists(os.path.join(BASE_STATIC_DIR, default_relative_path)):
+                relative_image_path = default_relative_path
+            else:
+                raise HTTPException(status_code=404, detail=f"Image for token '{token}' not found and default image file is also missing.")
+        else:
+            raise HTTPException(status_code=404, detail="Default promotional image file not found.")
+
+    # Store the actual static URL of the image in the session
+    promo_image_url = f"/static/{relative_image_path}"
+    request.session["promo_image_url"] = promo_image_url
+    request.session["promo_title"] = f"Working together to serve our communities!" # Example title
+    request.session["promo_description"] = "Thank you for visiting through our special promotion!" # Example description
+
+    # Redirect to the homepage
+    return RedirectResponse(url="/pages/homepage.html")
+
+# --- API to get promo info (called by JavaScript) ---
+@app.get("/get_promo_info/")
+async def get_promo_info(request: Request):
+    promo_info = {
+        "promo_image_url": request.session.pop("promo_image_url", None), # Pop to clear after use
+        "promo_title": request.session.pop("promo_title", None),
+    }
+    # Clear the session variables after they are fetched
+    return JSONResponse(content=promo_info)
 
 
 if __name__ == "__main__":
