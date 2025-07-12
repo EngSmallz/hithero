@@ -1237,7 +1237,6 @@ async def get_promotional_page_with_hero(request: Request, token: str):
     promo_image_url = f"/static/{relative_image_path}"
     request.session["promo_image_url"] = promo_image_url
     request.session["promo_title"] = f"Working together to serve our communities!" # Example title
-    request.session["promo_description"] = "Thank you for visiting through our special promotion!" # Example description
 
     # Redirect to the homepage
     return RedirectResponse(url="/pages/homepage.html")
