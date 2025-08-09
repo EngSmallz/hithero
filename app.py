@@ -20,9 +20,6 @@ from sqlalchemy.sql import select, cast, delete, insert, update
 from datetime import date
 from typing import Optional
 
-
-
-
 app = FastAPI()
 load_dotenv()
 logger = logging.getLogger(__name__)
