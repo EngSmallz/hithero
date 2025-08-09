@@ -128,10 +128,10 @@
             </form>
         </section>
 
-        <section class="bg-white p-8 rounded-lg shadow-md text-gray-800 max-w-2xl mx-auto mt-8">
-            <h3 class="text-2xl font-semibold text-green-700 mb-4">Search Results</h3>
-            <ul id="teacherList" class="space-y-2">
-                </ul>
+        <section class="bg-white p-8 rounded-lg shadow-md text-gray-800 max-w-4xl mx-auto mt-8">
+            <h3 class="text-2xl font-semibold text-green-700 mb-4 text-center">Search Results</h3>
+            <div id="teacherListGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                </div>
             <p id="noTeachersFound" class="hidden text-gray-600 text-center mt-4">No teachers found for your selection. Please try different criteria.</p>
         </section>
     </main>
@@ -345,13 +345,13 @@
 
         async function fetchTeachers() {
             const searchForm = document.getElementById("teacher-search-form");
-            const teacherList = document.getElementById("teacherList");
+            const teacherListGrid = document.getElementById("teacherListGrid");
             const noTeachersFoundMessage = document.getElementById("noTeachersFound");
-            teacherList.innerHTML = ""; // Clear previous list
+            teacherListGrid.innerHTML = ""; // Clear previous list
             noTeachersFoundMessage.classList.add('hidden'); // Hide message initially
 
             const formData = new FormData(searchForm);
-            
+
             try {
                 const response = await fetch("/index_teachers/", {
                     method: "POST",
@@ -359,22 +359,41 @@
                 });
 
                 if (response.ok) {
-                    const teachers = await response.json();
+                    let teachers = await response.json();
+
+                    // Shuffle the teachers array to randomize the order
+                    for (let i = teachers.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [teachers[i], teachers[j]] = [teachers[j], teachers[i]];
+                    }
+
                     if (teachers.length > 0) {
                         teachers.forEach((teacher) => {
-                            const listItem = document.createElement("li");
-                            // Add Tailwind classes for list items
-                            listItem.classList.add('mb-2', 'last:mb-0', 'p-3', 'bg-gray-100', 'rounded-md', 'shadow-sm', 'hover:bg-gray-200', 'transition', 'duration-200');
+                            const teacherCard = document.createElement("a");
+                            teacherCard.href = `/teacher/${encodeURIComponent(teacher.url_id)}`;
+                            teacherCard.classList.add(
+                                'block',
+                                'p-4',
+                                'bg-blue-600',
+                                'hover:bg-blue-700',
+                                'text-white',
+                                'font-bold',
+                                'py-2',
+                                'px-4',
+                                'rounded-lg',
+                                'transition',
+                                'duration-300',
+                                'ease-in-out',
+                                'transform',
+                                'hover:scale-105',
+                                'shadow-md',
+                                'text-center'
+                            );
 
-                            const button = document.createElement("button");
-                            button.textContent = teacher.name; // Display teacher's name
-                            button.classList.add('w-full', 'text-left', 'text-lg', 'font-semibold', 'text-blue-700', 'hover:underline', 'focus:outline-none');
-                            button.onclick = () => {
-                                // Ensure this URL is correct based on your application's routing
-                                window.location.href = `/teacher/${encodeURIComponent(teacher.url_id)}`;
-                            };
-                            listItem.appendChild(button);
-                            teacherList.appendChild(listItem);
+                            const teacherName = document.createElement("span");
+                            teacherName.textContent = teacher.name;
+                            teacherCard.appendChild(teacherName);
+                            teacherListGrid.appendChild(teacherCard);
                         });
                     } else {
                         noTeachersFoundMessage.classList.remove('hidden'); // Show "No teachers found" message
