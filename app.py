@@ -159,20 +159,11 @@ def store_my_cookies(request: Request, id: int = Depends(get_current_id)):
 def render_email_template(template_path: str, data: dict) -> str:
     """
     Loads an HTML template and replaces placeholders with provided data.
-    Also embeds the logo as a base64 data URI.
     """
-    # 1. Read the HTML template content
     with open(template_path, 'r', encoding='utf-8') as f:
         template_content = f.read()
 
-    # 2. Embed the logo image directly into the HTML
-    logo_path = 'static/images/logo.png'
-    with open(logo_path, "rb") as image_file:
-        encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
-        logo_data_uri = f"data:image/png;base64,{encoded_string}"
-        template_content = template_content.replace('{{ logo_data_uri }}', logo_data_uri)
-
-    # 3. Replace other placeholders with data values
+    # Replace placeholders with data values
     for key, value in data.items():
         template_content = template_content.replace(f'{{{{ {key} }}}}', str(value))
     
