@@ -181,7 +181,7 @@ def send_email(recipient_email: str, subject: str, html_message: str, plain_mess
         to=[{"email": recipient_email}],
         subject=subject,
         html_content=html_message,
-        textContent=plain_message,
+        text_content=plain_message,
         sender={"name": "Homeroom Heroes", "email": "homeroom.heroes.contact@gmail.com"}
     )
     
