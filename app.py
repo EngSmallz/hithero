@@ -159,11 +159,20 @@ def store_my_cookies(request: Request, id: int = Depends(get_current_id)):
 def render_email_template(template_path: str, data: dict) -> str:
     """
     Loads an HTML template and replaces placeholders with provided data.
+    Also embeds the logo as a base64 data URI.
     """
+    # 1. Read the HTML template content
     with open(template_path, 'r', encoding='utf-8') as f:
         template_content = f.read()
 
-    # Replace placeholders with data values
+    # 2. Embed the logo image directly into the HTML
+    logo_path = 'static/images/logo.png'
+    with open(logo_path, "rb") as image_file:
+        encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+        logo_data_uri = f"data:image/png;base64,{encoded_string}"
+        template_content = template_content.replace('{{ logo_data_uri }}', logo_data_uri)
+
+    # 3. Replace other placeholders with data values
     for key, value in data.items():
         template_content = template_content.replace(f'{{{{ {key} }}}}', str(value))
     
@@ -171,30 +180,18 @@ def render_email_template(template_path: str, data: dict) -> str:
 
 def send_email(recipient_email: str, subject: str, html_message: str, plain_message: str):
     """
-    Sends an email with an embedded logo, HTML content, and a plain text fallback.
+    Sends an email with HTML content and a plain text fallback using the Brevo API.
     """
     configuration = brevo_python.Configuration()
     configuration.api_key['api-key'] = os.environ.get('BREVO_API_KEY')
     api_instance = brevo_python.TransactionalEmailsApi(brevo_python.ApiClient(configuration))
-
-    # Read the logo file and prepare it for embedding
-    logo_path = 'static/images/logo.png'
-    with open(logo_path, "rb") as f:
-        file_data = f.read()
-        encoded_content = base64.b64encode(file_data).decode('utf-8')
-        attachments = [{
-            "content": encoded_content,
-            "name": os.path.basename(logo_path),
-            "contentId": "logo_cid"
-        }]
-
+    
     send_smtp_email = brevo_python.SendSmtpEmail(
         to=[{"email": recipient_email}],
         subject=subject,
         html_content=html_message,
         text_content=plain_message,
-        sender={"name": "Homeroom Heroes", "email": "homeroom.heroes.contact@gmail.com"},
-        attachment=attachments
+        sender={"name": "Homeroom Heroes", "email": "homeroom.heroes.contact@gmail.com"}
     )
     
     try:
@@ -203,6 +200,7 @@ def send_email(recipient_email: str, subject: str, html_message: str, plain_mess
         return api_response
     except ApiException as e:
         print(f"Exception when calling Brevo API: {e}")
+        return None
         return None
 
 def send_attachment(recipient_email: str, subject: str, message: str, attachment_path: str):
