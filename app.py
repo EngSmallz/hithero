@@ -7,10 +7,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.applications import Starlette
 from starlette.middleware.sessions import SessionMiddleware
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from email.mime.base import MIMEBase
-from email import encoders
 from passlib.hash import sha256_crypt
 from sqlalchemy import create_engine, Column, Integer, String, func, LargeBinary
 from sqlalchemy.ext.declarative import declarative_base
@@ -19,6 +15,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import select, cast, delete, insert, update
 from datetime import date
 from typing import Optional
+import brevo_python
+from brevo_python.rest import ApiException
 
 app = FastAPI()
 load_dotenv()
@@ -158,65 +156,154 @@ def store_my_cookies(request: Request, id: int = Depends(get_current_id)):
     finally:
         db.close()
 
+def render_email_template(template_path: str, data: dict) -> str:
+    """
+    Loads an HTML template and replaces placeholders with provided data.
+    """
+    with open(template_path, 'r', encoding='utf-8') as f:
+        template_content = f.read()
 
-def send_email(recipient_email: str, subject: str, message: str):
+    # Replace placeholders with data values
+    for key, value in data.items():
+        template_content = template_content.replace(f'{{{{ {key} }}}}', str(value))
+    
+    return template_content
+
+def send_email(recipient_email: str, subject: str, html_message: str, plain_message: str):
+    """
+    Sends an email with HTML content and a plain text fallback using the Brevo API.
+    """
+    # Configure API key authorization
+    configuration = brevo_python.Configuration()
+    configuration.api_key['api-key'] = os.environ.get('BREVO_API_KEY')
+    api_instance = brevo_python.TransactionalEmailsApi(brevo_python.ApiClient(configuration))
+    
+    send_smtp_email = brevo_python.SendSmtpEmail(
+        to=[{"email": recipient_email}],
+        subject=subject,
+        html_content=html_message,
+        plain_text_content=plain_message,
+        sender={"name": "Homeroom Heroes", "email": "homeroom.heroes.contact@gmail.com"}
+    )
+    
     try:
-        sender = 'homeroom.heroes.contact@gmail.com'
-        msg = MIMEMultipart()
-        msg['Subject'] = subject
-        msg['From'] = sender
-        msg['To'] = recipient_email
-        msg.attach(MIMEText(message, 'plain'))
-        smtp_server = 'smtp.sendgrid.net'
-        smtp_port = 465
-        try:
-            context = ssl.create_default_context()
-            with smtplib.SMTP_SSL(smtp_server, smtp_port, context=context) as smtp:
-                smtp.login('apikey', os.environ.get('SENDGRID_API_KEY'))
-                smtp.send_message(msg)
-        except Exception as e:
-            print(f'Error: {e}')
-    except Exception as e:
-        print(f'Error: {e}')
+        api_response = api_instance.send_transac_email(send_smtp_email)
+        print("Email sent successfully!")
+        return api_response
+    except ApiException as e:
+        print(f"Exception when calling Brevo API: {e}")
+        return None
 
 def send_attachment(recipient_email: str, subject: str, message: str, attachment_path: str):
+    """
+    Sends an email with an attachment using the Brevo API.
+    
+    Args:
+        recipient_email (str): The email address of the recipient.
+        subject (str): The subject line of the email.
+        message (str): The plain text body of the email.
+        attachment_path (str): The local file path to the attachment.
+    """
+    # Configure API key authorization
+    configuration = brevo_python.Configuration()
+    configuration.api_key['api-key'] = os.environ.get('BREVO_API_KEY')
+
+    api_instance = brevo_python.TransactionalEmailsApi(brevo_python.ApiClient(configuration))
+    
+    attachments = []
+    if os.path.exists(attachment_path):
+        with open(attachment_path, "rb") as f:
+            file_data = f.read()
+            encoded_content = base64.b64encode(file_data).decode('utf-8')
+            
+            attachments.append({
+                "content": encoded_content,
+                "name": os.path.basename(attachment_path)
+            })
+    else:
+        print(f"Attachment file {attachment_path} not found. Sending email without attachment.")
+
+    # Create the email message object
+    send_smtp_email = brevo_python.SendSmtpEmail(
+        to=[{"email": recipient_email}],
+        subject=subject,
+        html_content=f"<html><body>{message.replace('\\n', '<br>')}</body></html>",
+        sender={"name": "Homeroom Heroes", "email": "homeroom.heroes.contact@gmail.com"},
+        attachment=attachments
+    )
+    
     try:
-        sender = 'homeroom.heroes.contact@gmail.com'
-        msg = MIMEMultipart()
-        msg['Subject'] = subject
-        msg['From'] = sender
-        msg['To'] = recipient_email
-        
-        # Attach message body
-        msg.attach(MIMEText(message, 'plain'))
+        api_response = api_instance.send_transac_email(send_smtp_email)
+        print("Email sent successfully with attachment!")
+        return api_response
+    except ApiException as e:
+        print(f"Exception when calling TransactionalEmailsApi->send_transac_email: {e}")
+        return None
 
-        # Attach file
-        if os.path.exists(attachment_path):
-            with open(attachment_path, 'rb') as attachment_file:
-                part = MIMEBase('application', 'octet-stream')
-                part.set_payload(attachment_file.read())
-                encoders.encode_base64(part)
-                part.add_header(
-                    'Content-Disposition',
-                    f'attachment; filename={os.path.basename(attachment_path)}',
-                )
-                msg.attach(part)
-        else:
-            print(f"Attachment file {attachment_path} not found.")
+def send_registration_email(recipient_email: str):
+    """
+    Prepares and sends the registration success email using the HTML template.
+    """
+    # Define the data to populate the template
+    template_data = {
+        'recipient_name': recipient_email,
+        'message_body': (
+            "Thank you for registering with us! Once you are validated by a "
+            "fellow teacher in your district or one of us here at Homeroom Heroes, "
+            "you will be able to create your profile and start receiving support."
+        )
+    }
 
-        # Send the email
-        smtp_server = 'smtp.sendgrid.net'
-        smtp_port = 465
-        try:
-            context = ssl.create_default_context()
-            with smtplib.SMTP_SSL(smtp_server, smtp_port, context=context) as smtp:
-                smtp.login('apikey', os.environ.get('SENDGRID_API_KEY'))
-                smtp.send_message(msg)
-                print("Email sent successfully!")
-        except Exception as e:
-            print(f'Error sending email: {e}')
-    except Exception as e:
-        print(f'Error: {e}')
+    # Generate the HTML message from the template
+    html_message = render_email_template('static/email_template.html', template_data)
+
+    # Create a plain text fallback version
+    plain_message = (
+        f"Dear {template_data['recipient_name']},\n\n"
+        f"{template_data['message_body']}\n\n"
+        "Best regards,\nHomeroom Heroes Team"
+    )
+
+    # Call the core send_email function
+    send_email(
+        recipient_email,
+        "Registration successful",
+        html_message,
+        plain_message
+    )
+
+def send_validation_email(recipient_email: str):
+    """
+    Prepares and sends the validation success email using the HTML template.
+    """
+    # Define the data to populate the template
+    template_data = {
+        'recipient_name': recipient_email,
+        'message_body': (
+            "We are pleased to inform you that your registration with us has been "
+            "successfully validated! You may now log in and create your profile "
+            "to start receiving support."
+        )
+    }
+
+    # Generate the HTML message from the template
+    html_message = render_email_template('static/email_template.html', template_data)
+
+    # Create a plain text fallback version
+    plain_message = (
+        f"Dear {template_data['recipient_name']},\n\n"
+        f"{template_data['message_body']}\n\n"
+        "If you have any questions or need assistance, please do not hesitate to contact us.\n\n"
+        "Best regards,\nHomeroom Heroes Team"
+    )
+
+    # Call the core send_email function
+    send_email(
+        recipient_email,
+        "Validation Notification",
+        html_message,
+        plain_message
+    )
 
 def update_temp_password(db: Session, email: str, new_password: str):
     try:
@@ -354,7 +441,7 @@ async def register_user(name: str = Form(...), email: str = Form(...), phone_num
         new_user = NewUsers(name=name, email=email, state=state, county=county, district=district, school=school, phone_number=phone_number, password=hashed_password, role=role, report=0, emailed=0)
         db.add(new_user)
         db.commit()
-        send_email(email, "Registration successful",  f"Dear {email},\n\nThank you for registering with us! Once you are validated by a fellow teacher in your district or one of us here at Homeroom Heroes, you will be able to create your profile and start receiving support.\n\nBest regards,\nHomeroom Heroes Team")
+        send_registration_email(email)
         return {"message": "User registered successfully. You should recieve an email shortly. Please check your spam folder"}
     except Exception as e:
         return {"message": "Registration unsuccessful", "error": str(e)}
@@ -410,7 +497,7 @@ async def move_user(user_email: str):
         delete_query = delete(NewUsers).where(cast(NewUsers.email, String) == cast(user_email, String))
         db.execute(delete_query)
         db.commit()
-        send_email(user[0].email, "Validation Notification", f"Dear {user[0].email},\n\nWe are pleased to inform you that your registration with us has been successfully validated! You may now log in and create your profile to start receiving support.\n\nIf you have any questions or need assistance, please do not hesitate to contact us.\n\nBest regards,\nHomeroom Heroes Team")
+        send_validation_email(user[0].email)        
         return {"message": "User validated."}
     except Exception as e:
         db.rollback()
@@ -508,20 +595,36 @@ async def get_user_profile(email: str = Depends(get_current_email), role: str = 
     else:
         raise HTTPException(status_code=404, detail="No user logged in.")
 
-##api used to send contact us email from /contact.html
+## api used to send contact us email from /contact.html
 @app.post('/contact_us/')
 async def contact_us(name: str = Form(...), email: str = Form(...), subject: str = Form(...), message: str = Form(...), recaptcha_response: str = Form(...)):
 
     # reCAPTCHA verification
     is_valid = verify_recaptcha(recaptcha_response)
     if not is_valid:
-        return HTTPException(status_code=400, content={"message": "Invalid reCAPTCHA"})
-    
+        raise HTTPException(status_code=400, detail="Invalid reCAPTCHA")
+
+    # Define the data to populate the template
+    template_data = {
+        'recipient_name': 'Homeroom Heroes Team',
+        'message_body': f"Message from {name} ({email}):\n\n{message}"
+    }
+
+    # 1. Generate the HTML message from the template
+    # The path is correctly specified relative to the project root
+    html_message = render_email_template('static/email_template.html', template_data)
+
+    # 2. Create a plain text fallback version
+    plain_message = (
+        f"Subject: {subject}\n"
+        f"Message from {name} ({email}):\n\n"
+        f"{message}"
+    )
+
     recipient_email = 'Homeroom.heroes.contact@gmail.com'
-    full_message = f"{name}\n{email}\n{message}"
     try:
-        result = send_email(recipient_email, subject, full_message)
-        return {"message": result}
+        send_email(recipient_email, subject, html_message, plain_message)
+        return {"message": "Email sent successfully!"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
@@ -850,7 +953,7 @@ async def get_schools(state: str, county: str, district: str):
     finally:
         db.close()
 
-#api for forgotten password reset, currently does not do anything exceptional
+# api for forgotten password reset, currently does not do anything exceptional
 @app.post("/forgot_password/")
 async def forgot_password(email: str = Form(...)):
     db = SessionLocal()
@@ -861,12 +964,42 @@ async def forgot_password(email: str = Form(...)):
         if user:
             recipient_email = email
             temp_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(10))
-            full_message = f"Dear {email},\n\nWe have received a request for a password reset for your account. Here is your new temporary password: {temp_password}. Please use this password the next time you login and update it immediately.\n\nIf you did not request this password reset or have any concerns, please contact our support team.\n\nBest regards,\nHomeroom Heroes Team"
-            send_email(recipient_email, 'Forgot Password', full_message)
+            
+            # --- Prepare data for the HTML template ---
+            template_data = {
+                'recipient_name': email, # Using email as the name for the template
+                'message_body': (
+                    f"We have received a request for a password reset for your account. "
+                    f"Here is your new temporary password: <strong>{temp_password}</strong>. " # Bold the temporary password
+                    f"Please use this password the next time you login and update it immediately.\n\n"
+                    f"If you did not request this password reset or have any concerns, "
+                    f"please contact our support team."
+                )
+            }
+
+            # Generate the HTML message from the template file
+            html_message = render_email_template('static/email_template.html', template_data)
+
+            # Create the plain text fallback message
+            plain_message = (
+                f"Dear {email},\n\n"
+                f"We have received a request for a password reset for your account. "
+                f"Here is your new temporary password: {temp_password}. "
+                f"Please use this password the next time you login and update it immediately.\n\n"
+                f"If you did not request this password reset or have any concerns, "
+                f"please contact our support team.\n\n"
+                f"Best regards,\nHomeroom Heroes Team"
+            )
+
+            # Send the email using the updated send_email function
+            send_email(recipient_email, 'Forgot Password', html_message, plain_message)
+            
+            # Update the user's temporary password in the database
             update_temp_password(db, recipient_email, temp_password)
         else:
-            time.sleep(1)
-        message = "If account exists, instructions for password reset will be sent to your email. Check spam."
+            # Add a small delay for security reasons even if the email doesn't exist
+            time.sleep(1) 
+        message = "If an account exists, instructions for password reset will be sent to your email. Check your spam folder."
         return JSONResponse(content={"message": message})
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
@@ -907,49 +1040,6 @@ async def get_spotlight_info(request: Request, token: str):
             raise HTTPException(status_code=404, detail="Spotlight info not found for the given token")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
-    finally:
-        db.close()
-
-##admin page api to send update emails
-@app.post("/send_update_email/")
-async def send_update_email(request: Request,updates: str = Form(...)):
-    db = SessionLocal()
-    subject = "Important Updates from Homeroom Heroes"
-    message_body = f"""
-    We have some important updates to share with you regarding Homeroom Heroes:
-
-    Update Page:
-    -Uptade sections independently
-    -Update your unique URL ID
-
-    Create Page:
-    -Fix for error after successful creation
-
-    Profile Image:
-    -File size adjustment
-
-    We hope you find these updates valuable and look forward to continuing to support you in your teaching journey.
-
-    If you have any questions or need further information, please feel free to reply to this email.
-
-    Best regards,
-
-    Justin Brundage
-    Founder & CEO
-    Homeroom Heroes
-    www.HelpTeacehers.net
-    """
-
-    try:
-        # Fetch all email addresses from the database
-        emails = db.query(RegisteredUsers.email).all()
-        for email_tuple in emails:
-            email = email_tuple[0]
-            send_email(email, subject, message_body)
-
-        return JSONResponse(content={"message": "Update emails sent successfully"}, status_code=200)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
     finally:
         db.close()
 
