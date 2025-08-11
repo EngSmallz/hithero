@@ -171,18 +171,30 @@ def render_email_template(template_path: str, data: dict) -> str:
 
 def send_email(recipient_email: str, subject: str, html_message: str, plain_message: str):
     """
-    Sends an email with HTML content and a plain text fallback using the Brevo API.
+    Sends an email with an embedded logo, HTML content, and a plain text fallback.
     """
     configuration = brevo_python.Configuration()
     configuration.api_key['api-key'] = os.environ.get('BREVO_API_KEY')
     api_instance = brevo_python.TransactionalEmailsApi(brevo_python.ApiClient(configuration))
-    
+
+    # Read the logo file and prepare it for embedding
+    logo_path = 'static/images/logo.png'
+    with open(logo_path, "rb") as f:
+        file_data = f.read()
+        encoded_content = base64.b64encode(file_data).decode('utf-8')
+        attachments = [{
+            "content": encoded_content,
+            "name": os.path.basename(logo_path),
+            "contentId": "logo_cid"
+        }]
+
     send_smtp_email = brevo_python.SendSmtpEmail(
         to=[{"email": recipient_email}],
         subject=subject,
         html_content=html_message,
         text_content=plain_message,
-        sender={"name": "Homeroom Heroes", "email": "homeroom.heroes.contact@gmail.com"}
+        sender={"name": "Homeroom Heroes", "email": "homeroom.heroes.contact@gmail.com"},
+        attachment=attachments
     )
     
     try:
