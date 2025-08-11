@@ -1,2 +1,0 @@
-Name	School	Email	Phone
-Test Person1	FITIUTA ELEMENTARY SCHOOL	jstnkbrundage@gmail.com	None

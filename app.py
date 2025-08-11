@@ -173,7 +173,6 @@ def send_email(recipient_email: str, subject: str, html_message: str, plain_mess
     """
     Sends an email with HTML content and a plain text fallback using the Brevo API.
     """
-    # Configure API key authorization
     configuration = brevo_python.Configuration()
     configuration.api_key['api-key'] = os.environ.get('BREVO_API_KEY')
     api_instance = brevo_python.TransactionalEmailsApi(brevo_python.ApiClient(configuration))
@@ -182,7 +181,7 @@ def send_email(recipient_email: str, subject: str, html_message: str, plain_mess
         to=[{"email": recipient_email}],
         subject=subject,
         html_content=html_message,
-        plain_text_content=plain_message,
+        textContent=plain_message,
         sender={"name": "Homeroom Heroes", "email": "homeroom.heroes.contact@gmail.com"}
     )
     
