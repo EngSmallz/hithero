@@ -716,6 +716,7 @@ async def get_user_profile(email: str = Depends(get_current_email), role: str = 
     else:
         raise HTTPException(status_code=404, detail="No user logged in.")
 
+
 ## api used to send contact us email from /contact.html
 @app.post('/contact_us/')
 async def contact_us(name: str = Form(...), email: str = Form(...), subject: str = Form(...), message: str = Form(...), recaptcha_response: str = Form(...)):
@@ -823,6 +824,55 @@ async def update_info(request: Request, aboutMe: str = Form(...), id: int = Depe
         else:
             raise HTTPException(status_code=403, detail="Permission denied.")
     except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    finally:
+        db.close()
+
+##api that updates school
+@app.post("/update_teacher_school/")
+async def update_teacher_school(
+    request: Request,
+    state: str = Form(...),
+    county: str = Form(...),
+    district: str = Form(...),
+    school: str = Form(...),
+    id: int = Depends(get_current_id),
+    role: str = Depends(get_current_role)
+):
+    db: Session = SessionLocal()
+    try:
+        if role:
+            update_query = update(TeacherList).where(TeacherList.regUserID == id).values(
+                state=state,
+                county=county,
+                district=district,
+                school=school
+            )
+            db.execute(update_query)
+            db.commit()
+            return JSONResponse(content={"message": "School information updated successfully."})
+        else:
+            raise HTTPException(status_code=403, detail="Permission denied. Not logged in.")
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    finally:
+        db.close()
+
+##api that updates name
+@app.post("/update_teacher_name/")
+async def update_teacher_name(request: Request, teacher: str = Form(...), id: int = Depends(get_current_id), role: str = Depends(get_current_role)):
+    db = SessionLocal()
+    try:
+        if role:
+            update_query = update(TeacherList).where(TeacherList.regUserID == id).values(name=teacher)
+            db.execute(update_query)
+            db.commit()
+            return {"message": "Name updated."}
+        else:
+            raise HTTPException(status_code=403, detail="Permission denied.")
+    except Exception as e:
+        db.rollback()
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
     finally:
         db.close()
