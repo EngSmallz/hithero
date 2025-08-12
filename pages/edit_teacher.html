@@ -373,7 +373,7 @@
 
         async function populateStatesDropdown(selectedState = null, selectedCounty = null, selectedDistrict = null, selectedSchool = null) {
             try {
-                const response = await fetch("/index_states/");
+                const response = await fetch("/get_states/");
                 const states = await response.json();
                 const stateDropdown = document.getElementById("state");
                 stateDropdown.innerHTML = '<option value="" disabled selected>Choose state</option>';
@@ -402,7 +402,7 @@
                 document.getElementById("school").innerHTML = '<option value="" disabled selected>Choose school</option>';
 
                 if (selectedState) {
-                    const response = await fetch(`/index_counties/${selectedState}`);
+                    const response = await fetch(`/get_counties/${selectedState}`);
                     const counties = await response.json();
                     counties.forEach(county => {
                         const option = new Option(county, county);
@@ -430,7 +430,7 @@
                 document.getElementById("school").innerHTML = '<option value="" disabled selected>Choose school</option>';
 
                 if (selectedState && selectedCounty) {
-                    const response = await fetch(`/index_districts/${selectedState}/${selectedCounty}`);
+                    const response = await fetch(`/get_districts/${selectedState}/${selectedCounty}`);
                     const districts = await response.json();
                     districts.forEach(district => {
                         const option = new Option(district, district);
@@ -458,7 +458,7 @@
                 schoolDropdown.innerHTML = '<option value="" disabled selected>Choose school</option>';
 
                 if (selectedState && selectedCounty && selectedDistrict) {
-                    const response = await fetch(`/index_schools/${selectedState}/${selectedCounty}/${selectedDistrict}`);
+                    const response = await fetch(`/get_schools/${selectedState}/${selectedCounty}/${selectedDistrict}`);
                     const schools = await response.json();
                     schools.forEach(school => {
                         const option = new Option(school, school);
