@@ -390,6 +390,8 @@ def first_of_month_job():
         print('Not the first.')
 
 def schedule_jobs():
+    schedule.every().tuesday.at("06:00").do(tuesday_job)
+    schedule.every().thursday.at("06:00").do(thursday_job)
     schedule.every().day.at('13:37').do(daily_job)
     schedule.every().monday.at("06:00").do(monday_job)
     schedule.every().day.at("06:00").do(first_of_month_job)
@@ -407,6 +409,125 @@ def verify_recaptcha(recaptcha_response: str):
     data = response.json()
     return data["success"]
 
+def send_profile_creation_reminders():
+    """
+    Checks the RegisteredUsers table and sends a profile creation reminder
+    email to all users who have not yet created a profile.
+    """
+    db = SessionLocal()
+    try:
+        # Query for users with createCount equal to 0
+        query = select(RegisteredUsers).where(RegisteredUsers.createCount == 0)
+        users = db.execute(query).scalars().all()
+
+        if users:
+            print(f"Found {len(users)} users who need a profile reminder.")
+            for user in users:
+                send_profile_reminder_email(user.email)
+            print("Successfully sent all profile creation reminder emails.")
+        else:
+            print("No users found with a createCount of 0.")
+    except Exception as e:
+        print(f"An error occurred while sending profile reminders: {str(e)}")
+    finally:
+        db.close()
+
+def send_profile_reminder_email(recipient_email: str):
+    """
+    Sends a reminder email to a user to complete their profile.
+    """
+    # Define the data to populate the template
+    template_data = {
+        'recipient_name': recipient_email,
+        'message_body': (
+            "You're almost there! Your registration with us has been "
+            "successfully validated, but you haven't created your profile yet. "
+            "Please log in and complete your profile to start receiving support from our community."
+            "www.HelpTeachers.net"
+        )
+    }
+
+    # Generate the HTML message from the template
+    html_message = render_email_template('static/email_template.html', template_data)
+
+    # Create a plain text fallback version
+    plain_message = (
+        f"Dear {template_data['recipient_name']},\n\n"
+        f"{template_data['message_body']}\n\n"
+        "If you have any questions or need assistance, please do not hesitate to contact us.\n\n"
+        "Best regards,\nHomeroom Heroes Team"
+    )
+
+    # Call the core send_email function
+    send_email(
+        recipient_email,
+        "Reminder: Complete Your Homeroom Heroes Profile!",
+        html_message,
+        plain_message
+    )
+
+def tuesday_job():
+    send_profile_creation_reminders()
+    print("Tuesday job to send profile creation reminders has completed.")
+
+
+def send_validation_reminder_emails():
+    """
+    Checks the NewUsers table and sends a validation reminder
+    email to all users who have not been validated and have not been emailed yet.
+    """
+    db = SessionLocal()
+    try:
+        # Query for users with emailed equal to 0
+        query = select(NewUsers).where(NewUsers.emailed == 0)
+        users = db.execute(query).scalars().all()
+
+        if users:
+            print(f"Found {len(users)} new users who need a validation reminder.")
+            for user in users:
+                send_validation_reminder_email(user.email)
+            print("Successfully sent all new user validation reminder emails.")
+        else:
+            print("No new users found who need a validation reminder.")
+    except Exception as e:
+        print(f"An error occurred while sending new user reminders: {str(e)}")
+    finally:
+        db.close()
+
+def send_validation_reminder_email(recipient_email: str):
+    """
+    Sends a reminder email to a new user to reach out for validation.
+    """
+    # Define the data to populate the template
+    template_data = {
+        'recipient_name': recipient_email,
+        'message_body': (
+            "Thanks for signing up! We noticed you haven't been validated yet. "
+            "Please reach back out to us at homeroom.heroes.contact@gmail.com to complete your validation process."
+        )
+    }
+
+    # Generate the HTML message from the template
+    html_message = render_email_template('static/email_template.html', template_data)
+
+    # Create a plain text fallback version
+    plain_message = (
+        f"Dear {template_data['recipient_name']},\n\n"
+        f"{template_data['message_body']}\n\n"
+        "Best regards,\nHomeroom Heroes Team"
+    )
+
+    # Call the core send_email function
+    send_email(
+        recipient_email,
+        "Reminder: Complete Your Homeroom Heroes Validation!",
+        html_message,
+        plain_message
+    )
+
+def thursday_job():
+    send_validation_reminder_emails()
+    print("Thursday job to send new user validation reminders has completed.")
 
 # Start scheduling the jobs
 schedule_thread = threading.Thread(target=schedule_jobs)
