@@ -319,12 +319,14 @@ def update_temp_password(db: Session, email: str, new_password: str):
 def fetch_random_teacher():
     db = SessionLocal()
     try:
+        # The scalar_one_or_none() method directly returns the TeacherList object,
+        # or None if no teacher is found.
         query = select(TeacherList).order_by(func.newid()).limit(1)
-        result = db.execute(query)
-        random_teacher = result.fetchone()
-        return random_teacher
+        random_teacher_record = db.execute(query).scalar_one_or_none()
+        return random_teacher_record
     except Exception as e:
         print(f"Error fetching random teacher: {e}")
+        return None
     finally:
         db.close()
 
@@ -347,21 +349,79 @@ def store_spotlight(teacher_info: dict, token: str):
     finally:
         db.close()
 
+def send_teacher_of_the_day_email(recipient_email: str, recipient_name: str, url_id: str):
+    """
+    Prepares and sends the 'Teacher of the Day' notification email.
+    """
+    # Define the data to populate the template
+    template_data = {
+        'recipient_name': recipient_name,
+        'message_body': (
+            "Congratulations! You've been chosen as today's 'Teacher of the Day' at Homeroom Heroes! "
+            "Your profile is now featured on our homepage, giving you extra visibility. "
+            "Remember to share your unique page with your community."
+        ),
+        'url': f"www.HelpTeachers.net/teachers/{url_id}"
+    }
+
+    # Generate the HTML message from the template
+    html_message = render_email_template('static/email_template.html', template_data)
+
+    # Create a plain text fallback version
+    plain_message = (
+        f"Dear {template_data['recipient_name']},\n\n"
+        f"{template_data['message_body']}\n\n"
+        f"Share your page: {template_data['url']}\n\n"
+        "Best regards,\nHomeroom Heroes Team"
+    )
+
+    # Call the core send_email function
+    send_email(
+        recipient_email,
+        "🎉 You're Today's Homeroom Hero!",
+        html_message,
+        plain_message
+    )
+
 def daily_job():
-    random_teacher = fetch_random_teacher()
-    if random_teacher:
-        teacher_info = {
-            "name": random_teacher[0].name,
-            "state": random_teacher[0].state,
-            "county": random_teacher[0].county,
-            "district": random_teacher[0].district,
-            "school": random_teacher[0].school,
-            "image_data": random_teacher[0].image_data
-        }
+    db = SessionLocal()
+    try:
+        # Re-fetch the teacher to ensure we get the full object with regUserID and url_id
+        random_teacher = fetch_random_teacher()
         
-        store_spotlight(teacher_info, "teacher")
-    else:
-        print("No random teacher found.")
+        if random_teacher:
+            teacher_info = {
+                "name": random_teacher.name, 
+                "state": random_teacher.state,
+                "county": random_teacher.county,
+                "district": random_teacher.district,
+                "school": random_teacher.school,
+                "image_data": random_teacher.image_data,
+                "url_id": random_teacher.url_id
+            }
+
+            # Store the teacher in the spotlight regardless of email availability
+            store_spotlight(teacher_info, "teacher")
+
+            # Now, attempt to fetch the email and send the notification
+            email_query = select(RegisteredUsers.email).where(RegisteredUsers.id == random_teacher.regUserID)
+            teacher_email = db.execute(email_query).scalar_one_or_none()
+
+            if teacher_email:
+                # Send the email notification
+                send_teacher_of_the_day_email(
+                    recipient_email=teacher_email,
+                    recipient_name=teacher_info["name"],
+                    url_id=teacher_info["url_id"]
+                )
+            else:
+                print(f"No email found for teacher: {random_teacher.name}. Spotlight stored, but no email sent.")
+        else:
+            print("No random teacher found.")
+    except Exception as e:
+        print(f"Error in daily_job: {e}")
+    finally:
+        db.close()
 
 def monday_job():
     random_teacher = fetch_random_teacher()
