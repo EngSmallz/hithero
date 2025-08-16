@@ -359,9 +359,9 @@ def send_teacher_of_the_day_email(recipient_email: str, recipient_name: str, url
         'message_body': (
             "Congratulations! You've been chosen as today's 'Teacher of the Day' at Homeroom Heroes! "
             "Your profile is now featured on our homepage, giving you extra visibility. "
-            "Remember to share your unique page with your community."
-        ),
-        'url': f"www.HelpTeachers.net/teachers/{url_id}"
+            "Remember to share your unique page with your community.\n"
+            "www.HelpTeachers.net/teachers/{url_id}"
+        )
     }
 
     # Generate the HTML message from the template
@@ -534,12 +534,11 @@ def tuesday_job():
 def send_validation_reminder_emails():
     """
     Checks the NewUsers table and sends a validation reminder
-    email to all users who have not been validated and have not been emailed yet.
+    email to all users who have not been validated and have  been emailed yet.
     """
     db = SessionLocal()
     try:
-        # Query for users with emailed equal to 0
-        query = select(NewUsers).where(NewUsers.emailed == 0)
+        query = select(NewUsers)
         users = db.execute(query).scalars().all()
 
         if users:
