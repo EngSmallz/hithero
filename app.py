@@ -359,9 +359,10 @@ def send_teacher_of_the_day_email(recipient_email: str, recipient_name: str, url
         'message_body': (
             "Congratulations! You've been chosen as today's 'Teacher of the Day' at Homeroom Heroes! "
             "Your profile is now featured on our homepage, giving you extra visibility. "
-            "Remember to share your unique page with your community.\n"
-            "www.HelpTeachers.net/teachers/{url_id}"
-        )
+            "Remember to share your unique page with your community."
+        ),
+        # Define the URL as a separate, clean variable for both templates
+        'url': f"www.HelpTeachers.net/teachers/{url_id}"
     }
 
     # Generate the HTML message from the template
