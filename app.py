@@ -503,7 +503,7 @@ def send_profile_reminder_email(recipient_email: str):
         'message_body': (
             "You're almost there! Your registration with us has been "
             "successfully validated, but you haven't created your profile yet. "
-            "Please log in and complete your profile to start receiving support from our community."
+            "Please log in and complete your profile to start receiving support from our community.\n"
             "www.HelpTeachers.net"
         )
     }
