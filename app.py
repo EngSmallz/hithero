@@ -453,7 +453,7 @@ def first_of_month_job():
 def schedule_jobs():
     schedule.every().tuesday.at("06:00").do(tuesday_job)
     schedule.every().thursday.at("06:00").do(thursday_job)
-    schedule.every().day.at('13:37').do(daily_job)
+    schedule.every().day.at("6:00").do(daily_job)
     schedule.every().monday.at("06:00").do(monday_job)
     schedule.every().day.at("06:00").do(first_of_month_job)
 
