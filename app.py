@@ -449,9 +449,9 @@ def first_of_month_job():
         print('Not the first.')
 
 def schedule_jobs():
-    schedule.every().tuesday.at("09:00").do(tuesday_job)
+    schedule.every().tuesday.at("12:30").do(tuesday_job)
     schedule.every().thursday.at("06:00").do(thursday_job)
-    schedule.every().day.at("9:00").do(daily_job)
+    schedule.every().day.at("12:30").do(daily_job)
     schedule.every().monday.at("06:00").do(monday_job)
     schedule.every().day.at("06:00").do(first_of_month_job)
 
