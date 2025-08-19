@@ -426,9 +426,9 @@ def monday_job():
     random_teacher = fetch_random_teacher()
     if random_teacher:
         teacher_info = {
-            "state": random_teacher[0].state,
-            "county": random_teacher[0].county,
-            "district": random_teacher[0].district,
+            "state": random_teacher.state,
+            "county": random_teacher.county,
+            "district": random_teacher.district,
         }
         store_spotlight(teacher_info, "district")
     else:
@@ -439,8 +439,8 @@ def first_of_month_job():
         random_teacher = fetch_random_teacher()
         if random_teacher:
             teacher_info = {
-                "state": random_teacher[0].state,
-                "county": random_teacher[0].county
+                "state": random_teacher.state,
+                "county": random_teacher.county
             }
             store_spotlight(teacher_info, "county")
         else:
@@ -735,16 +735,16 @@ async def get_random_teacher(request: Request):
     try:
         random_teacher = fetch_random_teacher()
         if random_teacher:
-            if random_teacher[0].image_data:
-                image_data = base64.b64encode(random_teacher[0].image_data).decode('utf-8')
+            if random_teacher.image_data:
+                image_data = base64.b64encode(random_teacher.image_data).decode('utf-8')
             else:
                 image_data = None
             data = {
-                "name": random_teacher[0].name,
-                "state": random_teacher[0].state,
-                "county": random_teacher[0].county,
-                "district": random_teacher[0].district,
-                "school": random_teacher[0].school,
+                "name": random_teacher.name,
+                "state": random_teacher.state,
+                "county": random_teacher.county,
+                "district": random_teacher.district,
+                "school": random_teacher.school,
                 "image_data": image_data
             }
             request.session["state"] = data["state"]
