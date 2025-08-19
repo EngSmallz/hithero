@@ -1,4 +1,4 @@
-8from fastapi import FastAPI, HTTPException, Request, Form, Depends, Body, File, UploadFile, Response
+from fastapi import FastAPI, HTTPException, Request, Form, Depends, Body, File, UploadFile, Response
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, FileResponse
 from pydantic import BaseModel
 import os, logging, smtplib, secrets, string, pyodbc, time, ssl, schedule, threading, datetime, base64, random, requests
@@ -449,9 +449,9 @@ def first_of_month_job():
         print('Not the first.')
 
 def schedule_jobs():
-    schedule.every().tuesday.at("18:50").do(tuesday_job)
+    schedule.every().tuesday.at("19:05").do(tuesday_job)
     schedule.every().thursday.at("06:00").do(thursday_job)
-    schedule.every().day.at("18:50").do(daily_job)
+    schedule.every().day.at("19:05").do(daily_job)
     schedule.every().monday.at("06:00").do(monday_job)
     schedule.every().day.at("06:00").do(first_of_month_job)
 
