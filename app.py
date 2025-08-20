@@ -359,7 +359,7 @@ def send_teacher_of_the_day_email(recipient_email: str, recipient_name: str, url
         'message_body': (
             "Congratulations! You've been chosen as today's 'Teacher of the Day' at Homeroom Heroes! "
             "Your profile is now featured on our homepage, giving you extra visibility. "
-            "Remember to share your unique page with your community."
+            "Remember to share your unique page with your community. "
             f"www.HelpTeachers.net/teachers/{url_id}"
         )
     }
@@ -426,9 +426,9 @@ def monday_job():
     random_teacher = fetch_random_teacher()
     if random_teacher:
         teacher_info = {
-            "state": random_teacher.state,
-            "county": random_teacher.county,
-            "district": random_teacher.district,
+            "state": random_teacher[0].state,
+            "county": random_teacher[0].county,
+            "district": random_teacher[0].district,
         }
         store_spotlight(teacher_info, "district")
     else:
@@ -439,8 +439,8 @@ def first_of_month_job():
         random_teacher = fetch_random_teacher()
         if random_teacher:
             teacher_info = {
-                "state": random_teacher.state,
-                "county": random_teacher.county
+                "state": random_teacher[0].state,
+                "county": random_teacher[0].county
             }
             store_spotlight(teacher_info, "county")
         else:
@@ -451,7 +451,7 @@ def first_of_month_job():
 def schedule_jobs():
     schedule.every().tuesday.at("06:00").do(tuesday_job)
     schedule.every().thursday.at("06:00").do(thursday_job)
-    schedule.every().day.at("06:00").do(daily_job)
+    schedule.every().day.at("6:00").do(daily_job)
     schedule.every().monday.at("06:00").do(monday_job)
     schedule.every().day.at("06:00").do(first_of_month_job)
 
@@ -735,16 +735,16 @@ async def get_random_teacher(request: Request):
     try:
         random_teacher = fetch_random_teacher()
         if random_teacher:
-            if random_teacher.image_data:
-                image_data = base64.b64encode(random_teacher.image_data).decode('utf-8')
+            if random_teacher[0].image_data:
+                image_data = base64.b64encode(random_teacher[0].image_data).decode('utf-8')
             else:
                 image_data = None
             data = {
-                "name": random_teacher.name,
-                "state": random_teacher.state,
-                "county": random_teacher.county,
-                "district": random_teacher.district,
-                "school": random_teacher.school,
+                "name": random_teacher[0].name,
+                "state": random_teacher[0].state,
+                "county": random_teacher[0].county,
+                "district": random_teacher[0].district,
+                "school": random_teacher[0].school,
                 "image_data": image_data
             }
             request.session["state"] = data["state"]
