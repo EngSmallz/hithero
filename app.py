@@ -360,7 +360,7 @@ def send_teacher_of_the_day_email(recipient_email: str, recipient_name: str, url
             "Congratulations! You've been chosen as today's 'Teacher of the Day' at Homeroom Heroes! "
             "Your profile is now featured on our homepage, giving you extra visibility. "
             "Remember to share your unique page with your community. "
-            f"www.HelpTeachers.net/teachers/{url_id}"
+            f"www.HelpTeachers.net/teacher/{url_id}"
         )
     }
 
