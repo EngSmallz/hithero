@@ -449,9 +449,9 @@ def first_of_month_job():
         print('Not the first.')
 
 def schedule_jobs():
-    schedule.every().tuesday.at("16:30").do(tuesday_job)
+    schedule.every().tuesday.at("10:00").do(tuesday_job)
     schedule.every().thursday.at("10:00").do(thursday_job)
-    schedule.every().day.at("16:30").do(daily_job)
+    schedule.every().day.at("10:00").do(daily_job)
     schedule.every().monday.at("10:00").do(monday_job)
     schedule.every().day.at("10:00").do(first_of_month_job)
 
@@ -502,7 +502,7 @@ def send_profile_reminder_email(recipient_email: str):
             "You're almost there! Your registration with us has been "
             "successfully validated, but you haven't created your profile yet. "
             "Please log in and complete your profile to start receiving support from our community.\n"
-            "www.HelpTeachers.net"
+            "www.HelpTeachers.net/pages/login.html"
         )
     }
 
