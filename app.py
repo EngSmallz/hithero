@@ -731,7 +731,6 @@ async def create_teacher_profile(request: Request, name: str = Form(...), state:
 ##api gets a random teacher from the list teacher_list in the hithero data base
 @app.get("/random_teacher/")
 async def get_random_teacher(request: Request):
-    db = SessionLocal()
     try:
         random_teacher = fetch_random_teacher()
         if random_teacher:
@@ -758,7 +757,7 @@ async def get_random_teacher(request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
     finally:
-        db.close()
+        return
 
 
 ###api gets the current session info of the logged in user
