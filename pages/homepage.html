@@ -254,28 +254,32 @@
             }
         }
 
+
         async function randomTeacher() {
             try {
                 const response = await fetch('/random_teacher/');
                 const data = await response.json();
-
+        
                 const randomTeacherInfo = document.getElementById('randomTeacherInfo');
-                if (response.ok) {
+                
+                if (response.ok && data) {
                     let img_text;
                     if (data.image_data) {
                         img_text = `<img src="data:image/jpeg;base64,${data.image_data}" alt="Teacher Image" class="w-36 h-36 object-cover rounded-full border-2 border-green-400 mb-4">`;
                     } else {
-                        img_text = '<img src="/static/images/apple.jpg" alt="Teacher Image" class="w-36 h-36 object-cover rounded-full border-2 border-green-400 mb-4">';
+                        img_text = `<img src="/static/images/apple.jpg" alt="Teacher Image" class="w-36 h-36 object-cover rounded-full border-2 border-green-400 mb-4">`;
                     }
+        
                     randomTeacherInfo.innerHTML = `
                         <div class="teacher-home">
                             ${img_text}
                             <div class="teacher-details">
-                                <h2 class="text-2xl font-semibold text-white">${data.name}</h2>
-                                <p class="text-lg text-white"> from ${data.school} in ${data.county}, ${data.state}</p>
+                                <h2 class="text-2xl font-semibold text-white">${data.name || 'Unknown'}</h2>
+                                <p class="text-lg text-white"> from ${data.school || 'Unknown'} in ${data.county || 'Unknown'}, ${data.state || 'Unknown'}</p>
                             </div>
                         </div>
-                        <button onclick="redirectTo('/pages/teacher.html')" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md mt-4">View Random Teacher</button>`;
+                        <button onclick="redirectTo('/pages/teacher.html')" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md mt-4">View Random Teacher</button>
+                    `;
                 } else {
                     randomTeacherInfo.innerHTML = "<p class='text-red-500'>Unable to fetch random teacher information. We are sorry.</p>";
                 }
