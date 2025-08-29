@@ -729,13 +729,13 @@ async def create_teacher_profile(request: Request, name: str = Form(...), state:
         db.close()
 
 ##api gets a random teacher from the list teacher_list in the hithero data base
+
 @app.get("/random_teacher/")
 async def get_random_teacher(request: Request):
     try:
-        random_teacher = fetch_random_teacher()
-        if not random_teacher:
+        teacher = fetch_random_teacher()
+        if not teacher:
             raise HTTPException(status_code=404, detail="No teachers found in the database")
-        teacher = random_teacher[0]
         if teacher.image_data:
             image_data = base64.b64encode(teacher.image_data).decode('utf-8')
         else:
@@ -748,12 +748,12 @@ async def get_random_teacher(request: Request):
             "school": teacher.school,
             "image_data": image_data
         }
-        # Store some info in session (if needed)
-        request.session["state"] = data["state"]
-        request.session["county"] = data["county"]
-        request.session["district"] = data["district"]
-        request.session["school"] = data["school"]
-        request.session["teacher"] = data["name"]
+        if hasattr(request, "session"):
+            request.session["state"] = data["state"]
+            request.session["county"] = data["county"]
+            request.session["district"] = data["district"]
+            request.session["school"] = data["school"]
+            request.session["teacher"] = data["name"]
         return data
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
