@@ -733,31 +733,30 @@ async def create_teacher_profile(request: Request, name: str = Form(...), state:
 async def get_random_teacher(request: Request):
     try:
         random_teacher = fetch_random_teacher()
-        if random_teacher:
-            if random_teacher[0].image_data:
-                image_data = base64.b64encode(random_teacher[0].image_data).decode('utf-8')
-            else:
-                image_data = None
-            data = {
-                "name": random_teacher[0].name,
-                "state": random_teacher[0].state,
-                "county": random_teacher[0].county,
-                "district": random_teacher[0].district,
-                "school": random_teacher[0].school,
-                "image_data": image_data
-            }
-            request.session["state"] = data["state"]
-            request.session["county"] = data["county"]
-            request.session["district"] = data["district"]
-            request.session["school"] = data["school"]
-            request.session["teacher"] = data["name"]
-            return data
-        else:
+        if not random_teacher:
             raise HTTPException(status_code=404, detail="No teachers found in the database")
+        teacher = random_teacher[0]
+        if teacher.image_data:
+            image_data = base64.b64encode(teacher.image_data).decode('utf-8')
+        else:
+            image_data = None
+        data = {
+            "name": teacher.name,
+            "state": teacher.state,
+            "county": teacher.county,
+            "district": teacher.district,
+            "school": teacher.school,
+            "image_data": image_data
+        }
+        # Store some info in session (if needed)
+        request.session["state"] = data["state"]
+        request.session["county"] = data["county"]
+        request.session["district"] = data["district"]
+        request.session["school"] = data["school"]
+        request.session["teacher"] = data["name"]
+        return data
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
-    finally:
-        return
 
 
 ###api gets the current session info of the logged in user
