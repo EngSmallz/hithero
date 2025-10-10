@@ -262,7 +262,7 @@
             let userRole = null;
 
             try {
-                const response = await fetch('/profile/');
+                const response = await fetch('/auth/profile/');
                 if (response.ok) {
                     const data = await response.json();
                     if (data && data.user_role) {
@@ -310,7 +310,7 @@
 
         async function logout() {
             try {
-                const response = await fetch(`/logout/`, {
+                const response = await fetch(`/auth/logout/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -330,7 +330,7 @@
 
         async function mypage() {
             try {
-                const response = await fetch('/myinfo/', {
+                const response = await fetch('/teacher/myinfo/', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -350,7 +350,7 @@
 
         async function populateStatesDropdown() {
             try {
-                const response = await fetch("/get_states/");
+                const response = await fetch("/location/states/");
                 if (!response.ok) throw new Error('Network response was not ok.');
                 const states = await response.json();
                 const stateDropdown = document.getElementById("state");
@@ -377,7 +377,7 @@
                     document.getElementById("school").innerHTML = '<option value="" disabled selected>Choose school</option>';
                     return;
                 }
-                const response = await fetch(`/get_counties/${selectedState}`);
+                const response = await fetch(`/location/counties/${selectedState}`);
                 if (!response.ok) throw new Error('Network response was not ok.');
                 const counties = await response.json();
                 const countyDropdown = document.getElementById("county");
@@ -407,7 +407,7 @@
                     document.getElementById("school").innerHTML = '<option value="" disabled selected>Choose school</option>';
                     return;
                 }
-                const response = await fetch(`/get_districts/${selectedState}/${selectedCounty}`);
+                const response = await fetch(`/location/districts/${selectedState}/${selectedCounty}`);
                 if (!response.ok) throw new Error('Network response was not ok.');
                 const districts = await response.json();
                 const districtDropdown = document.getElementById("district");
@@ -436,7 +436,7 @@
                     document.getElementById("school").innerHTML = '<option value="" disabled selected>Choose school</option>';
                     return;
                 }
-                const response = await fetch(`/get_schools/${selectedState}/${selectedCounty}/${selectedDistrict}`);
+                const response = await fetch(`/location/schools/${selectedState}/${selectedCounty}/${selectedDistrict}`);
                 if (!response.ok) throw new Error('Network response was not ok.');
                 const schools = await response.json();
                 const schoolDropdown = document.getElementById("school");
@@ -503,7 +503,7 @@
                 formData.append('recaptcha_response', recaptchaResponse); // Correct form field name
 
                 try {
-                    const response = await fetch("/register/", {
+                    const response = await fetch("/auth/register/", {
                         method: "POST",
                         body: formData,
                     });

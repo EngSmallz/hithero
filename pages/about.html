@@ -224,7 +224,7 @@
             let userRole = null; // Default to no role
 
             try {
-                const response = await fetch('/profile/');
+                const response = await fetch('/auth/profile/');
                 if (response.ok) {
                     const data = await response.json();
                     if (data && data.user_role) {
@@ -266,7 +266,7 @@
         // Function to log out the user
         async function logout() {
             try {
-                const response = await fetch(`/logout/`, {
+                const response = await fetch(`/auth/logout/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -281,7 +281,7 @@
         // Function to redirect to my page
         async function mypage() {
             try {
-                const response = await fetch('/myinfo/', {
+                const response = await fetch('/teacher/myinfo/', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',

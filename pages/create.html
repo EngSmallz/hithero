@@ -231,7 +231,7 @@
             let userRole = null;
 
             try {
-                const response = await fetch('/profile/');
+                const response = await fetch('/auth/profile/');
                 if (response.ok) {
                     const data = await response.json();
                     if (data && data.user_role) {
@@ -263,7 +263,7 @@
 
         async function logout() {
             try {
-                const response = await fetch(`/logout/`, {
+                const response = await fetch(`/auth/logout/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -283,7 +283,7 @@
 
         async function mypage() {
             try {
-                const response = await fetch('/myinfo/', {
+                const response = await fetch('/teacher/myinfo/', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -303,7 +303,7 @@
 
         async function populateStatesDropdown() {
             try {
-                const response = await fetch("/get_states/");
+                const response = await fetch("/location/states/");
                 const states = await response.json();
                 const stateDropdown = document.getElementById("state");
                 stateDropdown.innerHTML = '<option value="" disabled selected>Choose state</option>';
@@ -322,7 +322,7 @@
                 const countyDropdown = document.getElementById("county");
                 countyDropdown.innerHTML = '<option value="" disabled selected>Choose county</option>';
                 if (selectedState) {
-                    const response = await fetch(`/get_counties/${selectedState}`);
+                    const response = await fetch(`/location/counties/${selectedState}`);
                     const counties = await response.json();
                     counties.forEach(county => {
                         countyDropdown.add(new Option(county, county));
@@ -343,7 +343,7 @@
                 const districtDropdown = document.getElementById("district");
                 districtDropdown.innerHTML = '<option value="" disabled selected>Choose district</option>';
                 if (selectedState && selectedCounty) {
-                    const response = await fetch(`/get_districts/${selectedState}/${selectedCounty}`);
+                    const response = await fetch(`/location/districts/${selectedState}/${selectedCounty}`);
                     const districts = await response.json();
                     districts.forEach(district => {
                         districtDropdown.add(new Option(district, district));
@@ -364,7 +364,7 @@
                 const schoolDropdown = document.getElementById("school");
                 schoolDropdown.innerHTML = '<option value="" disabled selected>Choose school</option>';
                 if (selectedState && selectedCounty && selectedDistrict) {
-                    const response = await fetch(`/get_schools/${selectedState}/${selectedCounty}/${selectedDistrict}`);
+                    const response = await fetch(`/location/schools/${selectedState}/${selectedCounty}/${selectedDistrict}`);
                     const schools = await response.json();
                     schools.forEach(school => {
                         schoolDropdown.add(new Option(school, school));
@@ -407,7 +407,7 @@
                     const formData = new FormData(createForm);
 
                     try {
-                        const response = await fetch("/create_teacher_profile/", {
+                        const response = await fetch("/teacher/create_profile/", {
                             method: "POST",
                             body: formData,
                         });

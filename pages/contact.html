@@ -168,7 +168,7 @@
             buttons.forEach(id => document.getElementById(id)?.classList.add('hidden'));
 
             try {
-                const response = await fetch('/profile/');
+                const response = await fetch('/auth/profile/');
                 const data = await response.json();
                 if (response.ok && data?.user_role) {
                     if (data.user_role === 'teacher') {
@@ -244,7 +244,7 @@
                     formData.append('recaptcha_response', recaptchaResponse); 
 
                     try {
-                        const response = await fetch("/contact_us/", {
+                        const response = await fetch("/misc/contact_us/", {
                             method: "POST",
                             body: formData,
                         });
@@ -277,7 +277,7 @@
 
         async function logout() {
             try {
-                const response = await fetch(`/logout/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }});
+                const response = await fetch(`/auth/logout/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }});
                 if (response.ok) { window.location.href = '/'; }
                 else { console.error('Logout failed:', response.status); alert('Logout failed.'); }
             } catch (error) { console.error('Error during logout:', error); alert('An error occurred during logout.'); }
@@ -285,7 +285,7 @@
 
         async function mypage() {
             try {
-                const response = await fetch('/myinfo/', { method: 'GET', headers: { 'Content-Type': 'application/json' }});
+                const response = await fetch('/teacher/myinfo/', { method: 'GET', headers: { 'Content-Type': 'application/json' }});
                 if (response.ok) { window.location.href = '/pages/teacher.html'; }
                 else { console.error('Error fetching my page info:', response.status); window.location.href = '/'; }
             } catch (error) { console.error('Error fetching my page info:', error); window.location.href = '/'; }

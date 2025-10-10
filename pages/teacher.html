@@ -144,7 +144,7 @@
             let userRole = null;
 
             try {
-                const response = await fetch('/profile/');
+                const response = await fetch('/auth/profile/');
                 if (response.ok) {
                     const data = await response.json();
                     if (data && data.user_role) {
@@ -192,7 +192,7 @@
 
         async function logout() {
             try {
-                const response = await fetch(`/logout/`, {
+                const response = await fetch(`/auth/logout/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -212,7 +212,7 @@
 
         async function mypage() {
             try {
-                const response = await fetch('/myinfo/', {
+                const response = await fetch('/auth/myinfo/', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -232,11 +232,11 @@
 
         async function checkTeacher() {
             try {
-                const profileResponse = await fetch('/profile/');
+                const profileResponse = await fetch('/auth/profile/');
                 const profileData = await profileResponse.json();
 
                 if (profileData.user_role === 'teacher') {
-                    const accessResponse = await fetch('/check_access_teacher/');
+                    const accessResponse = await fetch('/teacher/check_access/');
                     if (accessResponse.ok) {
                         document.getElementById('editButton')?.classList.remove('hidden');
                         document.getElementById('updateButton')?.classList.remove('hidden');
@@ -304,7 +304,7 @@
                         const formData = new FormData();
                         formData.append('image', selectedFile);
                         try {
-                            const response = await fetch('/update_teacher_image/', {
+                            const response = await fetch('/teacher/update_image/', {
                                 method: 'POST',
                                 body: formData,
                             });
@@ -328,7 +328,7 @@
 
         async function getTeacherURL() {
             try {
-                const response = await fetch('/teacher_url/', {
+                const response = await fetch('/teacher/url/', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',

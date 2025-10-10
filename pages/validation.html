@@ -123,7 +123,7 @@
             let userRole = null;
 
             try {
-                const response = await fetch('/profile/');
+                const response = await fetch('/auth/profile/');
                 if (response.ok) {
                     const data = await response.json();
                     if (data && data.user_role) {
@@ -171,7 +171,7 @@
 
         async function checkPermission() {
             try {
-                const response = await fetch('/profile/');
+                const response = await fetch('/auth/profile/');
                 if (!response.ok) {
                     // If response is not OK, redirect to 403.html
                     window.location.href = '/pages/403.html';
@@ -190,7 +190,7 @@
 
         async function get_list(userRole) { // Accept userRole as a parameter
             try {
-                const response = await fetch(`/validation_list/`);
+                const response = await fetch(`/validation/list/`);
                 const data = await response.json();
                 const validationList = document.getElementById("validationList");
                 validationList.innerHTML = ""; // Clear existing list
@@ -251,7 +251,7 @@
         
         async function validate(email) {
             try {
-                const validateResponse = await fetch(`/validate_user/${email}`, {
+                const validateResponse = await fetch(`/validate/validate_user/${email}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -276,7 +276,7 @@
                 return;
             }
             try {
-                const deleteResponse = await fetch(`/delete_user/${email}`, {
+                const deleteResponse = await fetch(`/validation/delete_user/${email}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -301,7 +301,7 @@
                 return;
             }
             try {
-                const reportResponse = await fetch(`/report_user/${email}`, {
+                const reportResponse = await fetch(`/validation/report_user/${email}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -323,7 +323,7 @@
 
         async function emailUser(email) {
             try {
-                const emailResponse = await fetch(`/emailed_user/${email}`, {
+                const emailResponse = await fetch(`/validation/emailed_user/${email}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -345,7 +345,7 @@
         
         async function logout() {
             try {
-                const response = await fetch(`/logout/`, {
+                const response = await fetch(`/auth/logout/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -365,7 +365,7 @@
 
         async function mypage() {
             try {
-                const response = await fetch('/myinfo/', {
+                const response = await fetch('/teacher/myinfo/', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
