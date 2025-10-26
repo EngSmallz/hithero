@@ -17,6 +17,7 @@ from datetime import date
 from typing import Optional
 import brevo_python
 from brevo_python.rest import ApiException
+from tweepy import Client
 
 app = FastAPI()
 load_dotenv()
@@ -406,6 +407,15 @@ def daily_job():
             email_query = select(RegisteredUsers.email).where(RegisteredUsers.id == random_teacher.regUserID)
             teacher_email = db.execute(email_query).scalar_one_or_none()
 
+            # Now make x post about the teacher <-- REPLACE THIS COMMENT WITH THE FOLLOWING LINES
+            teacher_url = f"www.HelpTeachers.net/teacher/{random_teacher.url_id}"
+            tweet_message = (
+                f"Today's #TeacherOfTheDay is {random_teacher.name}! "
+                f"You can support their classroom and mission here: {teacher_url}"
+                f"#HomeroomHeroes #Education"
+            )
+            post_tweet_x(tweet_message)
+
             if teacher_email:
                 # Send the email notification
                 send_teacher_of_the_day_email(
@@ -586,6 +596,35 @@ def send_validation_reminder_email(recipient_email: str):
 def thursday_job():
     send_validation_reminder_emails()
     print("Thursday job to send new user validation reminders has completed.")
+
+def post_tweet_x(tweet_text: str):
+    """
+    Authenticates and posts a tweet using the X API (Tweepy v2).
+    REQUIRES: Consumer Key, Consumer Secret, Access Token, and Access Token Secret.
+    These must be stored securely as environment variables.
+    """
+    API_KEY = os.getenv("X_API_KEY")
+    API_SECRET = os.getenv("X_API_SECRET")
+    ACCESS_TOKEN = os.getenv("X_ACCESS_TOKEN")
+    ACCESS_TOKEN_SECRET = os.getenv("X_ACCESS_TOKEN_SECRET")
+    if not all([API_KEY, API_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET]):
+        print("X API credentials missing. Skipping tweet post.")
+        print("Please set X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET environment variables.")
+        return
+    try:
+        # Authenticate using OAuth 1.0a (required for posting tweets)
+        client = Client(
+            consumer_key=API_KEY,
+            consumer_secret=API_SECRET,
+            access_token=ACCESS_TOKEN,
+            access_token_secret=ACCESS_TOKEN_SECRET
+        )
+        # Post the tweet
+        response = client.create_tweet(text=tweet_text)
+        print(f"X POST SUCCESS: Tweeted: {tweet_text}")
+        print(f"X Response ID: {response.data['id']}")
+    except Exception as e:
+        print(f"X POST ERROR: Failed to post tweet. {e}")
 
 # Start scheduling the jobs
 schedule_thread = threading.Thread(target=schedule_jobs)
