@@ -1,0 +1,5 @@
+SELECT DISTINCT CAST([state] AS VARCHAR(100)) AS state
+FROM [dbo].[teacher_list]
+WHERE CAST([state] AS VARCHAR(100)) IS NOT NULL 
+  AND CAST([state] AS VARCHAR(100)) <> ''
+ORDER BY CAST([state] AS VARCHAR(100));
