@@ -1,6 +1,0 @@
-SELECT TOP (1000) [id]
-      ,[email]
-      ,[password]
-      ,[role]
-      ,[createCount]
-  FROM [dbo].[registered_users]
