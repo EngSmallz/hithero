@@ -62,6 +62,9 @@ async def get_teacher_info(
     request: Request,
     db: Session = Depends(get_db)
 ):
+    """
+    Retrieve teacher info based on session values
+    """
     state = get_session_value(request, 'state')
     county = get_session_value(request, 'county')
     district = get_session_value(request, 'district')

@@ -32,7 +32,9 @@ class EmailService:
         html_message: str,
         plain_message: str
     ):
-        """Sends an email with HTML content and plain text fallback"""
+        """
+        Sends an email with HTML content and a plain text fallback using the Brevo API.
+        """
         send_smtp_email = brevo_python.SendSmtpEmail(
             to=[{"email": recipient_email}],
             subject=subject,
@@ -89,7 +91,7 @@ class EmailService:
             print("Email sent successfully with attachment!")
             return api_response
         except ApiException as e:
-            print(f"Exception when calling Brevo API: {e}")
+            print(f"Exception when calling Brevo API[TransactionalEmailsApi->send_transac_email]: {e}")
             return None
     
     def send_registration_email(self, recipient_email: str):

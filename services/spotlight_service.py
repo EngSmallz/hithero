@@ -7,6 +7,8 @@ from fastapi import HTTPException
 import base64
 from typing import Dict, Optional
 
+from services.twitter_service import TwitterService
+
 class SpotlightService:
     def __init__(self, db: Session):
         self.db = db
@@ -85,9 +87,19 @@ class SpotlightService:
         
         # Store the teacher in spotlight
         self.store_spotlight(teacher_info, "teacher")
+
+        #Try to send Tweet notification
+        teacher_url = f"www.HelpTeachers.net/teacher/{random_teacher.url_id}"
+        tweet_message = (
+            f"Today's #TeacherOfTheDay is {random_teacher.name}! "
+            f"You can support their classroom and mission here: {teacher_url}"
+            f"#HomeroomHeroes #Education"
+        )
+
+        TwitterService().post_tweet(tweet_message)
         
         # Try to send email notification
-        user = self.user_repo.find_registered_user_by_email(
+        user = self.user_repo.find_registered_user_by_id(
             random_teacher.regUserID
         )
         

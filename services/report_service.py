@@ -37,7 +37,7 @@ class ReportService:
             # Need to get full teacher object for regUserID
             full_teacher = self.teacher_repo.find_by_url_id(teacher.url_id)
             if full_teacher:
-                user = self.user_repo.find_registered_user_by_email(
+                user = self.user_repo.find_registered_user_by_id(
                     full_teacher.regUserID
                 )
                 teacher_data.append({

@@ -1,22 +1,11 @@
 from services.email_service import EmailService
+from utils.security import verify_recaptcha
 from fastapi import HTTPException
-import requests
 from config import settings
 
 class ContactService:
     def __init__(self):
         self.email_service = EmailService()
-    
-    def verify_recaptcha(self, recaptcha_response: str) -> bool:
-        """Verify reCAPTCHA response"""
-        url = "https://www.google.com/recaptcha/api/siteverify"
-        params = {
-            "secret": settings.RECAPTCHA_SECRET_KEY,
-            "response": recaptcha_response
-        }
-        response = requests.post(url, params=params)
-        data = response.json()
-        return data.get("success", False)
     
     def send_contact_message(
         self,
@@ -28,7 +17,7 @@ class ContactService:
     ):
         """Send contact form message"""
         # Verify reCAPTCHA
-        if not self.verify_recaptcha(recaptcha_response):
+        if not verify_recaptcha(recaptcha_response):
             raise HTTPException(
                 status_code=400,
                 detail="Invalid reCAPTCHA"

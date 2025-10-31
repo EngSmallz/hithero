@@ -15,5 +15,6 @@ __all__ = [
     "SpotlightService",
     "SchedulerService",
     "ReportService",
-    "ContactService"
+    "ContactService",
+    "TwitterService"
 ]

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Form
+from fastapi import APIRouter, Depends, Form, HTTPException
 from sqlalchemy.orm import Session
 from config import get_db
 from repositories.school_repository import SchoolRepository

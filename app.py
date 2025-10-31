@@ -6,6 +6,7 @@ from starlette.middleware.sessions import SessionMiddleware
 import os
 from config import settings, Base, engine
 from controllers import auth_controller, teacher_controller, location_controller
+from services.scheduler_service import SchedulerService
 # Import other controllers as needed
 
 # Create database tables
@@ -32,7 +33,6 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(auth_controller.router)
 app.include_router(teacher_controller.router)
 app.include_router(location_controller.router)
-# Include other routers here
 
 # Homepage
 @app.get("/")
@@ -55,3 +55,4 @@ async def forbidden(request: Request, exc: HTTPException):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)
+    SchedulerService().schedule_jobs()

@@ -14,6 +14,13 @@ class UserRepository:
         result = self.db.execute(query)
         return result.scalar_one_or_none()
     
+    def find_registered_user_by_id(self, id: int) -> Optional[RegisteredUsers]:
+        query = select(RegisteredUsers).where(
+            RegisteredUsers.id == id
+        )
+        result = self.db.execute(query)
+        return result.scalar_one_or_none()
+    
     def find_new_user_by_email(self, email: str) -> Optional[NewUsers]:
         query = select(NewUsers).where(
             cast(NewUsers.email, String) == cast(email, String)

@@ -108,7 +108,7 @@ class SchedulerService:
         """Run the scheduler in an infinite loop"""
         while True:
             schedule.run_pending()
-            time.sleep(1)
+            time.sleep(60)
     
     def start_scheduler_thread(self):
         """Start the scheduler in a background thread"""

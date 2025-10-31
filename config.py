@@ -22,6 +22,12 @@ class Settings:
     # Security
     SECRET_KEY = os.getenv("SECRET_KEY")
     RECAPTCHA_SECRET_KEY = os.getenv("SERVER_KEY_CAPTCHA")
+
+    #Twitter API
+    TWITTER_API_KEY = os.getenv("X_API_KEY")
+    TWITTER_API_SECRET = os.getenv("X_API_SECRET")
+    TWITTER_ACCESS_TOKEN = os.getenv("X_ACCESS_TOKEN")
+    TWITTER_ACCESS_TOKEN_SECRET = os.getenv("X_ACCESS_TOKEN_SECRET")
     
     # Email
     BREVO_API_KEY = os.getenv("BREVO_API_KEY")

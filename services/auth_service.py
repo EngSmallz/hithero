@@ -1,10 +1,9 @@
 from sqlalchemy.orm import Session
+from models.database import RegisteredUsers
 from repositories.user_repository import UserRepository
-from utils.security import hash_password, verify_password, generate_temp_password
+from utils.security import hash_password, verify_password, generate_temp_password, verify_recaptcha
 from services.email_service import EmailService
 from fastapi import HTTPException
-import requests
-from config import settings
 
 class AuthService:
     def __init__(self, db: Session):
@@ -14,7 +13,7 @@ class AuthService:
     
     def register_user(self, user_data: dict, recaptcha_response: str):
         # Verify reCAPTCHA
-        if not self._verify_recaptcha(recaptcha_response):
+        if not verify_recaptcha(recaptcha_response):
             raise HTTPException(
                 status_code=400, 
                 detail="reCAPTCHA verification failed"
@@ -112,13 +111,3 @@ class AuthService:
         self.user_repo.update_password(user.email, hashed_password)
         
         return {"message": "Password updated successfully"}
-    
-    def _verify_recaptcha(self, recaptcha_response: str) -> bool:
-        url = "https://www.google.com/recaptcha/api/siteverify"
-        params = {
-            "secret": settings.RECAPTCHA_SECRET_KEY,
-            "response": recaptcha_response
-        }
-        response = requests.post(url, params=params)
-        data = response.json()
-        return data.get("success", False)
