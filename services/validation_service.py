@@ -52,50 +52,88 @@ class ValidationService:
     
     def validate_user(self, user_email: str):
         """Move user from new_users to registered_users"""
-        new_user = self.user_repo.find_new_user_by_email(user_email)
-        
-        if not new_user:
-            raise HTTPException(
-                status_code=404,
-                detail="User not found in new_users"
-            )
-        
-        # Create registered user
-        registered_user_data = {
-            "email": new_user.email,
-            "password": new_user.password,
-            "role": new_user.role,
-            "phone_number": new_user.phone_number,
-            "createCount": 0
-        }
-        
-        self.user_repo.create_registered_user(registered_user_data)
-        self.user_repo.delete_new_user(user_email)
-        
-        # Send validation email
-        self.email_service.send_validation_email(new_user.email)
-        
-        return {"message": "User validated"}
+        try:
+            new_user = self.user_repo.find_new_user_by_email(user_email)
+            
+            if not new_user:
+                raise HTTPException(
+                    status_code=404,
+                    detail="User not found in new_users"
+                )
+            
+            # Create registered user
+            registered_user_data = {
+                "email": new_user.email,
+                "password": new_user.password,
+                "role": new_user.role,
+                "phone_number": new_user.phone_number,
+                "createCount": 0
+            }
+            
+            self.user_repo.create_registered_user(registered_user_data)
+            self.user_repo.delete_new_user(user_email)
+            
+            # Send validation email
+            self.email_service.send_validation_email(new_user.email)
+
+            self.db.commit()
+            
+            return {"message": "User validated"}
+    
+        except HTTPException:
+            self.db.rollback()  # Rollback on error
+            raise
+    
+        except Exception as e:
+            self.db.rollback()
+            raise HTTPException(status_code=500, detail=str(e))
     
     def delete_user(self, user_email: str):
         """Delete user from new_users table"""
-        new_user = self.user_repo.find_new_user_by_email(user_email)
+        try:
+            new_user = self.user_repo.find_new_user_by_email(user_email)
+            
+            if not new_user:
+                raise HTTPException(
+                    status_code=404,
+                    detail="User not found in new_users"
+                )
+            
+            self.user_repo.delete_new_user(user_email)
+            self.db.commit()
+            return {"message": "User deleted successfully"}
+        except HTTPException:
+            self.db.rollback()  # Rollback on error
+            raise
         
-        if not new_user:
-            raise HTTPException(
-                status_code=404,
-                detail="User not found in new_users"
-            )
-        
-        self.user_repo.delete_new_user(user_email)
-        return {"message": "User deleted successfully"}
+        except Exception as e:
+            self.db.rollback()
+            raise HTTPException(status_code=500, detail=str(e))
     
     def report_user(self, user_email: str):
         """Mark user as reported"""
-        self.user_repo.update_new_user_report(user_email)
-        return {"message": "User reported"}
+        try:
+            self.user_repo.update_new_user_report(user_email)
+            self.db.commit()
+            return {"message": "User reported"}
+        except HTTPException:
+            self.db.rollback()  # Rollback on error
+            raise
+        
+        except Exception as e:
+            self.db.rollback()
+            raise HTTPException(status_code=500, detail=str(e))
     
     def mark_user_emailed(self, user_email: str):
         """Mark that user has been emailed"""
-        self.user_repo.update_new_user_emailed(user_email)
-        return {"message": "User marked as emailed"}
+        try:
+            self.user_repo.update_new_user_emailed(user_email)
+            self.db.commit()
+            return {"message": "User marked as emailed"}
+        except HTTPException:
+            self.db.rollback()  # Rollback on error
+            raise
+        
+        except Exception as e:
+            self.db.rollback()
+            raise HTTPException(status_code=500, detail=str(e))

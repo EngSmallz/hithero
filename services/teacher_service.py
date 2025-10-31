@@ -1,3 +1,5 @@
+from config import settings
+from models.database import RegisteredUsers
 from sqlalchemy.orm import Session
 from repositories.teacher_repository import TeacherRepository
 from repositories.user_repository import UserRepository
@@ -14,40 +16,49 @@ class TeacherService:
     def create_teacher_profile(
         self, user_id: int, user_role: str, user_email: str, teacher_data: dict
     ):
-        user = self.db.query(RegisteredUsers).filter_by(id=user_id).first()
+        try:
+            user = self.db.query(RegisteredUsers).filter_by(id=user_id).first()
+            
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+            
+            if user.createCount > 0 and user_role != 'admin':
+                raise HTTPException(
+                    status_code=400,
+                    detail="Profile already created"
+                )
+            
+            # Generate URL ID
+            first_part_email = user_email.split('@')[0]
+            url_id = self._generate_unique_url_id(first_part_email)
+            
+            # Add Amazon affiliate tag
+            aa_link = teacher_data["wishlist"] + "&tag=h0mer00mher0-20"
+            
+            teacher_insert_data = {
+                "name": teacher_data["name"],
+                "state": teacher_data["state"],
+                "county": teacher_data["county"],
+                "district": teacher_data["district"],
+                "school": teacher_data["school"],
+                "regUserID": user_id,
+                "about_me": teacher_data["aboutMe"],
+                "wishlist_url": aa_link,
+                "url_id": url_id
+            }
+            
+            self.teacher_repo.create_teacher(teacher_insert_data)
+            self.user_repo.update_user_create_count(user_id)
+            self.db.commit()
+            
+            return {"message": "Teacher created successfully", "role": user_role}
+        except HTTPException:
+            self.db.rollback()  # Rollback on error
+            raise
         
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
-        
-        if user.createCount > 0 and user_role != 'admin':
-            raise HTTPException(
-                status_code=400,
-                detail="Profile already created"
-            )
-        
-        # Generate URL ID
-        first_part_email = user_email.split('@')[0]
-        url_id = self._generate_unique_url_id(first_part_email)
-        
-        # Add Amazon affiliate tag
-        aa_link = teacher_data["wishlist"] + "&tag=h0mer00mher0-20"
-        
-        teacher_insert_data = {
-            "name": teacher_data["name"],
-            "state": teacher_data["state"],
-            "county": teacher_data["county"],
-            "district": teacher_data["district"],
-            "school": teacher_data["school"],
-            "regUserID": user_id,
-            "about_me": teacher_data["aboutMe"],
-            "wishlist_url": aa_link,
-            "url_id": url_id
-        }
-        
-        self.teacher_repo.create_teacher(teacher_insert_data)
-        self.user_repo.update_user_create_count(user_id)
-        
-        return {"message": "Teacher created successfully", "role": user_role}
+        except Exception as e:
+            self.db.rollback()
+            raise HTTPException(status_code=500, detail=str(e))
     
     def get_teacher_info_by_session(
         self, state: str, county: str, district: str, school: str, name: str
@@ -87,51 +98,103 @@ class TeacherService:
         }
     
     def update_teacher_info(self, user_id: int, about_me: str):
-        self.teacher_repo.update_teacher(user_id, {"about_me": about_me})
-        return {"message": "Info updated"}
+        try:
+            self.teacher_repo.update_teacher(user_id, {"about_me": about_me})
+            self.db.commit()
+            return {"message": "Info updated"}
+        except HTTPException:
+            self.db.rollback()  # Rollback on error
+            raise
+        
+        except Exception as e:
+            self.db.rollback()
+            raise HTTPException(status_code=500, detail=str(e))
     
     def update_teacher_school(self, user_id: int, school_data: dict):
-        self.teacher_repo.update_teacher(user_id, school_data)
-        return {"message": "School information updated"}
+        try:
+            self.teacher_repo.update_teacher(user_id, school_data)
+            return {"message": "School information updated"}
+        except HTTPException:
+            self.db.rollback()  # Rollback on error
+            raise
+        
+        except Exception as e:
+            self.db.rollback()
+            raise HTTPException(status_code=500, detail=str(e))
     
     def update_teacher_name(self, user_id: int, name: str):
-        self.teacher_repo.update_teacher(user_id, {"name": name})
-        return {"message": "Name updated"}
+        try:
+            self.teacher_repo.update_teacher(user_id, {"name": name})
+            self.db.commit()
+            return {"message": "Name updated"}
+        except HTTPException:
+            self.db.rollback()  # Rollback on error
+            raise
+        
+        except Exception as e:
+            self.db.rollback()
+            raise HTTPException(status_code=500, detail=str(e))
     
     def update_wishlist(self, user_id: int, wishlist: str):
-        aa_link = wishlist + "&tag=h0mer00mher0-20"
-        self.teacher_repo.update_teacher(user_id, {"wishlist_url": aa_link})
-        return {"message": "Wishlist updated"}
+        try:
+            aa_link = wishlist + "&tag=h0mer00mher0-20"
+            self.teacher_repo.update_teacher(user_id, {"wishlist_url": aa_link})
+            self.db.commit()
+            return {"message": "Wishlist updated"}
+        except HTTPException:
+            self.db.rollback()  # Rollback on error
+            raise
+        
+        except Exception as e:
+            self.db.rollback()
+            raise HTTPException(status_code=500, detail=str(e))
     
     def update_url_id(self, user_id: int, url_id: str):
         # Check if URL ID already exists
-        existing = self.teacher_repo.find_by_url_id(url_id)
-        if existing:
-            raise HTTPException(
-                status_code=409,
-                detail="URL ID already in use"
-            )
+        try:
+            existing = self.teacher_repo.find_by_url_id(url_id)
+            if existing:
+                raise HTTPException(
+                    status_code=409,
+                    detail="URL ID already in use"
+                )
+            
+            self.teacher_repo.update_teacher(user_id, {"url_id": url_id})
+            self.db.commit()
+            return {"message": "URL ID updated successfully"}
+        except HTTPException:
+            self.db.rollback()  # Rollback on error
+            raise
         
-        self.teacher_repo.update_teacher(user_id, {"url_id": url_id})
-        return {"message": "URL ID updated successfully"}
+        except Exception as e:
+            self.db.rollback()
+            raise HTTPException(status_code=500, detail=str(e))
     
     def update_teacher_image(
         self, image: UploadFile, state: str, county: str,
         district: str, school: str, name: str
     ):
-        if image.size > settings.MAX_FILE_SIZE:
-            raise HTTPException(
-                status_code=400,
-                detail="File size exceeds limit"
+        try:
+            if image.size > settings.MAX_FILE_SIZE:
+                raise HTTPException(
+                    status_code=400,
+                    detail="File size exceeds limit"
+                )
+            
+            image_data = image.file.read()
+            self.teacher_repo.update_teacher_by_location(
+                state, county, district, school, name,
+                {"image_data": image_data}
             )
+            self.db.commit()
+            return {"message": "Image updated"}
+        except HTTPException:
+            self.db.rollback()  # Rollback on error
+            raise
         
-        image_data = image.file.read()
-        self.teacher_repo.update_teacher_by_location(
-            state, county, district, school, name,
-            {"image_data": image_data}
-        )
-        
-        return {"message": "Image updated"}
+        except Exception as e:
+            self.db.rollback()
+            raise HTTPException(status_code=500, detail=str(e))
     
     def get_my_teacher_info(self, user_id: int):
         teacher = self.teacher_repo.find_by_reg_user_id(user_id)

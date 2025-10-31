@@ -10,7 +10,7 @@ class TeacherRepository:
     def create_teacher(self, teacher_data: dict) -> TeacherList:
         teacher = TeacherList(**teacher_data)
         self.db.add(teacher)
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(teacher)
         return teacher
     
@@ -45,7 +45,7 @@ class TeacherRepository:
             TeacherList.regUserID == reg_user_id
         ).values(**update_data)
         self.db.execute(query)
-        self.db.commit()
+        self.db.flush()
     
     def update_teacher_by_location(
         self, state: str, county: str, district: str, 
@@ -59,7 +59,7 @@ class TeacherRepository:
             (cast(TeacherList.name, String) == name)
         ).values(**update_data)
         self.db.execute(query)
-        self.db.commit()
+        self.db.flush()
     
     def get_teachers_by_location(
         self, state: str, county: str = None, 

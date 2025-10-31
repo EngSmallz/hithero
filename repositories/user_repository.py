@@ -31,28 +31,28 @@ class UserRepository:
     def create_new_user(self, user_data: dict) -> NewUsers:
         new_user = NewUsers(**user_data)
         self.db.add(new_user)
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(new_user)
         return new_user
     
     def create_registered_user(self, user_data: dict) -> RegisteredUsers:
         query = insert(RegisteredUsers).values(**user_data)
         self.db.execute(query)
-        self.db.commit()
+        self.db.flush()
     
     def delete_new_user(self, email: str):
         query = delete(NewUsers).where(
             cast(NewUsers.email, String) == cast(email, String)
         )
         self.db.execute(query)
-        self.db.commit()
+        self.db.flush()
     
     def update_password(self, email: str, hashed_password: str):
         query = update(RegisteredUsers).where(
             cast(RegisteredUsers.email, String) == cast(email, String)
         ).values(password=hashed_password)
         self.db.execute(query)
-        self.db.commit()
+        self.db.flush()
     
     def get_all_new_users(self) -> List[NewUsers]:
         query = select(NewUsers)
@@ -75,7 +75,7 @@ class UserRepository:
             RegisteredUsers.id == user_id
         ).values(createCount=RegisteredUsers.createCount + 1)
         self.db.execute(query)
-        self.db.commit()
+        self.db.flush()
     
     def get_users_without_profile(self) -> List[RegisteredUsers]:
         query = select(RegisteredUsers).where(RegisteredUsers.createCount == 0)
@@ -86,11 +86,11 @@ class UserRepository:
             cast(NewUsers.email, String) == cast(email, String)
         ).values(report=1)
         self.db.execute(query)
-        self.db.commit()
+        self.db.flush()
     
     def update_new_user_emailed(self, email: str):
         query = update(NewUsers).where(
             cast(NewUsers.email, String) == cast(email, String)
         ).values(emailed=1)
         self.db.execute(query)
-        self.db.commit()
+        self.db.flush()

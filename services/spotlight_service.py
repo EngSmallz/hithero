@@ -42,30 +42,38 @@ class SpotlightService:
     
     def store_spotlight(self, teacher_info: dict, token: str):
         """Store spotlight information"""
-        spotlight_data = {"token": token}
+        try:
+            spotlight_data = {"token": token}
+            
+            if token == "teacher":
+                spotlight_data.update({
+                    "state": teacher_info["state"],
+                    "county": teacher_info["county"],
+                    "district": teacher_info["district"],
+                    "school": teacher_info["school"],
+                    "name": teacher_info["name"],
+                    "image_data": teacher_info.get("image_data")
+                })
+            elif token == "district":
+                spotlight_data.update({
+                    "state": teacher_info["state"],
+                    "county": teacher_info["county"],
+                    "district": teacher_info["district"]
+                })
+            elif token == "county":
+                spotlight_data.update({
+                    "state": teacher_info["state"],
+                    "county": teacher_info["county"]
+                })
+            
+            self.spotlight_repo.upsert_spotlight(spotlight_data, token)
+        except HTTPException:
+            self.db.rollback()  # Rollback on error
+            raise
         
-        if token == "teacher":
-            spotlight_data.update({
-                "state": teacher_info["state"],
-                "county": teacher_info["county"],
-                "district": teacher_info["district"],
-                "school": teacher_info["school"],
-                "name": teacher_info["name"],
-                "image_data": teacher_info.get("image_data")
-            })
-        elif token == "district":
-            spotlight_data.update({
-                "state": teacher_info["state"],
-                "county": teacher_info["county"],
-                "district": teacher_info["district"]
-            })
-        elif token == "county":
-            spotlight_data.update({
-                "state": teacher_info["state"],
-                "county": teacher_info["county"]
-            })
-        
-        self.spotlight_repo.upsert_spotlight(spotlight_data, token)
+        except Exception as e:
+            self.db.rollback()
+            raise HTTPException(status_code=500, detail=str(e))
     
     def select_teacher_of_the_day(self):
         """Select a random teacher as teacher of the day"""

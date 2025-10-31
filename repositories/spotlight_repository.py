@@ -18,12 +18,12 @@ class SpotlightRepository:
             cast(Spotlight.token, String) == cast(token, String)
         )
         self.db.execute(query)
-        self.db.commit()
+        self.db.flush()
     
     def create_spotlight(self, spotlight_data: dict) -> Spotlight:
         spotlight = Spotlight(**spotlight_data)
         self.db.add(spotlight)
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(spotlight)
         return spotlight
     

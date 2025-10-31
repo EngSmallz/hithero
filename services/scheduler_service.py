@@ -52,9 +52,8 @@ class SchedulerService:
         finally:
             db.close()
     
-    def tuesday_job(self):
+    def tuesday_job(self, db: Session = Depends(get_db)):
         """Runs on Tuesdays - sends profile creation reminders"""
-        db = SessionLocal()
         try:
             user_repo = UserRepository(db)
             users = user_repo.get_users_without_profile()
@@ -68,8 +67,6 @@ class SchedulerService:
                 print("No users found with a createCount of 0.")
         except Exception as e:
             print(f"Error in tuesday_job: {e}")
-        finally:
-            db.close()
     
     def thursday_job(self):
         """Runs on Thursdays - sends validation reminders"""
