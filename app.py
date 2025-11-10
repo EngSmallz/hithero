@@ -1,6 +1,6 @@
-from fastapi import FastAPI, HTTPException, Request, Form, Depends, Body, File, UploadFile, Response
+from fastapi import FastAPI, HTTPException, Request, Form, Depends, Body, File, UploadFile, Response, status, Path
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import os, logging, smtplib, secrets, string, pyodbc, time, ssl, schedule, threading, datetime, base64, random, requests
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,13 +8,12 @@ from fastapi.staticfiles import StaticFiles
 from starlette.applications import Starlette
 from starlette.middleware.sessions import SessionMiddleware
 from passlib.hash import sha256_crypt
-from sqlalchemy import create_engine, Column, Integer, String, func, LargeBinary
+from sqlalchemy import create_engine, Column, Integer, String, func, LargeBinary, DateTime, ForeignKey, UniqueConstraint, select, desc
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import sessionmaker, Session, relationship
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import select, cast, delete, insert, update
-from datetime import date
-from typing import Optional
+from typing import Optional, List
 import brevo_python
 from brevo_python.rest import ApiException
 from tweepy import Client
@@ -119,6 +118,74 @@ class Spotlight(Base):
     school = Column(String)
     image_data = Column(LargeBinary)
 
+class ForumPost(Base):
+    __tablename__ = "forum_posts"
+
+    # Core Post Data
+    id = Column(Integer, primary_key=True)
+    title = Column(String(255), nullable=False)
+    content = Column(String, nullable=False)
+    
+    # User and Timestamp
+    user_id = Column(Integer, ForeignKey("registered_users.id"), nullable=False)
+    created_at = Column(DateTime, default=func.now(), nullable=False)
+    
+    # Denormalized/Cached Metrics (for fast sorting/display)
+    upvote_count = Column(Integer, default=0, nullable=False)
+    comment_count = Column(Integer, default=0, nullable=False)
+
+
+class ForumComment(Base):
+    __tablename__ = "forum_comments"
+
+    # Core Comment Data
+    id = Column(Integer, primary_key=True)
+    content = Column(String, nullable=False)
+    
+    # Relationships
+    post_id = Column(Integer, ForeignKey("forum_posts.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("registered_users.id"), nullable=False)
+    
+    # Hierarchy and Timestamp
+    parent_comment_id = Column(Integer, ForeignKey("forum_comments.id"), nullable=True) # For nested replies
+    created_at = Column(DateTime, default=func.now(), nullable=False)
+
+
+class PostVote(Base):
+    __tablename__ = "post_votes"
+
+    # Core Vote Data
+    id = Column(Integer, primary_key=True)
+    post_id = Column(Integer, ForeignKey("forum_posts.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("registered_users.id"), nullable=False)
+    
+    # 1 for Upvote, -1 for Downvote
+    vote_type = Column(Integer, nullable=False) 
+
+    # Enforce uniqueness: a user can only vote on a post once
+    __table_args__ = (UniqueConstraint('post_id', 'user_id', name='uq_post_user_vote'), )
+    
+class CreatePostRequest(BaseModel):
+    """Defines the expected input structure for creating a new forum post."""
+    title: str
+    content: str
+
+class PostDisplay(BaseModel):
+    """Schema for returning post data."""
+    id: int
+    title: str
+    content: str
+    user_id: int
+    created_at: datetime.datetime
+    upvote_count: int
+    comment_count: int
+
+    class Config:
+        from_attributes = True
+
+class VoteInput(BaseModel):
+    """Defines the expected input structure for posting a vote."""
+    vote_type: int = Field(..., description="1 for Upvote, -1 for Downvote")
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -630,6 +697,17 @@ def post_tweet_x(tweet_text: str):
 schedule_thread = threading.Thread(target=schedule_jobs)
 schedule_thread.start()
 
+def model_to_dict(model):
+    """Converts a SQLAlchemy model instance to a dictionary, handling dates for JSON serialization."""
+    data = {}
+    for column in model.__table__.columns:
+        value = getattr(model, column.name)
+        # Convert datetime objects to ISO format string
+        if hasattr(value, 'isoformat'):
+            data[column.name] = value.isoformat()
+        else:
+            data[column.name] = value
+    return data
 
 
 #######apis#######
@@ -1604,7 +1682,250 @@ async def get_promo_info(request: Request):
     # Clear the session variables after they are fetched
     return JSONResponse(content=promo_info)
 
+@app.post("/forum/create_post",response_model=PostDisplay,status_code=status.HTTP_201_CREATED,summary="Create a new forum post")
+def create_post(title: str = Form(...),content: str = Form(...),user_id: int = Depends(get_current_id) ):
+    """
+    Handles the creation of a new forum post, linking it to the authenticated user.
+    """
+    db: Session = SessionLocal()
+    # 1. Create a new ForumPost instance
+    new_post = ForumPost(title=title,content=content,user_id=user_id,)
+    try:
+        # 2. Add to session and commit
+        db.add(new_post)
+        db.commit()
+        # 3. Refresh to get the auto-generated ID and created_at timestamp
+        db.refresh(new_post)
+    except Exception as e:
+        db.rollback()
+        print(f"Database error during post creation: {e}")
+        # Return a generic error to the user
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not create post due to a server error."
+        )
+    # 4. Return the new post data
+    return new_post
 
+@app.get("/forum/get_posts")
+def get_posts():
+    """
+    Retrieves a list of all forum posts.
+
+    The resulting list is ordered by creation date (newest first).
+    If you implement an upvote mechanism, you can modify the order_by clause
+    to use upvotes first:
+    .order_by(ForumPost.upvotes.desc(), ForumPost.created_at.desc())
+    """
+    db: Session = SessionLocal()
+   
+    try:
+        # Query all posts and order them by the 'created_at' column descending.
+        # This returns the newest posts first, which is a good default for a feed.
+        posts = db.query(ForumPost).order_by(ForumPost.created_at.desc()).all()
+        return posts
+    except Exception as e:
+        print(f"Database error during post retrieval: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not retrieve posts due to a server error."
+        )
+
+@app.get("/forum/get_post")
+def get_post(post_id: int):
+    """
+    Retrieves a single forum post using its unique ID.
+    
+    Raises HTTPException 404 if the post is not found.
+    """
+    db: Session = SessionLocal()
+    
+    try:
+        # Query the database for a single post matching the provided ID
+        post = db.query(ForumPost).filter(ForumPost.id == post_id).first()
+        
+        # Check if the post was found
+        if post is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Post with ID {post_id} not found."
+            )
+            
+        return post
+        
+    except HTTPException:
+        # Re-raise the 404 exception if it was already raised
+        raise
+    except Exception as e:
+        print(f"Database error during single post retrieval (ID: {post_id}): {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not retrieve post due to a server error."
+        )
+
+@app.post("/forum/posts/{post_id}/vote")
+def handle_post_vote(post_id: int, vote_data: VoteInput, user_id: int = Depends(get_current_id)):
+    """
+    Allows a user to cast, change, or retract an upvote (1) or downvote (-1) on a post.
+    The final updated post data, including the new upvote_count, is returned.
+    """
+    db: Session = SessionLocal()
+    vote_type = vote_data.vote_type
+
+    # 1. Input validation
+    if vote_type not in (1, -1):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid vote type. Must be 1 (upvote) or -1 (downvote)."
+        )
+
+    # 2. Check if the post exists
+    post = db.query(ForumPost).filter(ForumPost.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with ID {post_id} not found.")
+
+    # 3. Check for an existing vote by this user
+    existing_vote = db.query(PostVote).filter(
+        PostVote.post_id == post_id,
+        PostVote.user_id == user_id
+    ).first()
+
+    try:
+        if existing_vote:
+            if existing_vote.vote_type == vote_type:
+                # Case 1: Retract vote (User clicks the same button again)
+                db.delete(existing_vote)
+                # Subtract the existing vote type from the post's count
+                post.upvote_count -= vote_type
+                
+            else:
+                # Case 2: Change vote (e.g., upvote to downvote or vice versa)
+                old_vote_value = existing_vote.vote_type
+                
+                # Update the vote record with the new type
+                existing_vote.vote_type = vote_type
+                
+                # Calculate net change and update the post's cached count
+                # Net Change = (New Value) - (Old Value). This handles +/-2 changes.
+                net_change = vote_type - old_vote_value
+                post.upvote_count += net_change
+
+        else:
+            # Case 3: New vote
+            new_vote = PostVote(post_id=post_id, user_id=user_id, vote_type=vote_type)
+            db.add(new_vote)
+            # Add the new vote type to the post's cached count
+            post.upvote_count += vote_type
+
+        # 4. Commit all changes to PostVote and ForumPost
+        db.commit()
+        db.refresh(post)
+
+    except Exception as e:
+        db.rollback()
+        print(f"Database error during voting operation on post {post_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="A server error prevented the vote from being recorded."
+        )
+
+    # 5. Return the updated post data
+    return post
+
+@app.post("/forum/posts/{post_id}/comment", summary="Add a new comment to a specific post")
+def add_comment_to_post(
+    post_id: int, 
+    content: str = Form(...), 
+    parent_comment_id: Optional[int] = Form(None), 
+    user_id: int = Depends(get_current_id) # Dependency to get the authenticated user's ID
+):
+    """
+    Handles the creation of a new comment, linking it to a specific forum post
+    and the authenticated user.
+    """
+    # Assuming SessionLocal() correctly creates a DB session
+    db: Session = SessionLocal() 
+
+    # 1. Check if the parent post exists
+    post = db.query(ForumPost).filter(ForumPost.id == post_id).first()
+    if not post:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail=f"Post with ID {post_id} not found."
+        )
+
+    # 2. Check if a parent comment exists (if parent_comment_id is provided, for nesting)
+    if parent_comment_id:
+        parent_comment = db.query(ForumComment).filter(ForumComment.id == parent_comment_id).first()
+        if not parent_comment:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, 
+                detail=f"Parent comment with ID {parent_comment_id} not found."
+            )
+
+    try:
+        # 3. Create a new ForumComment instance
+        new_comment = ForumComment(
+            post_id=post_id,
+            user_id=user_id,
+            content=content,
+            parent_comment_id=parent_comment_id
+        )
+
+        # 4. Add to session
+        db.add(new_comment)
+        
+        # 5. Update the comment_count on the parent post (Denormalization)
+        post.comment_count += 1 
+        
+        db.commit()
+        db.refresh(new_comment)
+
+    except Exception as e:
+        db.rollback()
+        print(f"Database error during comment creation on post {post_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not create comment due to a server error."
+        )
+
+    # 6. Return the new comment data
+    # Assuming the API returns the comment object, which includes 'user_id' and 'created_at'
+    return new_comment
+
+
+@app.get("/forum/posts/{post_id}/comments")
+def get_comments_for_post(post_id: int = Path(..., gt=0),) -> List[dict]:
+    """
+    Fetches all comments associated with a specific post, ordered by creation date (newest first).
+    """
+    db: Session = SessionLocal()
+    
+    # 1. Check if the parent post exists (Optional, but good practice)
+    post = db.query(ForumPost).filter(ForumPost.id == post_id).first()
+    if not post:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail=f"Post with ID {post_id} not found."
+        )
+
+    try:
+        # 2. Query all comments for that post ID
+        comments = db.query(ForumComment)\
+                     .filter(ForumComment.post_id == post_id)\
+                     .order_by(desc(ForumComment.created_at))\
+                     .all()
+
+        # 3. FIX APPLIED HERE: Convert list of SQLAlchemy model objects to list of dictionaries
+        return [model_to_dict(comment) for comment in comments] 
+
+    except Exception as e:
+        print(f"Database error during comment retrieval on post {post_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not retrieve comments due to a server error."
+        )
+    
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)

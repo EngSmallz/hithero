@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Homeroom Heroes - Forum Discussions</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Note: Favicon path remains as a placeholder -->
+    <link rel="shortcut icon" type="image/x-icon" href="/static/images/favicon.ico" />
+    <style>
+        /* Ensure the font is applied globally */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1f2937; /* Tailwind's bg-gray-800 */
+            color: #f9fafb; /* Tailwind's text-gray-50 */
+        }
+        /* Custom styles for hamburger menu items */
+        .menu-items .listButton {
+            width: 100%;
+            text-align: left;
+            padding: 0.75rem 1rem;
+            color: white;
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            border-radius: 0.375rem; /* rounded-md */
+        }
+        .menu-items .listButton:hover {
+            background-color: rgba(255, 255, 255, 0.1); /* Light hover effect */
+        }
+        /* Positioning for the dropdown menu */
+        .menu-items {
+            flex-direction: column; /* Stacks buttons vertically */
+            position: absolute;
+            top: 100%; /* Position below the header or its relative parent */
+            right: 0;
+            background-color: #1a472a; /* Darker green for dropdown */
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 20;
+            min-width: 150px;
+            padding: 0.5rem;
+        }
+
+        /* Sorting button active state */
+        .sort-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            color: white;
+            transition: background-color 0.2s ease;
+        }
+        .active-sort {
+            background-color: #065f46; /* Tailwind green-700 equivalent */
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        /* Post Content: Ensure line breaks from the database are respected */
+        .post-content {
+            white-space: pre-wrap;
+            overflow-wrap: break-word;
+        }
+    </style>
+</head>
+<body class="bg-gray-800 text-gray-50">
+    <header class="bg-gradient-to-r from-green-700 to-green-900 text-white shadow-lg py-4 md:py-6 relative">
+        <div class="container mx-auto px-4 flex justify-between items-center">
+            <div class="flex items-center">
+                <a href="/pages/homepage.html" class="flex items-center">
+                    <!-- Note: Image path remains as a placeholder -->
+                    <img src="/static/images/logo_transparent.png" alt="Homeroom Heroes Logo" class="h-16 md:h-20 mr-3">
+                </a>
+                <nav class="hidden md:flex ml-4">
+                    <ul class="flex space-x-4 md:space-x-8 text-lg">
+                        <li><a href="/pages/homepage.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Home</a></li>
+                        <li><a href="/pages/index.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Donate</a></li>
+                        <li><a href="/pages/register.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Sign Up</a></li>
+                        <li><a href="/pages/about.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">About</a></li>
+                        <li><a href="/pages/contact.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Contact</a></li>
+                        <li><a href="/pages/partners.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Radio Partners</a></li>
+                    </ul>
+                </nav>
+            </div>
+
+            <div class="relative">
+                <button id="hamburgerButton" class="text-white text-3xl focus:outline-none" onclick="toggleMenu()">☰</button>
+
+                <div class="menu-items absolute right-0 top-full mt-2 w-48 bg-green-800 rounded-md shadow-lg py-1 z-20 hidden" id="menuItems">
+                    <!-- Authentication buttons will be displayed here -->
+                    <button id="loginButton" class="listButton hidden" onclick="redirectTo('/pages/login.html')">Login</button>
+                    <button id="logoutButton" class="listButton hidden" onclick="logout()">Logout</button>
+                    <button id="mypageButton" class="listButton hidden" onclick="mypage()">My Page</button>
+                    <button id="validationButton" class="listButton hidden" onclick="redirectTo('/pages/validation.html')">Validation</button>
+                    <button id="createButton" class="listButton hidden" onclick="redirectTo('/pages/create.html')">Create Post</button>
+                    <button id="adminButton" class="listButton hidden" onclick="redirectTo('/pages/admin.html')">Admin</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8">
+        <section class="max-w-4xl mx-auto">
+            <h2 class="text-4xl font-extrabold text-white mb-8 border-b border-green-700 pb-4">Community Discussions</h2>
+            
+            <!-- Sorting Controls -->
+            <div class="flex items-center justify-between mb-6 p-4 bg-gray-700 rounded-lg shadow-inner">
+                <p class="text-lg font-semibold text-green-300">Sort By:</p>
+                <div class="flex space-x-3">
+                    <button id="sort-date" class="sort-btn bg-green-600 active-sort hover:bg-green-500" data-sort="date">
+                        Date (Newest)
+                    </button>
+                    <button id="sort-upvotes" class="sort-btn bg-gray-600 hover:bg-gray-500" data-sort="upvotes">
+                        Upvotes
+                    </button>
+                    <button id="create-post-btn" class="sort-btn bg-indigo-600 hover:bg-indigo-700" onclick="redirectTo('/pages/create_post.html')">
+                        + New Post
+                    </button>
+                </div>
+            </div>
+
+            <!-- Loading/Error Message Box -->
+            <div id="status-box" class="p-4 mb-6 rounded-lg text-center bg-blue-900 text-blue-100 hidden">
+                Loading posts...
+            </div>
+
+            <!-- Container for all the forum posts -->
+            <div id="posts-container" class="space-y-6">
+                <!-- Posts will be injected here by JavaScript -->
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-gray-800 text-white py-6 mt-8 rounded-t-lg shadow-inner text-center">
+        <div class="container mx-auto px-4 text-sm">
+            <p>&copy; 2024 Homeroom Heroes. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Store fetched posts globally for client-side sorting
+        let allPosts = [];
+        let currentSort = 'date';
+
+        // Helper function for redirection
+        function redirectTo(url) {
+            window.location.href = url;
+        }
+
+        // Function to toggle the mobile menu visibility
+        function toggleMenu() {
+            var menuItems = document.getElementById('menuItems');
+            menuItems.classList.toggle('hidden');
+        }
+
+        // Utility function to format dates
+        function formatDate(dateString) {
+            const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+            return new Date(dateString).toLocaleDateString(undefined, options);
+        }
+
+        /**
+         * Renders the list of posts into the DOM based on the current sort order.
+         * @param {Array<Object>} posts - The list of post objects to render.
+         */
+        function renderPosts(posts) {
+            const container = document.getElementById('posts-container');
+            container.innerHTML = ''; // Clear existing posts
+
+            if (posts.length === 0) {
+                container.innerHTML = '<p class="text-xl text-center text-gray-400 p-10">No posts found. Be the first to start a discussion!</p>';
+                return;
+            }
+
+            posts.forEach(post => {
+                // 1. Create the anchor element
+                const postLink = document.createElement('a');
+                // Set the link to the post detail page, using the post ID
+                postLink.href = `/pages/post.html?id=${post.id}`; 
+                postLink.className = 'block cursor-pointer'; 
+
+                // 2. Create the article element for styling
+                const postElement = document.createElement('article');
+                postElement.className = 'bg-white p-6 rounded-xl shadow-xl hover:shadow-2xl transition duration-300 text-gray-800';
+                
+                // Format the date for display
+                const formattedDate = formatDate(post.created_at);
+                
+                // Truncate content for list view 
+                const displayContent = post.content.length > 200 
+                    ? post.content.substring(0, 200) + '...' 
+                    : post.content;
+
+                // Injecting the Comment Count
+                // UPDATED: Using smaller counters with black emojis (👍 and 💬)
+                postElement.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="text-2xl font-extrabold text-green-800">${post.title}</h3>
+                        
+                        <div class="flex items-center space-x-3">
+                            <!-- UPVOTE COUNTER with black emoji and smaller size -->
+                            <div class="flex items-center text-gray-900 bg-gray-100 px-2 py-0.5 rounded-full shadow-inner">
+                                <span class="text-base mr-1">👍</span>
+                                <span class="text-xs font-semibold">${post.upvote_count || 0}</span>
+                            </div>
+
+                            <!-- COMMENT COUNTER with black emoji and smaller size -->
+                            <div class="flex items-center text-gray-900 bg-gray-100 px-2 py-0.5 rounded-full shadow-inner">
+                                <span class="text-base mr-1">💬</span>
+                                <span class="text-xs font-semibold">${post.comment_count || 0}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-sm text-gray-500 mb-4 border-b pb-2">
+                        Posted by User: <span class="font-medium text-gray-700">${post.user_id}</span> on ${formattedDate}
+                    </div>
+                    <div class="text-gray-700 post-content text-ellipsis overflow-hidden line-clamp-2">${displayContent}</div>
+                `;
+                // 3. Append the article to the link, and the link to the container
+                postLink.appendChild(postElement);
+                container.appendChild(postLink);
+            });
+        }
+
+        /**
+         * Applies client-side sorting to the global post array and re-renders.
+         * @param {string} sortBy - 'date' or 'upvotes'.
+         */
+        function sortAndRender(sortBy) {
+            // Update the global state
+            currentSort = sortBy;
+            
+            // 1. Reset active class on buttons
+            document.querySelectorAll('.sort-btn').forEach(btn => {
+                btn.classList.remove('active-sort');
+                btn.classList.remove('bg-green-600', 'hover:bg-green-500');
+                // The New Post button is an exception, it should not be grayed out
+                if (btn.id !== 'create-post-btn') {
+                    btn.classList.add('bg-gray-600', 'hover:bg-gray-500');
+                }
+            });
+            
+            // 2. Set active class on the correct button
+            const activeBtn = document.querySelector(`[data-sort="${sortBy}"]`);
+            if (activeBtn) {
+                activeBtn.classList.add('active-sort');
+                activeBtn.classList.remove('bg-gray-600', 'hover:bg-gray-500');
+                activeBtn.classList.add('bg-green-600', 'hover:bg-green-500');
+            }
+
+            // 3. Perform sorting
+            const sortedPosts = [...allPosts]; // Clone array to avoid mutating the original fetched data
+
+            if (sortBy === 'upvotes') {
+                // Primary sort by upvotes (descending), secondary by date (descending)
+                sortedPosts.sort((a, b) => {
+                    // Use b.upvote_count and a.upvote_count
+                    if (b.upvote_count !== a.upvote_count) { 
+                        return (b.upvote_count || 0) - (a.upvote_count || 0); // Handle null/undefined counts
+                    }
+                    return new Date(b.created_at) - new Date(a.created_at);
+                });
+            } else { // Default to 'date'
+                // Sort by date (newest first / descending)
+                sortedPosts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            }
+
+            // 4. Render the sorted list
+            renderPosts(sortedPosts);
+        }
+
+        /**
+         * Fetches posts from the API and initializes the display.
+         */
+        async function fetchPosts() {
+            const statusBox = document.getElementById('status-box');
+            statusBox.classList.remove('hidden', 'bg-red-900', 'text-red-100');
+            statusBox.classList.add('bg-blue-900', 'text-blue-100');
+            statusBox.textContent = 'Loading discussions...';
+
+            try {
+                const response = await fetch('/forum/get_posts');
+
+                if (response.ok) {
+                    allPosts = await response.json();
+                    statusBox.classList.add('hidden');
+                    
+                    // Initial render (default to date sort)
+                    sortAndRender(currentSort);
+
+                } else {
+                    // Handle non-200 responses, but do not prevent page load
+                    let errorData = {};
+                    try {
+                        errorData = await response.json();
+                    } catch { /* Ignore JSON parse error if response body is empty or not JSON */ }
+                    
+                    const detail = errorData.detail || `HTTP Error: ${response.status} ${response.statusText}.`;
+                    statusBox.classList.remove('bg-blue-900', 'text-blue-100');
+                    statusBox.classList.add('bg-red-900', 'text-red-100');
+                    statusBox.textContent = `Error loading posts: ${detail}`;
+                    console.error("API Error Response:", errorData);
+                }
+
+            } catch (error) {
+                statusBox.classList.remove('bg-blue-900', 'text-blue-100');
+                statusBox.classList.add('bg-red-900', 'text-red-100');
+                statusBox.textContent = 'Network Error: Could not reach the forum API.';
+                console.error("Fetch Error:", error);
+            }
+        }
+        
+        // --- Authentication/Navigation Functions (Unchanged) ---
+
+        async function checkAuthentication() {
+            // First, hide ALL dynamic buttons
+            const buttons = ['loginButton', 'logoutButton', 'mypageButton', 'validationButton', 'createButton', 'adminButton'];
+            buttons.forEach(id => {
+                const button = document.getElementById(id);
+                if (button) {
+                    button.classList.add('hidden');
+                    button.classList.remove('block');
+                }
+            });
+
+            let userRole = null; 
+
+            try {
+                const response = await fetch('/profile/');
+                if (response.ok) {
+                    const data = await response.json();
+                    userRole = data?.user_role;
+                }
+            } catch (error) {
+                console.error('Network or parsing error fetching user profile:', error);
+            }
+
+            // Based on the determined role, show specific buttons
+            if (userRole === 'teacher') {
+                ['mypageButton', 'validationButton', 'logoutButton', 'createButton'].forEach(id => {
+                    document.getElementById(id)?.classList.remove('hidden');
+                    document.getElementById(id)?.classList.add('block');
+                });
+            } else if (userRole === 'admin') {
+                ['adminButton', 'validationButton', 'createButton', 'logoutButton'].forEach(id => {
+                    document.getElementById(id)?.classList.remove('hidden');
+                    document.getElementById(id)?.classList.add('block');
+                });
+            } else if (userRole === 'user') {
+                ['createButton', 'logoutButton'].forEach(id => {
+                    document.getElementById(id)?.classList.remove('hidden');
+                    document.getElementById(id)?.classList.add('block');
+                });
+            } else {
+                // Default: show login if no specific role or unauthenticated
+                document.getElementById('loginButton')?.classList.remove('hidden');
+                document.getElementById('loginButton')?.classList.add('block');
+            }
+        }
+
+        async function logout() {
+            try {
+                await fetch(`/logout/`, { method: 'POST' });
+                window.location.href = '/'; 
+            } catch (error) {
+                console.error('Error during logout:', error);
+            }
+        }
+
+        async function mypage() {
+            try {
+                const response = await fetch('/myinfo/', { method: 'GET' });
+                if (response.ok) {
+                    window.location.href = '/pages/teacher.html';
+                } else {
+                    console.error('Error:', response.status);
+                    window.location.href = '/'; 
+                }
+            } catch (error) {
+                console.error('Error fetching my page info:', error);
+                window.location.href = '/'; 
+            }
+        }
+
+        /**
+         * Checks if the user is an 'admin' or 'teacher' before allowing access to the page.
+         * Redirects to /pages/403.html if unauthorized or unauthenticated.
+         * NOTE: THIS FUNCTION IS NOW UNUSED AS IT WAS REMOVED FROM DOMContentLoaded
+         */
+        async function checkPermission() {
+            const allowedRoles = ['admin', 'teacher']; // Roles that are allowed access
+
+            try {
+                const response = await fetch('/profile/');
+
+                if (!response.ok) {
+                    // Case 1: Not authenticated (e.g., 401 Unauthorized or 403 Forbidden from server)
+                    console.error('Permission Check Failed: Not authenticated or session expired.', response.status);
+                    window.location.href = '/pages/403.html';
+                    return; // Stop execution
+                }
+
+                const data = await response.json();
+                const userRole = data?.user_role;
+                
+                // Case 2: Authenticated but unauthorized role
+                if (!userRole || !allowedRoles.includes(userRole)) {
+                    console.error('Permission Check Failed: User role is not authorized. Role:', userRole);
+                    window.location.href = '/pages/403.html';
+                    return; // Stop execution
+                }
+                
+                // Success: User is logged in and has an allowed role ('admin' or 'teacher').
+                // Execution continues normally.
+
+            } catch (error) {
+                // Case 3: Network error or JSON parsing failure
+                console.error('Critical Error during permission check:', error);
+                window.location.href = '/pages/403.html';
+            }
+        }
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // checkPermission(); // <<< REMOVED: Forum list should be visible to all
+            
+            // Update the header buttons visibility
+            checkAuthentication();
+            
+            // Fetch and display posts
+            fetchPosts();
+
+            // Add listeners for sorting buttons
+            document.getElementById('sort-date').addEventListener('click', () => sortAndRender('date'));
+            document.getElementById('sort-upvotes').addEventListener('click', () => sortAndRender('upvotes'));
+        });
+        
+    </script>
+</body>
+</html>

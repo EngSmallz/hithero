@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Homeroom Heroes - Create New Post</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Note: Favicon path remains as a placeholder -->
+    <link rel="shortcut icon" type="image/x-icon" href="/static/images/favicon.ico" />
+    <style>
+        /* Ensure the font is applied globally */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1f2937; /* Tailwind's bg-gray-800 */
+            color: #f9fafb; /* Tailwind's text-gray-50 */
+        }
+        /* Custom styles for hamburger menu items */
+        .menu-items .listButton {
+            width: 100%;
+            text-align: left;
+            padding: 0.75rem 1rem;
+            color: white;
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            border-radius: 0.375rem; /* rounded-md */
+        }
+        .menu-items .listButton:hover {
+            background-color: rgba(255, 255, 255, 0.1); /* Light hover effect */
+        }
+        /* Positioning for the dropdown menu */
+        .menu-items {
+            flex-direction: column; /* Stacks buttons vertically */
+            position: absolute;
+            top: 100%; /* Position below the header or its relative parent */
+            right: 0;
+            background-color: #1a472a; /* Darker green for dropdown */
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 20;
+            min-width: 150px;
+            padding: 0.5rem;
+            /* The 'hidden' class from HTML/JS will control its visibility */
+        }
+
+        /* Modal specific styles (now using Tailwind for display control) */
+        .modal {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent overlay */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50; /* Higher than other content */
+            /* This will be hidden by default with Tailwind's 'hidden' class */
+        }
+
+        .modal-content {
+            background-color: #ffffff; /* White background for content */
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
+            max-width: 48rem; /* Chosen 48rem for a good width */
+            width: 90%; /* Responsive width */
+            position: relative;
+            color: #1f2937; /* Dark text for modal content */
+        }
+
+        .modal-content .close {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.75rem;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            color: #4b5563; /* Gray text for close button */
+            transition: color 0.2s;
+        }
+
+        .modal-content .close:hover {
+            color: #1f2937; /* Darker gray on hover */
+        }
+        /* Custom style for form messages */
+        .message-box {
+            transition: all 0.3s ease-in-out;
+            min-height: 2.5rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-800 text-gray-50">
+    <header class="bg-gradient-to-r from-green-700 to-green-900 text-white shadow-lg py-4 md:py-6 relative">
+        <div class="container mx-auto px-4 flex justify-between items-center">
+            <div class="flex items-center">
+                <a href="/pages/homepage.html" class="flex items-center">
+                    <!-- Note: Image path remains as a placeholder -->
+                    <img src="/static/images/logo_transparent.png" alt="Homeroom Heroes Logo" class="h-16 md:h-20 mr-3">
+                </a>
+                <nav class="hidden md:flex ml-4">
+                    <ul class="flex space-x-4 md:space-x-8 text-lg">
+                        <li><a href="/pages/homepage.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Home</a></li>
+                        <li><a href="/pages/index.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Donate</a></li>
+                        <li><a href="/pages/register.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Sign Up</a></li>
+                        <li><a href="/pages/about.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">About</a></li>
+                        <li><a href="/pages/contact.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Contact</a></li>
+                        <li><a href="/pages/partners.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Radio Partners</a></li>
+                    </ul>
+                </nav>
+            </div>
+
+            <div class="relative">
+                <button id="hamburgerButton" class="text-white text-3xl focus:outline-none" onclick="toggleMenu()">☰</button>
+
+                <div class="menu-items absolute right-0 top-full mt-2 w-48 bg-green-800 rounded-md shadow-lg py-1 z-20 hidden" id="menuItems">
+                    <button id="loginButton" class="listButton hidden" onclick="redirectTo('/pages/login.html')">Login</button>
+                    <button id="logoutButton" class="listButton hidden" onclick="logout()">Logout</button>
+                    <button id="mypageButton" class="listButton hidden" onclick="mypage()">My Page</button>
+                    <button id="validationButton" class="listButton hidden" onclick="redirectTo('/pages/validation.html')">Validation</button>
+                    <button id="createButton" class="listButton hidden" onclick="redirectTo('/pages/create.html')">Create</button>
+                    <button id="adminButton" class="listButton hidden" onclick="redirectTo('/pages/admin.html')">Admin</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8">
+        
+        <!-- New section for the Create Post form, styled to match your existing content boxes -->
+        <section class="bg-white p-8 rounded-lg shadow-xl mb-8 text-gray-800 max-w-3xl mx-auto">
+            
+            <h2 class="text-3xl font-bold text-green-800 mb-6 border-b pb-2">Start a New Discussion</h2>
+            
+            <!-- Message Box for success/error alerts -->
+            <div id="message-box" class="message-box hidden p-4 mb-6 rounded-lg shadow-md transition duration-300">
+                <p id="message-text" class="font-medium"></p>
+            </div>
+
+            <form id="post-form" class="space-y-6">
+                
+                <div>
+                    <label for="title" class="block text-sm font-semibold text-gray-700 mb-1">
+                        Discussion Title
+                    </label>
+                    <input
+                        type="text"
+                        id="title"
+                        name="title"
+                        required
+                        maxlength="255"
+                        class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-green-500 focus:border-green-500 transition duration-150 ease-in-out"
+                        placeholder="Enter a concise and descriptive title"
+                    >
+                </div>
+
+                <div>
+                    <label for="content" class="block text-sm font-semibold text-gray-700 mb-1">
+                        Content
+                    </label>
+                    <textarea
+                        id="content"
+                        name="content"
+                        rows="10"
+                        required
+                        class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-green-500 focus:border-green-500 transition duration-150 ease-in-out resize-none"
+                        placeholder="Write the full body of your forum post here. Be respectful and informative."
+                    ></textarea>
+                </div>
+
+                <div class="pt-4">
+                    <button
+                        type="submit"
+                        id="submit-button"
+                        class="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-md text-base font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-200 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                        <span id="button-text">Submit New Post</span>
+                        <svg id="spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </button>
+                </div>
+            </form>
+        </section>
+        <div class="mb-8 flex justify-center max-w-3xl mx-auto">
+            <button 
+                id="back-to-forum-button"
+                onclick="redirectTo('/pages/forum.html')" 
+                class="flex items-center text-green-300 hover:text-green-100 transition duration-200 bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg shadow-md font-semibold"
+            >
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                Back to Forum
+            </button>
+        </div>
+    </main>
+
+    <footer class="bg-gray-800 text-white py-6 mt-8 rounded-t-lg shadow-inner text-center">
+        <div class="container mx-auto px-4 text-sm">
+            <p>&copy; 2024 Homeroom Heroes. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Helper function for redirection
+        function redirectTo(url) {
+            window.location.href = url;
+        }
+
+        // Function to toggle the mobile menu visibility
+        function toggleMenu() {
+            var menuItems = document.getElementById('menuItems');
+            // This robustly toggles Tailwind's 'hidden' class
+            menuItems.classList.toggle('hidden');
+        }
+
+        // Function to check user authentication role and display relevant buttons
+        async function checkAuthentication() {
+            // First, hide ALL dynamic buttons and remove any explicit display styles (like 'block')
+            const buttons = [
+                'loginButton', 'logoutButton', 'mypageButton',
+                'validationButton', 'createButton', 'adminButton'
+            ];
+
+            buttons.forEach(id => {
+                const button = document.getElementById(id);
+                if (button) {
+                    button.classList.add('hidden');
+                    button.classList.remove('block');
+                }
+            });
+
+            let userRole = null; // Default to no role
+
+            try {
+                const response = await fetch('/profile/');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data && data.user_role) {
+                        userRole = data.user_role;
+                    } else {
+                        console.warn('Profile data missing user_role or is null:', data);
+                    }
+                } else {
+                    console.error('Failed to fetch profile. Status:', response.status);
+                }
+            } catch (error) {
+                console.error('Network or parsing error fetching user profile:', error);
+            }
+
+            // Based on the determined role, show specific buttons by removing 'hidden' and adding 'block'
+            if (userRole === 'teacher') {
+                document.getElementById('mypageButton').classList.remove('hidden');
+                document.getElementById('mypageButton').classList.add('block');
+                document.getElementById('validationButton').classList.remove('hidden');
+                document.getElementById('validationButton').classList.add('block');
+                document.getElementById('logoutButton').classList.remove('hidden');
+                document.getElementById('logoutButton').classList.add('block');
+            } else if (userRole === 'admin') {
+                document.getElementById('adminButton').classList.remove('hidden');
+                document.getElementById('adminButton').classList.add('block');
+                document.getElementById('validationButton').classList.remove('hidden');
+                document.getElementById('validationButton').classList.add('block');
+                document.getElementById('createButton').classList.remove('hidden');
+                document.getElementById('createButton').classList.add('block');
+                document.getElementById('logoutButton').classList.remove('hidden');
+                document.getElementById('logoutButton').classList.add('block');
+            } else {
+                // Default: show login if no specific role or an error occurred (unauthenticated)
+                document.getElementById('loginButton').classList.remove('hidden');
+                document.getElementById('loginButton').classList.add('block');
+            }
+        }
+
+        // Function to log out the user
+        async function logout() {
+            try {
+                const response = await fetch(`/logout/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+                window.location.href = '/'; // Redirect to root after logout
+            } catch (error) {
+                console.error('Error during logout:', error);
+            }
+        }
+
+        // Function to redirect to my page
+        async function mypage() {
+            try {
+                const response = await fetch('/myinfo/', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+                if (response.ok) {
+                    window.location.href = '/pages/teacher.html';
+                } else {
+                    console.error('Error:', response.status);
+                    window.location.href = '/'; // Redirect to home or login if error
+                }
+            } catch (error) {
+                console.error('Error fetching my page info:', error);
+                window.location.href = '/'; // Redirect to home or login on network error
+            }
+        }
+
+        // --- Utility Functions for Form Handling ---
+
+        const messageBox = document.getElementById('message-box');
+        const messageText = document.getElementById('message-text');
+        const submitButton = document.getElementById('submit-button');
+        const buttonText = document.getElementById('button-text');
+        const spinner = document.getElementById('spinner');
+        const form = document.getElementById('post-form');
+        
+        /**
+         * Displays a formatted message to the user.
+         * @param {string} message - The text to display.
+         * @param {string} type - 'success' or 'error'.
+         */
+        function showMessage(message, type) {
+            messageText.textContent = message;
+            messageBox.classList.remove('hidden', 'bg-red-100', 'text-red-800', 'bg-green-100', 'text-green-800');
+            
+            if (type === 'success') {
+                messageBox.classList.add('bg-green-100', 'text-green-800');
+            } else if (type === 'error') {
+                messageBox.classList.add('bg-red-100', 'text-red-800');
+            }
+            
+            // Hide after 5 seconds
+            setTimeout(() => {
+                messageBox.classList.add('hidden');
+            }, 5000);
+        }
+
+        /**
+         * Sets the loading state for the form.
+         * @param {boolean} isLoading 
+         */
+        function setLoading(isLoading) {
+            submitButton.disabled = isLoading;
+            if (isLoading) {
+                buttonText.textContent = 'Creating...';
+                spinner.classList.remove('hidden');
+            } else {
+                buttonText.textContent = 'Submit New Post';
+                spinner.classList.add('hidden');
+            }
+        }
+
+        /**
+         * Checks if the user is an 'admin' or 'teacher' before allowing access to the page.
+         */
+        async function checkPermission() {
+            const allowedRoles = ['admin', 'teacher']; // Roles that are allowed access
+
+            try {
+                const response = await fetch('/profile/');
+
+                if (!response.ok) {
+                    // Case 1: Not authenticated (e.g., 401 Unauthorized or 403 Forbidden from server)
+                    console.error('Permission Check Failed: Not authenticated or session expired.', response.status);
+                    window.location.href = '/pages/403.html';
+                    return; // Stop execution
+                }
+
+                const data = await response.json();
+                const userRole = data?.user_role;
+                
+                // Case 2: Authenticated but unauthorized role
+                if (!userRole || !allowedRoles.includes(userRole)) {
+                    console.error('Permission Check Failed: User role is not authorized. Role:', userRole);
+                    window.location.href = '/pages/403.html';
+                    return; // Stop execution
+                }
+                
+                // Success: User is logged in and has an allowed role ('admin' or 'teacher').
+                console.log('Permission granted. User role:', userRole);
+
+            } catch (error) {
+                // Case 3: Network error or JSON parsing failure
+                console.error('Critical Error during permission check:', error);
+                window.location.href = '/pages/403.html';
+            }
+        }
+
+        // --- Form Submission Event Listener ---
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            // 1. Check if the user is authorized to be on this page first.
+            checkPermission();
+            
+            // 2. Update the header buttons visibility.
+            checkAuthentication();
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                setLoading(true);
+
+                // Use FormData to easily capture all form fields
+                const formData = new FormData(form);
+                // Convert to URLSearchParams for x-www-form-urlencoded body
+                const postData = new URLSearchParams(formData); 
+
+                const apiUrl = '/forum/create_post'; 
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: {
+                            // MANDATORY for FastAPI Form(...) dependencies
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: postData.toString()
+                    });
+
+                    if (response.ok) {
+                        const newPost = await response.json();
+                        showMessage(`Success! Your post "${newPost.title}" has been published.`, 'success');
+                        form.reset(); // Clear the form
+                    } else {
+                        // Attempt to parse JSON error response for better message
+                        const errorData = await response.json();
+                        const detail = errorData.detail || `HTTP Error: ${response.status} ${response.statusText}.`;
+                        showMessage(`Failed to create post: ${detail}`, 'error');
+                        console.error("API Error Response:", errorData);
+                    }
+
+                } catch (error) {
+                    showMessage(`Network Error: Could not reach the server.`, 'error');
+                    console.error("Fetch Error:", error);
+                } finally {
+                    setLoading(false);
+                }
+            });
+        });
+        
+    </script>
+</body>
+</html>
