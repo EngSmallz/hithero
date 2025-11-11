@@ -212,7 +212,7 @@
 
         async function mypage() {
             try {
-                const response = await fetch('/auth/myinfo/', {
+                const response = await fetch('/teacher/myinfo/', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -256,7 +256,7 @@
         }
 
         // Fetch teacher info and display it
-        fetch('/get_teacher_info/')
+        fetch('/teacher/info/')
             .then(response => response.json())
             .then(data => {
                 if (data) {

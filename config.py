@@ -49,7 +49,7 @@ class Settings:
 settings = Settings()
 
 # Database setup
-engine = create_engine(settings.SQLALCHEMY_DATABASE_URL)
+engine = create_engine(settings.SQLALCHEMY_DATABASE_URL, pool_pre_ping=True, isolation_level="READ COMMITTED")
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

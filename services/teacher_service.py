@@ -113,6 +113,7 @@ class TeacherService:
     def update_teacher_school(self, user_id: int, school_data: dict):
         try:
             self.teacher_repo.update_teacher(user_id, school_data)
+            self.db.commit()
             return {"message": "School information updated"}
         except HTTPException:
             self.db.rollback()  # Rollback on error

@@ -1,4 +1,7 @@
-from fastapi import Depends, Request
+from config import SessionLocal
+from fastapi import Depends, HTTPException, Request
+from models.database import TeacherList
+from sqlalchemy import select
 
 def get_session_value(request: Request, key: str, default=None):
     return request.session.get(key, default)

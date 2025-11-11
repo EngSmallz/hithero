@@ -217,7 +217,7 @@
             let userRole = null;
 
             try {
-                const response = await fetch('/profile/');
+                const response = await fetch('/auth/profile/');
                 if (response.ok) {
                     const data = await response.json();
                     if (data && data.user_role) {
@@ -257,7 +257,7 @@
 
         async function randomTeacher() {
             try {
-                const response = await fetch('/random_teacher/');
+                const response = await fetch('/teacher/random/');
                 const data = await response.json();
         
                 const randomTeacherInfo = document.getElementById('randomTeacherInfo');
@@ -291,7 +291,7 @@
 
         async function logout() {
             try {
-                const response = await fetch(`/logout/`, {
+                const response = await fetch(`/auth/logout/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -358,7 +358,7 @@
 
         async function mypage() {
             try {
-                const response = await fetch('/myinfo/', {
+                const response = await fetch('/teacher/myinfo/', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
