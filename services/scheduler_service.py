@@ -3,7 +3,8 @@ import time
 import threading
 from datetime import date
 from sqlalchemy.orm import Session
-from config import SessionLocal
+from config import SessionLocal, get_db
+from fastapi import Depends
 from services.spotlight_service import SpotlightService
 from services.email_service import EmailService
 from repositories.user_repository import UserRepository
