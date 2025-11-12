@@ -101,6 +101,7 @@
                 <div class="menu-items absolute right-0 top-full mt-2 w-48 bg-green-800 rounded-md shadow-lg py-1 z-20 hidden" id="menuItems">
                     <button id="loginButton" class="listButton hidden" onclick="redirectTo('/pages/login.html')">Login</button>
                     <button id="mypageButton" class="listButton hidden" onclick="mypage()">My Page</button>
+                    <button id="forumButton" class="listButton hidden" onclick="redirectTo('/pages/forum.html')">Forum</button>
                     <button id="validationButton" class="listButton hidden" onclick="redirectTo('/pages/validation.html')">Validation</button>
                     <button id="createButton" class="listButton hidden" onclick="redirectTo('/pages/create.html')">Create</button>
                     <button id="adminButton" class="listButton hidden" onclick="redirectTo('/pages/admin.html')">Admin</button>
@@ -203,7 +204,8 @@
         async function checkAuthentication() {
             const buttons = [
                 'loginButton', 'logoutButton', 'mypageButton',
-                'validationButton', 'createButton', 'adminButton'
+                'validationButton', 'createButton', 'adminButton',
+                'forumButton'
             ];
 
             buttons.forEach(id => {
@@ -237,6 +239,8 @@
                 document.getElementById('mypageButton').classList.add('block');
                 document.getElementById('validationButton').classList.remove('hidden');
                 document.getElementById('validationButton').classList.add('block');
+                document.getElementById('forumButton').classList.remove('hidden');
+                document.getElementById('forumButton').classList.add('block'); // Make it display as a block
                 document.getElementById('logoutButton').classList.remove('hidden');
                 document.getElementById('logoutButton').classList.add('block');
             } else if (userRole === 'admin') {
@@ -246,6 +250,8 @@
                 document.getElementById('validationButton').classList.add('block');
                 document.getElementById('createButton').classList.remove('hidden');
                 document.getElementById('createButton').classList.add('block');
+                document.getElementById('forumButton').classList.remove('hidden');
+                document.getElementById('forumButton').classList.add('block'); // Make it display as a block
                 document.getElementById('logoutButton').classList.remove('hidden');
                 document.getElementById('logoutButton').classList.add('block');
             } else {

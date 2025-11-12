@@ -61,7 +61,6 @@
         <div class="container mx-auto px-4 flex justify-between items-center">
             <div class="flex items-center">
                 <a href="/pages/homepage.html" class="flex items-center">
-                    <!-- Note: Image path remains as a placeholder -->
                     <img src="/static/images/logo_transparent.png" alt="Homeroom Heroes Logo" class="h-16 md:h-20 mr-3">
                 </a>
                 <nav class="hidden md:flex ml-4">
@@ -80,10 +79,10 @@
                 <button id="hamburgerButton" class="text-white text-3xl focus:outline-none" onclick="toggleMenu()">☰</button>
 
                 <div class="menu-items absolute right-0 top-full mt-2 w-48 bg-green-800 rounded-md shadow-lg py-1 z-20 hidden" id="menuItems">
-                    <!-- Authentication buttons will be displayed here -->
                     <button id="loginButton" class="listButton hidden" onclick="redirectTo('/pages/login.html')">Login</button>
                     <button id="logoutButton" class="listButton hidden" onclick="logout()">Logout</button>
                     <button id="mypageButton" class="listButton hidden" onclick="mypage()">My Page</button>
+                    <button id="forumButton" class="listButton hidden" onclick="redirectTo('/pages/forum.html')">Forum</button>
                     <button id="validationButton" class="listButton hidden" onclick="redirectTo('/pages/validation.html')">Validation</button>
                     <button id="createButton" class="listButton hidden" onclick="redirectTo('/pages/create.html')">Create Post</button>
                     <button id="adminButton" class="listButton hidden" onclick="redirectTo('/pages/admin.html')">Admin</button>
@@ -122,10 +121,25 @@
         </div>
     </footer>
     
-    <!-- Floating message box for feedback (Error/Success) -->
     <div id="floating-message" class="fixed top-4 right-4 z-50 p-4 rounded-lg shadow-xl text-white font-semibold transition-opacity duration-300"></div>
 
+    <div id="modal-backdrop" class="fixed inset-0 bg-gray-900 bg-opacity-75 hidden z-50 transition-opacity duration-300"></div>
+    <div id="confirmation-modal" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-8 rounded-xl shadow-2xl z-50 w-full max-w-sm hidden text-gray-800">
+        <h3 class="text-xl font-bold mb-4" id="modal-title">Confirm Deletion</h3>
+        <p class="mb-6" id="modal-message">This action cannot be undone. Are you absolutely sure you want to permanently delete this item?</p>
+        <div class="flex justify-end space-x-4">
+            <button onclick="closeModal()" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition duration-150">Cancel</button>
+            <button id="modal-confirm-button" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition duration-150">Delete</button>
+        </div>
+    </div>
+
+
     <script>
+        // --- Global State ---
+        let currentUserRole = null; 
+        let currentPostId = null; 
+        let currentUserId = null; // *** ADDED: Store the current logged-in user's ID for ownership checks ***
+
         // --- Utility Functions ---
 
         // Helper function for redirection
@@ -161,7 +175,7 @@
         }
 
         // ----------------------------------------------------------------------
-        // --- NEW COMMENTING UTILITIES AND LOGIC ---
+        // --- MESSAGING AND MODAL UTILITIES ---
         // ----------------------------------------------------------------------
 
         /**
@@ -192,23 +206,183 @@
         }
 
         /**
-         * Generates the HTML string for a single comment.
+         * Shows the confirmation modal.
+         */
+        function showModal() {
+            document.getElementById('modal-backdrop').classList.remove('hidden');
+            document.getElementById('confirmation-modal').classList.remove('hidden');
+        }
+
+        /**
+         * Hides the confirmation modal.
+         */
+        function closeModal() {
+            document.getElementById('modal-backdrop').classList.add('hidden');
+            document.getElementById('confirmation-modal').classList.add('hidden');
+        }
+
+        // ----------------------------------------------------------------------
+        // --- COMMENTING UTILITIES AND LOGIC ---
+        // ----------------------------------------------------------------------
+
+        /**
+         * Generates the HTML string for a single comment, including edit/delete buttons 
+         * for the author or admin.
          * @param {Object} comment - The comment data object.
          * @returns {string} HTML string for the comment.
          */
         function createCommentHtml(comment) {
-            // Note: We are currently ignoring parent_comment_id for nested rendering,
-            // but the structure is ready to be expanded later.
+            
+            let actionButtonsHtml = '';
+            
+            // Check if the current user is the author OR an admin
+            if (currentUserRole === 'admin' || currentUserId === comment.user_id) {
+                // --- NEW: Edit Button ---
+                const safeContent = comment.content.replace(/'/g, "\\'").replace(/\n/g, "\\n");
+
+                const editButtonHtml = `
+                    <button 
+                        onclick="promptEditCommentForm(${comment.id}, '${safeContent}')"
+                        title="Edit Comment"
+                        class="text-blue-500 hover:text-blue-700 transition duration-150 ease-in-out p-1 rounded-full hover:bg-blue-100 mr-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                    </button>
+                `;
+
+                // --- Existing: Delete Button ---
+                const deleteButtonHtml = `
+                    <button 
+                        onclick="promptDeleteCommentConfirmation(${comment.id})"
+                        title="Delete Comment"
+                        class="text-red-500 hover:text-red-700 transition duration-150 ease-in-out p-1 rounded-full hover:bg-red-100">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                `;
+                actionButtonsHtml = editButtonHtml + deleteButtonHtml;
+            }
+
+            // Updated HTML structure to support in-place editing
             return `
                 <div id="comment-${comment.id}" class="bg-gray-50 p-4 rounded-lg shadow-inner border-l-4 border-green-500">
-                    <p class="text-sm text-gray-700 whitespace-pre-wrap overflow-wrap break-word">${comment.content}</p>
-                    <div class="text-xs text-gray-500 mt-2 flex justify-between">
-                        <!-- Displaying User ID as username placeholder until joined data is available -->
-                        <span>Comment by User ID: <span class="font-semibold">${comment.user_id}</span></span> 
-                        <span>${formatDate(comment.created_at)}</span>
+                    
+                    <div id="comment-display-${comment.id}">
+                        <p class="comment-content text-sm text-gray-700 whitespace-pre-wrap overflow-wrap break-word">${comment.content}</p>
+                        <div class="text-xs text-gray-500 mt-2 flex justify-between items-center">
+                            <span>Comment by User ID: <span class="font-semibold">${comment.user_id}</span></span> 
+                            <span class="flex items-center">
+                                <span>${formatDate(comment.created_at)}</span>
+                                ${actionButtonsHtml} 
+                            </span>
+                        </div>
                     </div>
+                    
+                    <div id="comment-edit-${comment.id}" class="hidden">
+                        </div>
+
                 </div>
             `;
+        }
+
+        // ----------------------------------------------------------------------
+        // --- COMMENT EDITING LOGIC (NEW) ---
+        // ----------------------------------------------------------------------
+
+        /**
+         * Renders and displays the in-place edit form for a specific comment.
+         * @param {number} commentId - The ID of the comment to edit.
+         * @param {string} content - The current content of the comment (escaped).
+         */
+        function promptEditCommentForm(commentId, content) {
+            const displayArea = document.getElementById(`comment-display-${commentId}`);
+            const editArea = document.getElementById(`comment-edit-${commentId}`);
+            
+            // Hide display and show edit form area
+            displayArea.classList.add('hidden');
+            editArea.classList.remove('hidden');
+
+            editArea.innerHTML = `
+                <form id="edit-comment-form-${commentId}" onsubmit="handleCommentEditSubmission(event, ${commentId})">
+                    <textarea id="edit-comment-content-${commentId}" name="content" 
+                            class="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 resize-y min-h-[80px] text-gray-800" 
+                            required>${content.replace(/\\n/g, '\n')}</textarea>
+                    
+                    <div class="flex justify-end space-x-2 mt-2">
+                        <button type="button" onclick="cancelCommentEdit(${commentId})" 
+                                class="px-3 py-1 text-sm bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition duration-150">Cancel</button>
+                        <button type="submit" 
+                                class="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-150">Save</button>
+                    </div>
+                </form>
+            `;
+        }
+
+        /**
+         * Hides the edit form and reverts to the comment display mode.
+         * @param {number} commentId - The ID of the comment to revert.
+         */
+        function cancelCommentEdit(commentId) {
+            document.getElementById(`comment-display-${commentId}`).classList.remove('hidden');
+            document.getElementById(`comment-edit-${commentId}`).classList.add('hidden');
+        }
+
+
+        /**
+         * Executes the comment update API call and updates the UI.
+         * @param {Event} event - The form submission event.
+         * @param {number} commentId - The ID of the comment to update.
+         */
+        async function handleCommentEditSubmission(event, commentId) {
+            event.preventDefault(); 
+            
+            const contentTextarea = document.getElementById(`edit-comment-content-${commentId}`);
+            const content = contentTextarea.value.trim();
+
+            if (!content) {
+                showFloatingMessage('Comment content cannot be empty.', 'error');
+                return;
+            }
+
+            showFloatingMessage('Saving comment changes...', 'info');
+
+            try {
+                // Prepare the data to be sent as application/x-www-form-urlencoded
+                const formData = new URLSearchParams();
+                formData.append('content', content);
+                
+                // This assumes a PATCH/PUT endpoint at /forum/comment/{comment_id}/update
+                const response = await fetch(`/forum/comment/${commentId}/update`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: formData.toString()
+                });
+
+                if (response.ok) {
+                    const updatedComment = await response.json();
+                    
+                    // 1. Update the displayed content text
+                    const contentElement = document.getElementById(`comment-display-${commentId}`).querySelector('.comment-content');
+                    if (contentElement) {
+                        contentElement.textContent = updatedComment.content;
+                    }
+                    
+                    // 2. Hide the form and show the display area
+                    cancelCommentEdit(commentId);
+                    
+                    showFloatingMessage('Comment updated successfully!', 'success');
+
+                } else {
+                    const errorData = await response.json();
+                    const detail = errorData.detail || "Failed to update comment.";
+                    console.error("Comment Edit API Error:", detail);
+                    showFloatingMessage(`Error: ${detail}`, 'error');
+                }
+
+            } catch (error) {
+                console.error("Network Error during comment update:", error);
+                showFloatingMessage('Network Error: Could not reach the server to update comment.', 'error');
+            }
         }
 
         /**
@@ -221,7 +395,7 @@
             commentsListContainer.innerHTML = '<p class="text-gray-400 text-center p-4">Loading comments...</p>'; 
 
             try {
-                const response = await fetch(`/forum/posts/${postId}/comments`);
+                const response = await fetch(`/forum/comments/${postId}/`);
 
                 if (response.ok) {
                     const comments = await response.json();
@@ -326,10 +500,80 @@
                 showFloatingMessage('Network Error: Could not reach the server to post comment.', 'error');
             }
         }
+        
+        // ----------------------------------------------------------------------
+        // --- COMMENT DELETION LOGIC (NEW) ---
+        // ----------------------------------------------------------------------
+
+        /**
+         * Initiates the comment delete confirmation sequence by showing the modal.
+         * @param {number} commentId - The ID of the comment to delete.
+         */
+        function promptDeleteCommentConfirmation(commentId) {
+            // Set up the modal content
+            document.getElementById('modal-title').textContent = 'Confirm Comment Deletion';
+            document.getElementById('modal-message').textContent = 'Are you sure you want to permanently delete this comment? This cannot be undone.';
+            
+            const confirmBtn = document.getElementById('modal-confirm-button');
+            
+            // Remove previous event listener and assign new action for the current comment ID
+            confirmBtn.onclick = null; 
+            confirmBtn.onclick = () => handleDeleteComment(commentId); 
+
+            showModal();
+        }
+
+        /**
+         * Executes the comment deletion API call and updates the UI.
+         * @param {number} commentId - The ID of the comment to delete.
+         */
+        async function handleDeleteComment(commentId) {
+            closeModal(); // Close the modal immediately after confirmation
+            showFloatingMessage('Deleting comment...', 'info');
+
+            try {
+                // Call the new DELETE endpoint you created
+                const response = await fetch(`/forum/comment/${commentId}/delete`, {
+                    method: 'DELETE',
+                });
+
+                if (response.ok) {
+                    showFloatingMessage('Comment deleted successfully!', 'success');
+                    
+                    // 1. Remove the comment element from the DOM
+                    const commentElement = document.getElementById(`comment-${commentId}`);
+                    if (commentElement) {
+                        commentElement.remove();
+                    }
+
+                    // 2. Decrement the comment count display
+                    const commentCountSpan = document.getElementById('comment-count-display');
+                    if (commentCountSpan) {
+                        commentCountSpan.textContent = Math.max(0, parseInt(commentCountSpan.textContent) - 1);
+                    }
+                    
+                    // Optional: If the list is now empty, re-render the "No comments" message
+                    const commentsListContainer = document.getElementById('comments-list-container');
+                    if (commentsListContainer.children.length === 0) {
+                        commentsListContainer.innerHTML = '<p class="text-gray-500 p-4">No comments yet. Be the first to start the discussion!</p>';
+                    }
+
+                } else {
+                    const errorData = await response.json();
+                    const detail = errorData.detail || "Failed to delete comment.";
+                    console.error("Delete Comment API Error:", detail);
+                    showFloatingMessage(`Error deleting comment: ${detail}`, 'error');
+                }
+
+            } catch (error) {
+                console.error("Network Error during comment deletion:", error);
+                showFloatingMessage('Network Error: Could not reach the server to delete the comment.', 'error');
+            }
+        }
 
 
         // ----------------------------------------------------------------------
-        // --- MODIFIED RENDER AND FETCH FUNCTIONS ---
+        // --- POST DETAIL, VOTE, AND DELETE LOGIC ---
         // ----------------------------------------------------------------------
         
         /**
@@ -346,88 +590,129 @@
         }
 
 
-        /**
-         * Renders the fetched post data into the detail card.
-         * Includes the new comment form and comments container.
+       /**
+         * Renders the fetched post data into the detail card, including the admin delete button
+         * and the author's edit button.
          * @param {Object} post - The post data object.
          */
         function renderPost(post) {
             // Check if status-message exists before trying to remove it
             const statusMessage = document.getElementById('status-message');
             if (statusMessage) {
-                 statusMessage.remove(); 
+                 statusMessage.remove();
             }
 
             document.getElementById('page-title').textContent = `Homeroom Heroes - ${post.title}`;
 
             const card = document.getElementById('post-detail-card');
             const formattedDate = formatDate(post.created_at);
+            
+            // Store the ID for global access by the delete function
+            currentPostId = post.id;
+            
+            // Sanitize strings for use within the JS function call in HTML onclick
+            // Crucial: Replace single quotes with their escaped equivalent (\')
+            // Crucial: Replace newlines with their escaped equivalent (\n) for textarea pre-fill
+            const safeTitle = post.title.replace(/'/g, "\\'");
+            const safeContent = post.content.replace(/'/g, "\\'").replace(/\n/g, "\\n");
+
+
+            // --- NEW: Generate the Edit Post Button HTML (only if the user is the author) ---
+            let editButtonHtml = '';
+            if (currentUserId === post.user_id) {
+                 editButtonHtml = `
+                    <button id="edit-post-btn"
+                        onclick="showEditForm(${post.id}, '${safeTitle}', '${safeContent}')"
+                        title="Edit Post"
+                        class="mt-4 mr-2 px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition duration-300 ease-in-out flex items-center">
+                        <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                        Edit Post
+                    </button>
+                `;
+            }
+
+            // Generate the Delete Post Button HTML (only if the user is an admin)
+            let deleteButtonHtml = '';
+            if (currentUserRole === 'admin') {
+                deleteButtonHtml = `
+                    <button id="delete-post-btn"
+                        onclick="promptDeleteConfirmation(${post.id})"
+                        title="Delete Post"
+                        class="mt-4 px-4 py-2 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition duration-300 ease-in-out flex items-center">
+                        <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        Delete Post
+                    </button>
+                `;
+            }
 
             // Updated HTML to include Comment Form and Comment List container
             card.innerHTML = `
                 <div class="border-b pb-4 mb-4">
-                    <h1 class="text-4xl font-extrabold text-green-800 mb-2">${post.title}</h1>
                     
-                    <!-- Vote Section and Metadata -->
                     <div class="flex flex-col md:flex-row md:items-center justify-between text-base text-gray-500">
                         
-                        <!-- Left side: Vote Buttons and Count -->
                         <div class="flex items-center space-x-3 mb-3 md:mb-0">
-                            <!-- Upvote Button -->
                             <button id="upvote-btn" 
-                                        onclick="handleVote(${post.id}, 1)" 
-                                        title="Upvote"
-                                        class="text-gray-500 hover:text-green-600 active:text-green-800 transition duration-150 ease-in-out p-2 rounded-full bg-gray-100 hover:bg-green-100 shadow-md">
+                                            onclick="handleVote(${post.id}, 1)" 
+                                            title="Upvote"
+                                            class="text-gray-500 hover:text-green-600 active:text-green-800 transition duration-150 ease-in-out p-2 rounded-full bg-gray-100 hover:bg-green-100 shadow-md">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
                                 </svg>
                             </button>
                             
-                            <!-- Vote Count Display -->
                             <span id="upvote-count" class="text-2xl font-bold text-gray-800">${post.upvote_count}</span>
                             
-                            <!-- Downvote Button -->
                             <button id="downvote-btn" 
-                                        onclick="handleVote(${post.id}, -1)" 
-                                        title="Downvote"
-                                        class="text-gray-500 hover:text-red-600 active:text-red-800 transition duration-150 ease-in-out p-2 rounded-full bg-gray-100 hover:bg-red-100 shadow-md">
+                                            onclick="handleVote(${post.id}, -1)" 
+                                            title="Downvote"
+                                            class="text-gray-500 hover:text-red-600 active:text-red-800 transition duration-150 ease-in-out p-2 rounded-full bg-gray-100 hover:bg-red-100 shadow-md">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                 </svg>
                             </button>
                         </div>
                         
-                        <!-- Right side: Post Metadata -->
                         <p class="mt-2 md:mt-0">Posted by <span class="font-semibold text-gray-700">${post.user_id}</span> on ${formattedDate}</p>
                     </div>
-                </div>
-                <div class="pt-4 text-lg">
-                    <p id="post-content">${post.content}</p>
+                    
+                    <div class="flex items-center">
+                        ${editButtonHtml}
+                        ${deleteButtonHtml}
+                    </div>
                 </div>
                 
-                <!-- NEW COMMENTING SECTION -->
+                <div id="post-display-area">
+                    <div id="post-title-display" class="pt-4 text-lg">
+                        <h1 class="text-4xl font-extrabold text-green-800 mb-2">${post.title}</h1>
+                    </div>
+                    <div class="pt-4 text-lg">
+                        <p id="post-content" style="white-space: pre-wrap; overflow-wrap: break-word;">${post.content}</p>
+                    </div>
+                </div>
+
+                <div id="post-edit-area" class="hidden">
+                    </div>
+                
                 <div class="pt-8 mt-8 border-t border-gray-200">
                     <h3 class="text-2xl font-bold text-green-700 mb-4">Leave a Comment</h3>
                     
-                    <!-- Comment Form linked to new JS handler -->
                     <form id="comment-form" onsubmit="handleCommentSubmission(event, ${post.id})">
                         <textarea id="comment-content" name="content" 
-                                class="w-full p-4 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500 resize-y min-h-[100px] text-gray-800" 
-                                placeholder="Share your thoughts..." 
-                                required></textarea>
+                                     class="w-full p-4 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500 resize-y min-h-[100px] text-gray-800" 
+                                     placeholder="Share your thoughts..." 
+                                     required></textarea>
                         
                         <button type="submit" 
-                                class="mt-3 px-6 py-3 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition duration-300 ease-in-out">
+                                     class="mt-3 px-6 py-3 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition duration-300 ease-in-out">
                             Post Comment
                         </button>
                     </form>
                     
-                    <!-- Comments Display Area -->
                     <div id="comments-list" class="mt-8 space-y-4">
                         <h3 class="text-2xl font-bold text-green-700 mb-4">
                             <span id="comment-count-display">${post.comment_count || 0}</span> Comments
                         </h3>
-                        <!-- Container where comments will be dynamically inserted -->
                         <div id="comments-list-container" class="space-y-4">
                             <p class="text-gray-500 p-4">Loading existing comments...</p>
                         </div>
@@ -452,6 +737,114 @@
                 statusBox.textContent = `Error: ${message}`;
             } else {
                  document.getElementById('post-detail-card').innerHTML = `<div id="status-message" class="text-center p-10 text-xl font-bold text-red-600">Error: ${message}</div>`;
+            }
+        }
+        // ----------------------------------------------------------------------
+        // --- POST EDITING LOGIC (NEW) ---
+        // ----------------------------------------------------------------------
+
+        /**
+         * Shows the in-line edit form for the post by injecting HTML.
+         * @param {number} postId - The ID of the post.
+         * @param {string} title - The current title of the post (escaped).
+         * @param {string} content - The current content of the post (escaped).
+         */
+        function showEditForm(postId, title, content) {
+            const displayArea = document.getElementById('post-display-area');
+            const editArea = document.getElementById('post-edit-area');
+            
+            // Hide display content and show edit form area
+            displayArea.classList.add('hidden');
+            editArea.classList.remove('hidden');
+
+            editArea.innerHTML = `
+                <form id="edit-post-form" onsubmit="handleEditSubmission(event, ${postId})">
+                    <div class="mb-4">
+                        <label for="edit-title" class="block text-xl font-bold text-green-700 mb-2">Title</label>
+                        <input type="text" id="edit-title" name="title" value="${title}" 
+                            class="w-full p-3 border border-gray-300 rounded-lg text-gray-800 focus:ring-green-500 focus:border-green-500" 
+                            required>
+                    </div>
+                    <div class="mb-6">
+                        <label for="edit-content" class="block text-xl font-bold text-green-700 mb-2">Content</label>
+                        <textarea id="edit-content" name="content" 
+                                class="w-full p-4 border border-gray-300 rounded-lg text-gray-800 focus:ring-green-500 focus:border-green-500 resize-y min-h-[200px]" 
+                                required>${content}</textarea>
+                    </div>
+                    <div class="flex space-x-4">
+                        <button type="submit" 
+                                class="px-6 py-3 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition duration-300">
+                            Save Changes
+                        </button>
+                        <button type="button" onclick="cancelEdit()" 
+                                class="px-6 py-3 bg-gray-500 text-white font-semibold rounded-lg shadow-md hover:bg-gray-600 transition duration-300">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            `;
+        }
+
+        /**
+         * Hides the edit form and reverts to the display mode.
+         */
+        function cancelEdit() {
+            document.getElementById('post-display-area').classList.remove('hidden');
+            document.getElementById('post-edit-area').classList.add('hidden');
+        }
+
+        /**
+         * Handles the submission of the post edit form, sending a PATCH request to the API.
+         * @param {Event} event - The form submission event.
+         * @param {number} postId - The ID of the post to update.
+         */
+        async function handleEditSubmission(event, postId) {
+            event.preventDefault(); 
+            
+            const newTitle = document.getElementById('edit-title').value.trim();
+            const newContent = document.getElementById('edit-content').value.trim();
+
+            if (!newTitle || !newContent) {
+                showFloatingMessage('Title and content cannot be empty.', 'error');
+                return;
+            }
+
+            showFloatingMessage('Saving changes...', 'info');
+
+            try {
+                const response = await fetch(`/forum/post/${postId}/update`, { 
+                    method: 'PATCH', 
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        title: newTitle,
+                        content: newContent
+                    })
+                });
+
+                if (response.ok) {
+                    const updatedPost = await response.json();
+                    
+                    // 1. Update the displayed title and content immediately
+                    document.getElementById('post-title-display').querySelector('h1').textContent = updatedPost.title;
+                    document.getElementById('post-content').textContent = updatedPost.content;
+                    
+                    // 2. Switch back to display mode
+                    cancelEdit();
+                    
+                    showFloatingMessage('Post updated successfully!', 'success');
+
+                } else {
+                    const errorData = await response.json();
+                    const detail = errorData.detail || "Failed to update post.";
+                    console.error("Edit API Error:", detail);
+                    showFloatingMessage(`Error updating post: ${detail}`, 'error');
+                }
+
+            } catch (error) {
+                console.error("Network Error during post update:", error);
+                showFloatingMessage('Network Error: Could not reach the server to update the post.', 'error');
             }
         }
 
@@ -523,11 +916,67 @@
             }
         }
 
+        /**
+         * Initiates the post delete confirmation sequence by showing the modal.
+         * @param {number} postId - The ID of the post to delete.
+         */
+        function promptDeleteConfirmation(postId) {
+            if (!currentUserRole === 'admin') {
+                showFloatingMessage('Access denied. Only administrators can delete posts.', 'error');
+                return;
+            }
+            
+            // Set up the modal content for POST deletion
+            document.getElementById('modal-title').textContent = 'Confirm Post Deletion';
+            document.getElementById('modal-message').textContent = 'This action cannot be undone. Are you absolutely sure you want to permanently delete this discussion?';
+
+
+            // Set up the modal confirm action before showing it
+            const confirmBtn = document.getElementById('modal-confirm-button');
+            // Remove previous event listener to prevent multiple triggers
+            confirmBtn.onclick = null; 
+            // Assign new action for the current post ID
+            confirmBtn.onclick = () => handleDeletePost(postId); 
+
+            showModal();
+        }
+
+        /**
+         * Executes the post deletion API call.
+         * @param {number} postId - The ID of the post to delete.
+         */
+        async function handleDeletePost(postId) {
+            closeModal(); // Close the modal immediately after confirmation
+            showFloatingMessage('Deleting post...', 'info');
+
+            try {
+                const response = await fetch(`/forum/post/${postId}/delete`, {
+                    method: 'DELETE',
+                });
+
+                if (response.ok) {
+                    showFloatingMessage('Post deleted successfully!', 'success');
+                    // Wait a moment for the user to see the success message, then redirect
+                    setTimeout(() => {
+                        redirectTo('/pages/forum.html');
+                    }, 1500);
+                } else {
+                    const errorData = await response.json();
+                    const detail = errorData.detail || "Failed to delete post.";
+                    console.error("Delete API Error:", detail);
+                    showFloatingMessage(`Error deleting post: ${detail}`, 'error');
+                }
+
+            } catch (error) {
+                console.error("Network Error during deletion:", error);
+                showFloatingMessage('Network Error: Could not reach the server to delete the post.', 'error');
+            }
+        }
         
-        // --- Authentication/Navigation Functions (Copied from your reference) ---
+        // --- Authentication/Navigation Functions ---
 
         async function checkAuthentication() {
-            const buttons = ['loginButton', 'logoutButton', 'mypageButton', 'validationButton', 'createButton', 'adminButton'];
+            const buttons = ['loginButton', 'logoutButton', 'mypageButton', 'validationButton', 'createButton', 'adminButton', 'forumButton'];
             buttons.forEach(id => {
                 const button = document.getElementById(id);
                 if (button) {
@@ -536,101 +985,79 @@
                 }
             });
 
-            let userRole = null; 
+            currentUserRole = null; // Reset role state
+            currentUserId = null; // Reset user ID state
 
             try {
-                const response = await fetch('/profile/');
+                // Assuming this endpoint returns {user_role: "...", user_id: 123}
+                const response = await fetch('/profile/'); 
                 if (response.ok) {
                     const data = await response.json();
-                    userRole = data?.user_role;
+                    currentUserRole = data?.user_role; // Store the role globally
+                    currentUserId = data?.user_id; // Store the user ID globally
                 }
             } catch (error) {
                 console.error('Network or parsing error fetching user profile:', error);
             }
 
+            // Based on the determined role, show specific buttons by removing 'hidden' and adding 'block'
             if (userRole === 'teacher') {
-                ['mypageButton', 'validationButton', 'logoutButton'].forEach(id => {
-                    document.getElementById(id)?.classList.remove('hidden');
-                    document.getElementById(id)?.classList.add('block');
-                });
+                document.getElementById('mypageButton').classList.remove('hidden');
+                document.getElementById('mypageButton').classList.add('block'); // Make it display as a block
+                document.getElementById('forumButton').classList.remove('hidden');
+                document.getElementById('forumButton').classList.add('block'); // Make it display as a block
+                document.getElementById('validationButton').classList.remove('hidden');
+                document.getElementById('validationButton').classList.add('block'); // Make it display as a block
+                document.getElementById('logoutButton').classList.remove('hidden');
+                document.getElementById('logoutButton').classList.add('block'); // Make it display as a block
             } else if (userRole === 'admin') {
-                ['adminButton', 'validationButton', 'createButton', 'logoutButton'].forEach(id => {
-                    document.getElementById(id)?.classList.remove('hidden');
-                    document.getElementById(id)?.classList.add('block');
-                });
+                document.getElementById('adminButton').classList.remove('hidden');
+                document.getElementById('adminButton').classList.add('block'); // Make it display as a block
+                document.getElementById('forumButton').classList.remove('hidden');
+                document.getElementById('forumButton').classList.add('block'); // Make it display as a block
+                document.getElementById('validationButton').classList.remove('hidden');
+                document.getElementById('validationButton').classList.add('block'); // Make it display as a block
+                document.getElementById('createButton').classList.remove('hidden');
+                document.getElementById('createButton').classList.add('block'); // Make it display as a block
+                document.getElementById('logoutButton').classList.remove('hidden');
+                document.getElementById('logoutButton').classList.add('block'); // Make it display as a block
             } else {
-                document.getElementById('loginButton')?.classList.remove('hidden');
-                document.getElementById('loginButton')?.classList.add('block');
+                // Default: show login if no specific role or an error occurred (unauthenticated)
+                document.getElementById('loginButton').classList.remove('hidden');
+                document.getElementById('loginButton').classList.add('block'); // Make it display as a block
             }
+            
+            // Since role/ID is now set, fetch post detail immediately (if ID is in URL)
+            fetchPostDetail();
         }
 
-        async function logout() {
-            try {
-                await fetch(`/logout/`, { method: 'POST' });
-                window.location.href = '/'; 
-            } catch (error) {
-                console.error('Error during logout:', error);
-            }
-        }
 
-        async function mypage() {
-            try {
-                const response = await fetch('/myinfo/', { method: 'GET' });
-                if (response.ok) {
-                    window.location.href = '/pages/teacher.html';
-                } else {
-                    console.error('Error:', response.status);
-                    window.location.href = '/'; 
-                }
-            } catch (error) {
-                console.error('Error fetching my page info:', error);
-                window.location.href = '/'; 
-            }
-        }
+        // --- Initializers ---
 
-        // --- Initialization ---
-        document.addEventListener('DOMContentLoaded', () => {
-            checkPermission();
-            checkAuthentication();
-            fetchPostDetail(); // This now handles the loading of comments as well.
-        });
-        /**
-         * Checks if the user is an 'admin' or 'teacher' before allowing access to the page.
-         * Redirects to /pages/403.html if unauthorized or unauthenticated.
-         */
-        async function checkPermission() {
-            const allowedRoles = ['admin', 'teacher']; // Roles that are allowed access
+        document.addEventListener('DOMContentLoaded', checkAuthentication);
 
-            try {
-                const response = await fetch('/profile/');
-
-                if (!response.ok) {
-                    // Case 1: Not authenticated (e.g., 401 Unauthorized or 403 Forbidden from server)
-                    console.error('Permission Check Failed: Not authenticated or session expired.', response.status);
-                    window.location.href = '/pages/403.html';
-                    return; // Stop execution
-                }
-
-                const data = await response.json();
-                const userRole = data?.user_role;
-                
-                // Case 2: Authenticated but unauthorized role
-                if (!userRole || !allowedRoles.includes(userRole)) {
-                    console.error('Permission Check Failed: User role is not authorized. Role:', userRole);
-                    window.location.href = '/pages/403.html';
-                    return; // Stop execution
-                }
-                
-                // Success: User is logged in and has an allowed role ('admin' or 'teacher').
-                // Execution continues normally.
-
-            } catch (error) {
-                // Case 3: Network error or JSON parsing failure
-                console.error('Critical Error during permission check:', error);
-                window.location.href = '/pages/403.html';
+        function mypage() {
+            if (currentUserRole === 'admin') {
+                redirectTo('/pages/admin.html');
+            } else {
+                redirectTo('/pages/mypage.html');
             }
         }
         
+        async function logout() {
+            try {
+                const response = await fetch('/logout/', { method: 'POST' });
+                if (response.ok) {
+                    showFloatingMessage('Logged out successfully.', 'success');
+                    setTimeout(() => redirectTo('/pages/homepage.html'), 500);
+                } else {
+                    showFloatingMessage('Failed to log out.', 'error');
+                }
+            } catch (error) {
+                showFloatingMessage('Network error during logout.', 'error');
+            }
+        }
+
     </script>
 </body>
 </html>

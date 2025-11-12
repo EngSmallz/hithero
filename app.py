@@ -187,6 +187,11 @@ class VoteInput(BaseModel):
     """Defines the expected input structure for posting a vote."""
     vote_type: int = Field(..., description="1 for Upvote, -1 for Downvote")
 
+class PostUpdate(BaseModel):
+    """Schema for the data received when updating a post."""
+    title: str
+    content: str
+
 # Create database tables
 Base.metadata.create_all(bind=engine)
 
@@ -1682,7 +1687,7 @@ async def get_promo_info(request: Request):
     # Clear the session variables after they are fetched
     return JSONResponse(content=promo_info)
 
-@app.post("/forum/create_post",response_model=PostDisplay,status_code=status.HTTP_201_CREATED,summary="Create a new forum post")
+@app.post("/forum/create_post")
 def create_post(title: str = Form(...),content: str = Form(...),user_id: int = Depends(get_current_id) ):
     """
     Handles the creation of a new forum post, linking it to the authenticated user.
@@ -1894,7 +1899,7 @@ def add_comment_to_post(
     return new_comment
 
 
-@app.get("/forum/posts/{post_id}/comments")
+@app.get("/forum/comments/{post_id}/")
 def get_comments_for_post(post_id: int = Path(..., gt=0),) -> List[dict]:
     """
     Fetches all comments associated with a specific post, ordered by creation date (newest first).
@@ -1925,7 +1930,160 @@ def get_comments_for_post(post_id: int = Path(..., gt=0),) -> List[dict]:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Could not retrieve comments due to a server error."
         )
+@app.delete("/forum/post/{post_id}/delete")
+def delete_post(post_id: int, role: str = Depends(get_current_role)):
+    """
+    Deletes a post. Only allowed for role = 'admin'.
+    """
+    db: Session = SessionLocal()
+    # 1. Authorization Check (Admin Only)
+    if role != 'admin':
+        print(f"User attempted unauthorized post deletion.")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Access denied: Only administrators can delete posts."
+        )
+
+    # 2. Find the post
+    post = db.query(ForumPost).filter(ForumPost.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
+
+    # 3. Delete the post
+    db.delete(post)
+    db.commit()
     
+    # Due to CASCADE ON DELETE in the schema, votes and comments are automatically deleted.
+    return
+
+@app.delete("/forum/comment/{comment_id}/delete")
+def delete_comment(comment_id: int, current_user_id: int = Depends(get_current_id),role: str = Depends(get_current_role)):
+    """
+    Deletes a comment. Only allowed for admin OR the comment's author (not yet but can be if you uncomment below)
+    """
+    db: Session = SessionLocal()
+    # 1. Find the comment
+    comment = db.query(ForumComment).filter(ForumComment.id == comment_id).first()
+    
+    if not comment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Comment not found"
+        )
+    
+    # 2. Authorization Check (Admin OR Author)
+    is_admin = (role == 'admin')
+    #is_author = (comment.user_id == current_user_id)
+    
+    if not (is_admin): # or is_author):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Access denied: You can only delete your own comments or be an administrator."
+        )
+
+    # 3. Denormalization: Decrement the parent post's comment count
+    post = db.query(ForumPost).filter(ForumPost.id == comment.post_id).first()
+    
+    if post and post.comment_count > 0:
+        post.comment_count -= 1
+        # No need for db.add(post) if using SQLAlchemy and it's tracked by the session, 
+        # but calling db.commit() below will save the change.
+    
+    # 4. Delete the comment
+    db.delete(comment)
+    db.commit()
+    
+    # Note on nested comments: If you need to handle deletion of child comments 
+    # (i.e., comments that had replies) this would be handled automatically if 
+    # you set up CASCADE DELETE on the parent_comment_id foreign key in your DDL.
+    
+    return {"detail": f"Comment ID {comment_id} successfully deleted."}
+
+@app.patch("/forum/post/{post_id}/update")
+async def update_post(post_id: int, post_data: PostUpdate, id: int = Depends(get_current_id)):
+    """
+    Allows the author of a post to update its title and content.
+    """
+    
+    db: Session = SessionLocal()
+    
+    try:
+        # 1. Fetch the existing post
+        existing_post = db.query(ForumPost).filter(ForumPost.id == post_id).first()
+        
+        if existing_post is None:
+            raise HTTPException(status_code=404, detail=f"Post with ID {post_id} not found.")
+            
+        # 2. Authorization Check: Must be the original author
+        # 'user' is the dictionary returned by get_current_active_user, containing the authenticated user's details
+        if existing_post.user_id != id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, 
+                detail="Not authorized to edit this post. You must be the author."
+            )
+            
+        # 3. Update the post data in the SQLAlchemy model
+        existing_post.title = post_data.title
+        existing_post.content = post_data.content
+        
+        # 4. Commit the changes to the database
+        db.commit()
+        
+        # 5. Refresh the object to get any auto-updated fields (like a 'last_edited' timestamp if applicable)
+        db.refresh(existing_post)
+        
+        # 6. Return the updated post
+        # Note: We use response_model=PostUpdate for simplicity, 
+        # but in a real app, you might use your full Post schema if it includes more fields.
+        return existing_post
+        
+    except Exception as e:
+        db.rollback() # Rollback the transaction on any error
+        # In a production environment, log the error 'e' here
+        raise HTTPException(status_code=500, detail="Internal server error during post update.")
+        
+    finally:
+        db.close()
+
+@app.patch("/forum/comment/{comment_id}/update")
+async def update_comment(comment_id: int, content: str = Form(...), user: int = Depends(get_current_id)):
+    """
+    Allows the author of a comment to update its content.
+    """
+    db: Session = SessionLocal()
+    
+    try:
+        # 1. Fetch the existing comment
+        existing_comment = db.query(ForumComment).filter(ForumComment.id == comment_id).first()
+        
+        if existing_comment is None:
+            raise HTTPException(status_code=404, detail=f"Comment with ID {comment_id} not found.")
+            
+        # 2. Authorization Check: Must be the original author
+        if existing_comment.user_id != user:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, 
+                detail="Not authorized to edit this comment. You must be the author."
+            )
+            
+        # 3. Update the content
+        existing_comment.content = content
+        
+        # 4. Commit and Refresh
+        db.commit()
+        db.refresh(existing_comment)
+        
+        # Return the updated object (FastAPI handles JSON conversion)
+        return existing_comment
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Internal server error during comment update.")
+        
+    finally:
+        db.close()
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)

@@ -6,7 +6,6 @@
     <title>Homeroom Heroes - Forum Discussions</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <!-- Note: Favicon path remains as a placeholder -->
     <link rel="shortcut icon" type="image/x-icon" href="/static/images/favicon.ico" />
     <style>
         /* Ensure the font is applied globally */
@@ -69,7 +68,6 @@
         <div class="container mx-auto px-4 flex justify-between items-center">
             <div class="flex items-center">
                 <a href="/pages/homepage.html" class="flex items-center">
-                    <!-- Note: Image path remains as a placeholder -->
                     <img src="/static/images/logo_transparent.png" alt="Homeroom Heroes Logo" class="h-16 md:h-20 mr-3">
                 </a>
                 <nav class="hidden md:flex ml-4">
@@ -88,10 +86,10 @@
                 <button id="hamburgerButton" class="text-white text-3xl focus:outline-none" onclick="toggleMenu()">☰</button>
 
                 <div class="menu-items absolute right-0 top-full mt-2 w-48 bg-green-800 rounded-md shadow-lg py-1 z-20 hidden" id="menuItems">
-                    <!-- Authentication buttons will be displayed here -->
                     <button id="loginButton" class="listButton hidden" onclick="redirectTo('/pages/login.html')">Login</button>
                     <button id="logoutButton" class="listButton hidden" onclick="logout()">Logout</button>
                     <button id="mypageButton" class="listButton hidden" onclick="mypage()">My Page</button>
+                    <button id="forumButton" class="listButton hidden" onclick="redirectTo('/pages/forum.html')">Forum</button>
                     <button id="validationButton" class="listButton hidden" onclick="redirectTo('/pages/validation.html')">Validation</button>
                     <button id="createButton" class="listButton hidden" onclick="redirectTo('/pages/create.html')">Create Post</button>
                     <button id="adminButton" class="listButton hidden" onclick="redirectTo('/pages/admin.html')">Admin</button>
@@ -102,15 +100,31 @@
 
     <main class="container mx-auto px-4 py-8">
         <section class="max-w-4xl mx-auto">
-            <h2 class="text-4xl font-extrabold text-white mb-8 border-b border-green-700 pb-4">Community Discussions</h2>
+            <h2 class="text-4xl font-extrabold text-white mb-8 border-b border-green-700 pb-4">The Teachers' Lounge</h2>
             
-            <!-- Sorting Controls -->
+            <div class="mb-6 flex items-center space-x-4">
+                <input type="text" id="post-search-input" 
+                    placeholder="Search posts by keyword..."
+                    class="flex-grow p-3 border border-gray-600 rounded-lg bg-gray-700 text-white focus:ring-green-500 focus:border-green-500"
+                    onkeyup="handleSearchFilter(event)">
+                
+                <button onclick="clearSearchFilter()" 
+                        class="p-3 bg-gray-600 text-white rounded-lg hover:bg-gray-500 transition duration-200">
+                    Clear
+                </button>
+            </div>
+            
             <div class="flex items-center justify-between mb-6 p-4 bg-gray-700 rounded-lg shadow-inner">
                 <p class="text-lg font-semibold text-green-300">Sort By:</p>
                 <div class="flex space-x-3">
-                    <button id="sort-date" class="sort-btn bg-green-600 active-sort hover:bg-green-500" data-sort="date">
+                    <button id="sort-date-newest" class="sort-btn bg-green-600 active-sort hover:bg-green-500" data-sort="date-newest">
                         Date (Newest)
                     </button>
+                    
+                    <button id="sort-date-oldest" class="sort-btn bg-gray-600 hover:bg-gray-500" data-sort="date-oldest">
+                        Date (Oldest)
+                    </button>
+                    
                     <button id="sort-upvotes" class="sort-btn bg-gray-600 hover:bg-gray-500" data-sort="upvotes">
                         Upvotes
                     </button>
@@ -120,14 +134,22 @@
                 </div>
             </div>
 
-            <!-- Loading/Error Message Box -->
             <div id="status-box" class="p-4 mb-6 rounded-lg text-center bg-blue-900 text-blue-100 hidden">
                 Loading posts...
             </div>
 
-            <!-- Container for all the forum posts -->
             <div id="posts-container" class="space-y-6">
-                <!-- Posts will be injected here by JavaScript -->
+            </div>
+            
+            <div id="no-search-results" class="hidden p-10 mt-6 bg-gray-700 rounded-lg text-center text-xl text-red-300">
+                😔 No discussions found matching your search. Try a different keyword!
+            </div>
+
+            <div id="load-more-container" class="mt-8 text-center">
+                <button id="load-more-btn" onclick="loadMorePosts()" 
+                        class="hidden px-8 py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition duration-300">
+                    Load 10 More Discussions
+                </button>
             </div>
         </section>
     </main>
@@ -139,9 +161,10 @@
     </footer>
 
     <script>
-        // Store fetched posts globally for client-side sorting
+        // Store fetched posts globally for client-side sorting and filtering
         let allPosts = [];
-        let currentSort = 'date';
+        let currentSort = 'date-newest';
+        let currentPostDisplayCount = 10;
 
         // Helper function for redirection
         function redirectTo(url) {
@@ -161,51 +184,53 @@
         }
 
         /**
-         * Renders the list of posts into the DOM based on the current sort order.
+         * Renders the list of posts into the DOM, limited by currentPostDisplayCount.
          * @param {Array<Object>} posts - The list of post objects to render.
          */
         function renderPosts(posts) {
             const container = document.getElementById('posts-container');
+            const loadMoreBtn = document.getElementById('load-more-btn');
             container.innerHTML = ''; // Clear existing posts
+            
+            // Hide the No Search Results message when rendering posts
+            document.getElementById('no-search-results').classList.add('hidden');
 
-            if (posts.length === 0) {
+            // This check handles the case where the API returns 0 posts initially
+            if (posts.length === 0 && document.getElementById('post-search-input').value.trim().length === 0) {
                 container.innerHTML = '<p class="text-xl text-center text-gray-400 p-10">No posts found. Be the first to start a discussion!</p>';
+                loadMoreBtn.classList.add('hidden');
                 return;
             }
 
-            posts.forEach(post => {
+            // Determine how many posts to display (limit to currentPostDisplayCount)
+            const limit = Math.min(posts.length, currentPostDisplayCount);
+
+            for (let i = 0; i < limit; i++) {
+                const post = posts[i];
+
                 // 1. Create the anchor element
                 const postLink = document.createElement('a');
-                // Set the link to the post detail page, using the post ID
                 postLink.href = `/pages/post.html?id=${post.id}`; 
                 postLink.className = 'block cursor-pointer'; 
 
-                // 2. Create the article element for styling
+                // 2. Create the article element for styling (including critical search classes)
                 const postElement = document.createElement('article');
-                postElement.className = 'bg-white p-6 rounded-xl shadow-xl hover:shadow-2xl transition duration-300 text-gray-800';
+                postElement.className = 'forum-post-card bg-white p-6 rounded-xl shadow-xl hover:shadow-2xl transition duration-300 text-gray-800'; 
                 
-                // Format the date for display
                 const formattedDate = formatDate(post.created_at);
-                
-                // Truncate content for list view 
                 const displayContent = post.content.length > 200 
                     ? post.content.substring(0, 200) + '...' 
                     : post.content;
 
-                // Injecting the Comment Count
-                // UPDATED: Using smaller counters with black emojis (👍 and 💬)
                 postElement.innerHTML = `
                     <div class="flex justify-between items-start mb-2">
-                        <h3 class="text-2xl font-extrabold text-green-800">${post.title}</h3>
+                        <h3 class="post-title text-2xl font-extrabold text-green-800">${post.title}</h3>
                         
                         <div class="flex items-center space-x-3">
-                            <!-- UPVOTE COUNTER with black emoji and smaller size -->
                             <div class="flex items-center text-gray-900 bg-gray-100 px-2 py-0.5 rounded-full shadow-inner">
                                 <span class="text-base mr-1">👍</span>
                                 <span class="text-xs font-semibold">${post.upvote_count || 0}</span>
                             </div>
-
-                            <!-- COMMENT COUNTER with black emoji and smaller size -->
                             <div class="flex items-center text-gray-900 bg-gray-100 px-2 py-0.5 rounded-full shadow-inner">
                                 <span class="text-base mr-1">💬</span>
                                 <span class="text-xs font-semibold">${post.comment_count || 0}</span>
@@ -217,56 +242,153 @@
                     </div>
                     <div class="text-gray-700 post-content text-ellipsis overflow-hidden line-clamp-2">${displayContent}</div>
                 `;
-                // 3. Append the article to the link, and the link to the container
+                
                 postLink.appendChild(postElement);
                 container.appendChild(postLink);
-            });
+            }
+            
+            // Check if there are more posts to load (only relevant when not actively searching)
+            if (posts === allPosts && posts.length > currentPostDisplayCount) {
+                loadMoreBtn.classList.remove('hidden');
+            } else {
+                loadMoreBtn.classList.add('hidden');
+            }
         }
 
         /**
-         * Applies client-side sorting to the global post array and re-renders.
-         * @param {string} sortBy - 'date' or 'upvotes'.
+         * Increases the number of posts to display by 10 and re-renders.
          */
-        function sortAndRender(sortBy) {
-            // Update the global state
-            currentSort = sortBy;
+        function loadMorePosts() {
+            // Increase the display limit by 10
+            currentPostDisplayCount += 10;
             
-            // 1. Reset active class on buttons
-            document.querySelectorAll('.sort-btn').forEach(btn => {
-                btn.classList.remove('active-sort');
-                btn.classList.remove('bg-green-600', 'hover:bg-green-500');
-                // The New Post button is an exception, it should not be grayed out
-                if (btn.id !== 'create-post-btn') {
-                    btn.classList.add('bg-gray-600', 'hover:bg-gray-500');
-                }
+            // Sort and render the posts again, which will now use the new, higher limit
+            sortAndRender(currentSort);
+        }
+
+        // --- Search and Filter Functions (UPDATED) ---
+
+        /**
+         * Filters the global 'allPosts' array based on the current search term.
+         * @param {string} searchTerm - The text to search for (case-insensitive).
+         * @returns {Array<Object>} The array of posts matching the search criteria.
+         */
+        function filterPostsBySearchTerm(searchTerm) {
+            if (!searchTerm) {
+                // If the search term is empty, return all posts.
+                return allPosts;
+            }
+
+            const lowerCaseSearchTerm = searchTerm.toLowerCase();
+
+            return allPosts.filter(post => {
+                const title = post.title ? post.title.toLowerCase() : '';
+                const content = post.content ? post.content.toLowerCase() : '';
+
+                // Match if the term is in the title OR the full content.
+                return title.includes(lowerCaseSearchTerm) || content.includes(lowerCaseSearchTerm);
             });
+        }
+
+
+        /**
+         * Filters the displayed posts based on the text input value across ALL posts.
+         * This is triggered on key up.
+         */
+        function handleSearchFilter(event) {
+            const input = document.getElementById('post-search-input');
+            const searchTerm = input.value.trim();
+            const noResultsMessage = document.getElementById('no-search-results');
             
-            // 2. Set active class on the correct button
-            const activeBtn = document.querySelector(`[data-sort="${sortBy}"]`);
-            if (activeBtn) {
-                activeBtn.classList.add('active-sort');
-                activeBtn.classList.remove('bg-gray-600', 'hover:bg-gray-500');
-                activeBtn.classList.add('bg-green-600', 'hover:bg-green-500');
+            // 1. Get the filtered array from ALL posts
+            const filteredPosts = filterPostsBySearchTerm(searchTerm);
+            
+            // 2. Temporarily set the display count to show ALL search results
+            // Note: We use the length of the filtered list, but cap it at a max number 
+            // for search if you want to prevent rendering thousands of posts at once.
+            // For now, let's just show all matches.
+            currentPostDisplayCount = filteredPosts.length || 1; 
+
+            // 3. Render the filtered results
+            // We use the same sorting mechanism to maintain consistency in display order
+            sortAndRender(currentSort, filteredPosts); 
+
+            // 4. Update the visibility of the "No Results Found" message
+            if (filteredPosts.length === 0 && searchTerm.length > 0) {
+                noResultsMessage.classList.remove('hidden');
+            } else {
+                noResultsMessage.classList.add('hidden');
+            }
+        }
+
+        /**
+         * Clears the search input and resets all post visibility and message states.
+         */
+        function clearSearchFilter() {
+            const input = document.getElementById('post-search-input');
+            input.value = ''; // Clear the input field
+
+            // Reset the default display limit to the initial pagination amount
+            currentPostDisplayCount = 10;
+            
+            // Hide the "No Results" message
+            document.getElementById('no-search-results').classList.add('hidden');
+
+            // Re-render the full, sorted list to show the initial 10 posts and Load More button
+            sortAndRender(currentSort); 
+        }
+        
+        /**
+         * Applies client-side sorting to the post array and re-renders.
+         * @param {string} sortBy - 'date-newest', 'date-oldest', or 'upvotes'.
+         * @param {Array<Object>} [postsArray=allPosts] - The array to sort and render. Defaults to global allPosts.
+         */
+        function sortAndRender(sortBy, postsArray = allPosts) {
+            // Update the global state only if we are sorting the main array
+            if (postsArray === allPosts) {
+                currentSort = sortBy;
+            }
+            
+            // 1. Reset active class on buttons (only if we're sorting the main array, not a filtered one)
+            if (postsArray === allPosts) {
+                document.querySelectorAll('.sort-btn').forEach(btn => {
+                    btn.classList.remove('active-sort');
+                    btn.classList.remove('bg-green-600', 'hover:bg-green-500');
+                    
+                    if (btn.id !== 'create-post-btn') {
+                        btn.classList.add('bg-gray-600', 'hover:bg-gray-500');
+                    }
+                });
+                
+                // 2. Set active class on the correct button
+                const activeBtn = document.querySelector(`[data-sort="${sortBy}"]`);
+                if (activeBtn) {
+                    activeBtn.classList.add('active-sort');
+                    activeBtn.classList.remove('bg-gray-600', 'hover:bg-gray-500');
+                    activeBtn.classList.add('bg-green-600', 'hover:bg-green-500');
+                }
             }
 
             // 3. Perform sorting
-            const sortedPosts = [...allPosts]; // Clone array to avoid mutating the original fetched data
+            const sortedPosts = [...postsArray]; // Clone the provided array
 
             if (sortBy === 'upvotes') {
-                // Primary sort by upvotes (descending), secondary by date (descending)
+                // Sort by upvotes (descending)
                 sortedPosts.sort((a, b) => {
-                    // Use b.upvote_count and a.upvote_count
                     if (b.upvote_count !== a.upvote_count) { 
-                        return (b.upvote_count || 0) - (a.upvote_count || 0); // Handle null/undefined counts
+                        return (b.upvote_count || 0) - (a.upvote_count || 0);
                     }
-                    return new Date(b.created_at) - new Date(a.created_at);
+                    return new Date(b.created_at) - new Date(a.created_at); // Secondary: newest first
                 });
-            } else { // Default to 'date'
+            } else if (sortBy === 'date-oldest') { 
+                // Sort by date (oldest first / ascending)
+                sortedPosts.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+            } else { // Default to 'date-newest'
                 // Sort by date (newest first / descending)
                 sortedPosts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
             }
 
-            // 4. Render the sorted list
+            // 4. Render the sorted list (which respects the currentPostDisplayCount limit)
             renderPosts(sortedPosts);
         }
 
@@ -290,7 +412,6 @@
                     sortAndRender(currentSort);
 
                 } else {
-                    // Handle non-200 responses, but do not prevent page load
                     let errorData = {};
                     try {
                         errorData = await response.json();
@@ -315,7 +436,7 @@
 
         async function checkAuthentication() {
             // First, hide ALL dynamic buttons
-            const buttons = ['loginButton', 'logoutButton', 'mypageButton', 'validationButton', 'createButton', 'adminButton'];
+            const buttons = ['loginButton', 'logoutButton', 'mypageButton', 'validationButton', 'createButton', 'adminButton', 'forumButton'];
             buttons.forEach(id => {
                 const button = document.getElementById(id);
                 if (button) {
@@ -336,26 +457,31 @@
                 console.error('Network or parsing error fetching user profile:', error);
             }
 
-            // Based on the determined role, show specific buttons
+            // Based on the determined role, show specific buttons by removing 'hidden' and adding 'block'
             if (userRole === 'teacher') {
-                ['mypageButton', 'validationButton', 'logoutButton', 'createButton'].forEach(id => {
-                    document.getElementById(id)?.classList.remove('hidden');
-                    document.getElementById(id)?.classList.add('block');
-                });
+                document.getElementById('mypageButton').classList.remove('hidden');
+                document.getElementById('mypageButton').classList.add('block'); // Make it display as a block
+                document.getElementById('forumButton').classList.remove('hidden');
+                document.getElementById('forumButton').classList.add('block'); // Make it display as a block
+                document.getElementById('validationButton').classList.remove('hidden');
+                document.getElementById('validationButton').classList.add('block'); // Make it display as a block
+                document.getElementById('logoutButton').classList.remove('hidden');
+                document.getElementById('logoutButton').classList.add('block'); // Make it display as a block
             } else if (userRole === 'admin') {
-                ['adminButton', 'validationButton', 'createButton', 'logoutButton'].forEach(id => {
-                    document.getElementById(id)?.classList.remove('hidden');
-                    document.getElementById(id)?.classList.add('block');
-                });
-            } else if (userRole === 'user') {
-                ['createButton', 'logoutButton'].forEach(id => {
-                    document.getElementById(id)?.classList.remove('hidden');
-                    document.getElementById(id)?.classList.add('block');
-                });
+                document.getElementById('adminButton').classList.remove('hidden');
+                document.getElementById('adminButton').classList.add('block'); // Make it display as a block
+                document.getElementById('forumButton').classList.remove('hidden');
+                document.getElementById('forumButton').classList.add('block'); // Make it display as a block
+                document.getElementById('validationButton').classList.remove('hidden');
+                document.getElementById('validationButton').classList.add('block'); // Make it display as a block
+                document.getElementById('createButton').classList.remove('hidden');
+                document.getElementById('createButton').classList.add('block'); // Make it display as a block
+                document.getElementById('logoutButton').classList.remove('hidden');
+                document.getElementById('logoutButton').classList.add('block'); // Make it display as a block
             } else {
-                // Default: show login if no specific role or unauthenticated
-                document.getElementById('loginButton')?.classList.remove('hidden');
-                document.getElementById('loginButton')?.classList.add('block');
+                // Default: show login if no specific role or an error occurred (unauthenticated)
+                document.getElementById('loginButton').classList.remove('hidden');
+                document.getElementById('loginButton').classList.add('block'); // Make it display as a block
             }
         }
 
@@ -383,56 +509,18 @@
             }
         }
 
-        /**
-         * Checks if the user is an 'admin' or 'teacher' before allowing access to the page.
-         * Redirects to /pages/403.html if unauthorized or unauthenticated.
-         * NOTE: THIS FUNCTION IS NOW UNUSED AS IT WAS REMOVED FROM DOMContentLoaded
-         */
-        async function checkPermission() {
-            const allowedRoles = ['admin', 'teacher']; // Roles that are allowed access
-
-            try {
-                const response = await fetch('/profile/');
-
-                if (!response.ok) {
-                    // Case 1: Not authenticated (e.g., 401 Unauthorized or 403 Forbidden from server)
-                    console.error('Permission Check Failed: Not authenticated or session expired.', response.status);
-                    window.location.href = '/pages/403.html';
-                    return; // Stop execution
-                }
-
-                const data = await response.json();
-                const userRole = data?.user_role;
-                
-                // Case 2: Authenticated but unauthorized role
-                if (!userRole || !allowedRoles.includes(userRole)) {
-                    console.error('Permission Check Failed: User role is not authorized. Role:', userRole);
-                    window.location.href = '/pages/403.html';
-                    return; // Stop execution
-                }
-                
-                // Success: User is logged in and has an allowed role ('admin' or 'teacher').
-                // Execution continues normally.
-
-            } catch (error) {
-                // Case 3: Network error or JSON parsing failure
-                console.error('Critical Error during permission check:', error);
-                window.location.href = '/pages/403.html';
-            }
-        }
-
         // --- Initialization ---
         document.addEventListener('DOMContentLoaded', () => {
-            // checkPermission(); // <<< REMOVED: Forum list should be visible to all
-            
             // Update the header buttons visibility
             checkAuthentication();
             
             // Fetch and display posts
             fetchPosts();
 
+
             // Add listeners for sorting buttons
-            document.getElementById('sort-date').addEventListener('click', () => sortAndRender('date'));
+            document.getElementById('sort-date-newest').addEventListener('click', () => sortAndRender('date-newest'));
+            document.getElementById('sort-date-oldest').addEventListener('click', () => sortAndRender('date-oldest'));
             document.getElementById('sort-upvotes').addEventListener('click', () => sortAndRender('upvotes'));
         });
         

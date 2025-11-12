@@ -71,6 +71,7 @@
                     <button id="loginButton" class="listButton hidden" onclick="redirectTo('/pages/login.html')">Login</button>
                     <button id="logoutButton" class="listButton hidden" onclick="logout()">Logout</button>
                     <button id="mypageButton" class="listButton hidden" onclick="mypage()">My Page</button>
+                    <button id="forumButton" class="listButton hidden" onclick="redirectTo('/pages/forum.html')">Forum</button>
                     <button id="validationButton" class="listButton hidden" onclick="redirectTo('/pages/validation.html')">Validation</button>
                     <button id="createButton" class="listButton hidden" onclick="redirectTo('/pages/create.html')">Create</button>
                     <button id="adminButton" class="listButton hidden" onclick="redirectTo('/pages/admin.html')">Admin</button>
@@ -132,7 +133,7 @@
         async function checkAuthentication() {
             const menuItems = document.getElementById('menuItems');
             // Hide all dynamic buttons first to prevent flicker
-            const buttons = ['loginButton', 'logoutButton', 'mypageButton', 'validationButton', 'createButton', 'adminButton'];
+            const buttons = ['loginButton', 'logoutButton', 'mypageButton', 'validationButton', 'createButton', 'adminButton','forumButton'];
             buttons.forEach(id => {
                 const button = document.getElementById(id);
                 if (button) {
@@ -162,6 +163,8 @@
                 document.getElementById('logoutButton')?.classList.add('block');
                 document.getElementById('mypageButton')?.classList.remove('hidden');
                 document.getElementById('mypageButton')?.classList.add('block');
+                document.getElementById('forumButton').classList.remove('hidden');
+                document.getElementById('forumButton').classList.add('block'); // Make it display as a block
                 document.getElementById('validationButton')?.classList.remove('hidden');
                 document.getElementById('validationButton')?.classList.add('block');
             } else if (userRole === 'admin') {
@@ -169,6 +172,8 @@
                 document.getElementById('logoutButton')?.classList.add('block');
                 document.getElementById('validationButton')?.classList.remove('hidden');
                 document.getElementById('validationButton')?.classList.add('block');
+                document.getElementById('forumButton').classList.remove('hidden');
+                document.getElementById('forumButton').classList.add('block'); // Make it display as a block
                 document.getElementById('createButton')?.classList.remove('hidden');
                 document.getElementById('createButton')?.classList.add('block');
                 document.getElementById('adminButton')?.classList.remove('hidden');
