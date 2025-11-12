@@ -1001,7 +1001,7 @@
             }
 
             // Based on the determined role, show specific buttons by removing 'hidden' and adding 'block'
-            if (userRole === 'teacher') {
+            if (currentUserRole === 'teacher') {
                 document.getElementById('mypageButton').classList.remove('hidden');
                 document.getElementById('mypageButton').classList.add('block'); // Make it display as a block
                 document.getElementById('forumButton').classList.remove('hidden');
@@ -1010,7 +1010,7 @@
                 document.getElementById('validationButton').classList.add('block'); // Make it display as a block
                 document.getElementById('logoutButton').classList.remove('hidden');
                 document.getElementById('logoutButton').classList.add('block'); // Make it display as a block
-            } else if (userRole === 'admin') {
+            } else if (currentUserRole === 'admin') {
                 document.getElementById('adminButton').classList.remove('hidden');
                 document.getElementById('adminButton').classList.add('block'); // Make it display as a block
                 document.getElementById('forumButton').classList.remove('hidden');
