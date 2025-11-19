@@ -1419,7 +1419,7 @@ async def get_teacher_url(request: Request):
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 ##this api gets the token, gets the data, sets the data, then redirects
-@app.get("/api/teacher/{url_id}")
+@app.get("/teacher/{url_id}")
 async def get_teacher_info(url_id: str, request: Request):
     db = SessionLocal()
     try:
