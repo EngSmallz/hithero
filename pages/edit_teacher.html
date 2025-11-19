@@ -281,7 +281,7 @@
 
             let userRole = null;
             try {
-                const response = await fetch('/profile/');
+                const response = await fetch('/api/profile/');
                 if (response.ok) {
                     const data = await response.json();
                     if (data && data.user_role) {
@@ -323,7 +323,7 @@
 
         async function logout() {
             try {
-                const response = await fetch(`/logout/`, {
+                const response = await fetch(`/profile/logout/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -343,7 +343,7 @@
 
         async function mypage() {
             try {
-                const response = await fetch('/myinfo/', {
+                const response = await fetch('/profile/myinfo/', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -379,7 +379,7 @@
 
         async function populateStatesDropdown() {
             try {
-                const response = await fetch("/get_states/");
+                const response = await fetch("/api/get_states/");
                 const states = await response.json();
                 const stateDropdown = document.getElementById("state");
                 stateDropdown.innerHTML = '<option value="" disabled selected>Choose state</option>';
@@ -402,7 +402,7 @@
                 document.getElementById("school").innerHTML = '<option value="" disabled selected>Choose school</option>';
 
                 if (selectedState) {
-                    const response = await fetch(`/get_counties/${selectedState}`);
+                    const response = await fetch(`/api/get_counties/${selectedState}`);
                     const counties = await response.json();
                     counties.forEach(county => {
                         const option = new Option(county, county);
@@ -424,7 +424,7 @@
                 document.getElementById("school").innerHTML = '<option value="" disabled selected>Choose school</option>';
 
                 if (selectedState && selectedCounty) {
-                    const response = await fetch(`/get_districts/${selectedState}/${selectedCounty}`);
+                    const response = await fetch(`/api/get_districts/${selectedState}/${selectedCounty}`);
                     const districts = await response.json();
                     districts.forEach(district => {
                         const option = new Option(district, district);
@@ -446,7 +446,7 @@
                 schoolDropdown.innerHTML = '<option value="" disabled selected>Choose school</option>';
 
                 if (selectedState && selectedCounty && selectedDistrict) {
-                    const response = await fetch(`/get_schools/${selectedState}/${selectedCounty}/${selectedDistrict}`);
+                    const response = await fetch(`/api/get_schools/${selectedState}/${selectedCounty}/${selectedDistrict}`);
                     const schools = await response.json();
                     schools.forEach(school => {
                         const option = new Option(school, school);
@@ -474,7 +474,7 @@
                 event.preventDefault();
                 const formData = new FormData(updateNameForm);
                 try {
-                    const response = await fetch("/update_teacher_name/", {
+                    const response = await fetch("/profile/update_teacher_name/", {
                         method: "POST",
                         body: formData
                     });
@@ -498,7 +498,7 @@
                 event.preventDefault();
                 const formData = new FormData(updateSchoolForm);
                 try {
-                    const response = await fetch("/update_teacher_school/", {
+                    const response = await fetch("/profile/update_teacher_school/", {
                         method: "POST",
                         body: formData
                     });
@@ -522,7 +522,7 @@
                 const formData = new FormData(updateInfoForm);
 
                 try {
-                    const response = await fetch("/update_info/", {
+                    const response = await fetch("/profile/update_info/", {
                         method: "POST",
                         body: formData
                     });
@@ -548,7 +548,7 @@
                 const formData = new FormData(updateWishlistForm);
 
                 try {
-                    const response = await fetch("/update_wishlist/", {
+                    const response = await fetch("/profile/update_wishlist/", {
                         method: "POST",
                         body: formData
                     });
@@ -574,7 +574,7 @@
                 const formData = new FormData(updateUrlIdForm);
 
                 try {
-                    const response = await fetch("/update_url_id/", {
+                    const response = await fetch("/profile/update_url_id/", {
                         method: "POST",
                         body: formData
                     });

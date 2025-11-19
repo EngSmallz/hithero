@@ -717,7 +717,7 @@ def model_to_dict(model):
 
 #######apis#######
 ###api used to register a new user (and only a new user) into the new_user list
-@app.post("/register/")
+@app.post("/profile/register/")
 async def register_user(name: str = Form(...), email: str = Form(...), phone_number: str = Form(...), password: str = Form(...), confirm_password: str = Form(...), state: str = Form(...),county: str = Form(...),district: str = Form(...), school: str = Form(...), recaptcha_response: str = Form(...)):
     # Verify reCAPTCHA
     if not verify_recaptcha(recaptcha_response):
@@ -749,7 +749,7 @@ async def register_user(name: str = Form(...), email: str = Form(...), phone_num
 
 
 ###api used to create cookie based session via authentication with registered_user table
-@app.post("/login/")
+@app.post("/profile/login/")
 async def login_user(request: Request, email: str = Form(...), password: str = Form(...)):
     db = SessionLocal()
     try:
@@ -775,7 +775,7 @@ async def login_user(request: Request, email: str = Form(...), password: str = F
         db.close()
 
 ##end cookie session
-@app.post("/logout/")
+@app.post("/profile/logout/")
 async def logout_user(request: Request):
     if "user_id" in request.session:
         del request.session["user_id"]
@@ -784,7 +784,7 @@ async def logout_user(request: Request):
     return RedirectResponse(url="/", status_code=303)
 
 # Endpoint to move a user from new_users to registered_users and delete item in new_users
-@app.post("/validate_user/{user_email}")
+@app.post("/validation/validate_user/{user_email}")
 async def move_user(user_email: str):
     db = SessionLocal()
     try:
@@ -807,7 +807,7 @@ async def move_user(user_email: str):
         db.close()
 
 ##this api allows a logged in user to create an item in the table teacher_list in the hithero database if they have not created a user already
-@app.post("/create_teacher_profile/")
+@app.post("/profile/create_teacher_profile/")
 async def create_teacher_profile(request: Request, name: str = Form(...), state: str = Form(...), county: str = Form(...), district: str = Form(...), school: str = Form(...), aboutMe: str = Form(...), wishlist: str = Form(...), id: int = Depends(get_current_id), role: str = Depends(get_current_role)):
     db = SessionLocal()
     try:
@@ -852,7 +852,7 @@ async def create_teacher_profile(request: Request, name: str = Form(...), state:
 
 ##api gets a random teacher from the list teacher_list in the hithero data base
 
-@app.get("/random_teacher/")
+@app.get("/api/random_teacher/")
 async def get_random_teacher(request: Request):
     try:
         teacher = fetch_random_teacher()
@@ -882,7 +882,7 @@ async def get_random_teacher(request: Request):
 
 
 ###api gets the current session info of the logged in user
-@app.get("/profile/")
+@app.get("/api/profile/")
 async def get_user_profile(email: str = Depends(get_current_email), role: str = Depends(get_current_role), id: str = Depends(get_current_id)):
     if email:
         user_info = {
@@ -896,7 +896,7 @@ async def get_user_profile(email: str = Depends(get_current_email), role: str = 
 
 
 ## api used to send contact us email from /contact.html
-@app.post('/contact_us/')
+@app.post('/api/contact_us/')
 async def contact_us(name: str = Form(...), email: str = Form(...), subject: str = Form(...), message: str = Form(...), recaptcha_response: str = Form(...)):
 
     # reCAPTCHA verification
@@ -948,7 +948,7 @@ async def forbidden(request: Request, exc: HTTPException):
     return HTMLResponse(content=content, status_code=403)
 
 ###api gets a teacher data from teacher_list table
-@app.get("/get_teacher_info/")
+@app.get("/api/get_teacher_info/")
 async def get_teacher_info(request: Request):
     db = SessionLocal()
     try:
@@ -990,7 +990,7 @@ async def get_teacher_info(request: Request):
         db.close()
 
 ##api that updates about me info
-@app.post("/update_info/")
+@app.post("/profile/update_info/")
 async def update_info(request: Request, aboutMe: str = Form(...), id: int = Depends(get_current_id), role: str = Depends(get_current_role)):
     db = SessionLocal()
     try:
@@ -1007,7 +1007,7 @@ async def update_info(request: Request, aboutMe: str = Form(...), id: int = Depe
         db.close()
 
 ##api that updates school
-@app.post("/update_teacher_school/")
+@app.post("/profile/update_teacher_school/")
 async def update_teacher_school(
     request: Request,
     state: str = Form(...),
@@ -1038,7 +1038,7 @@ async def update_teacher_school(
         db.close()
 
 ##api that updates name
-@app.post("/update_teacher_name/")
+@app.post("/profile/update_teacher_name/")
 async def update_teacher_name(request: Request, teacher: str = Form(...), id: int = Depends(get_current_id), role: str = Depends(get_current_role)):
     db = SessionLocal()
     try:
@@ -1056,7 +1056,7 @@ async def update_teacher_name(request: Request, teacher: str = Form(...), id: in
         db.close()
 
 ##api to update wishlist
-@app.post("/update_wishlist/")
+@app.post("/profile/update_wishlist/")
 async def update_wishlist(request: Request, wishlist: str = Form(...), id: int = Depends(get_current_id), role: str = Depends(get_current_role)):
     db = SessionLocal()
     try:
@@ -1075,7 +1075,7 @@ async def update_wishlist(request: Request, wishlist: str = Form(...), id: int =
 
 
 #api that update the url of a teachers page
-@app.post("/update_url_id/")
+@app.post("/profile/update_url_id/")
 async def update_url_id(request: Request, url_id: str = Form(...), id: int = Depends(get_current_id), role: str = Depends(get_current_role)):
     db = SessionLocal()
     try:
@@ -1098,7 +1098,7 @@ async def update_url_id(request: Request, url_id: str = Form(...), id: int = Dep
 
     
 ###api used to update the logged in users teacher page image
-@app.post("/update_teacher_image/")
+@app.post("/profile/update_teacher_image/")
 async def edit_teacher_image(request: Request, role: str = Depends(get_current_role), image: UploadFile = Form(...)):
     db: Session = SessionLocal()
     try:
@@ -1132,7 +1132,7 @@ async def edit_teacher_image(request: Request, role: str = Depends(get_current_r
 
 
 ##api gets your page based on the id in reg_users and and regUserID in teacher_list
-@app.get("/myinfo/")
+@app.get("/profile/myinfo/")
 async def get_myinfo(request: Request, id: int = Depends(get_current_id)):
     db = SessionLocal()
     try:
@@ -1160,7 +1160,7 @@ async def get_myinfo(request: Request, id: int = Depends(get_current_id)):
 
 
 ##api lets the logged in user update their password
-@app.post("/update_password/")
+@app.post("/profile/update_password/")
 async def update_password(request: Request, id: int = Depends(get_current_id), old_password: str = Form(...), new_password: str = Form(...), new_password_confirmed: str = Form(...)):
     db = SessionLocal()
     try:
@@ -1185,7 +1185,7 @@ async def update_password(request: Request, id: int = Depends(get_current_id), o
 
 
 #api to check if a user has edit acces to teacher page
-@app.get("/check_access_teacher/")
+@app.get("/api/check_access_teacher/")
 async def check_access_teacher(request: Request, id: int = Depends(get_current_id), role: str = Depends(get_current_role)):
     db = SessionLocal()
     try:
@@ -1214,7 +1214,7 @@ async def check_access_teacher(request: Request, id: int = Depends(get_current_i
 
 
 #gets a list of unverified users to validate based on the role of the user
-@app.get("/validation_list/")
+@app.get("/api/validation_list/")
 async def validation_page(request: Request, role: str = Depends(get_current_role), id: int = Depends(get_current_id)):
     db = SessionLocal()
     try:
@@ -1245,7 +1245,7 @@ async def validation_page(request: Request, role: str = Depends(get_current_role
 
 
 #api gets a list of states from statecoutny table
-@app.get("/get_states/")
+@app.get("/api/get_states/")
 async def get_states():
     db = SessionLocal()
     try:
@@ -1255,7 +1255,7 @@ async def get_states():
         db.close()
 
 #api gets the names of the counties in the desired state
-@app.get("/get_counties/{state}")
+@app.get("/api/get_counties/{state}")
 async def get_counties(state: str):
     db = SessionLocal()
     try:
@@ -1271,7 +1271,7 @@ async def get_counties(state: str):
         db.close()
 
 #api gets the names of the school districts in the desired county and state
-@app.get("/get_districts/{state}/{county}")
+@app.get("/api/get_districts/{state}/{county}")
 async def get_districts(state: str, county: str):
     db = SessionLocal()
     try:
@@ -1287,7 +1287,7 @@ async def get_districts(state: str, county: str):
         db.close()
 
 #api gets the names of the school in the desired district, coutny, and state
-@app.get("/get_schools/{state}/{county}/{district}")
+@app.get("/api/get_schools/{state}/{county}/{district}")
 async def get_schools(state: str, county: str, district: str):
     db = SessionLocal()
     try:
@@ -1303,7 +1303,7 @@ async def get_schools(state: str, county: str, district: str):
         db.close()
 
 # api for forgotten password reset, currently does not do anything exceptional
-@app.post("/forgot_password/")
+@app.post("/profile/forgot_password/")
 async def forgot_password(email: str = Form(...)):
     db = SessionLocal()
     try:
@@ -1393,7 +1393,7 @@ async def get_spotlight_info(request: Request, token: str):
         db.close()
 
 ###api to get a link for the url to your page to share
-@app.get("/teacher_url/")
+@app.get("/api/teacher_url/")
 async def get_teacher_url(request: Request):
     db = SessionLocal()
     try:
@@ -1419,7 +1419,7 @@ async def get_teacher_url(request: Request):
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 ##this api gets the token, gets the data, sets the data, then redirects
-@app.get("/teacher/{url_id}")
+@app.get("/api/teacher/{url_id}")
 async def get_teacher_info(url_id: str, request: Request):
     db = SessionLocal()
     try:
@@ -1438,8 +1438,8 @@ async def get_teacher_info(url_id: str, request: Request):
     except Exception as e:
         return RedirectResponse(url="/pages/404.html")
 
-# Endpoint to move a user from new_users
-@app.post("/delete_user/{user_email}")
+# Endpoint to  users
+@app.post("/validation/delete_user/{user_email}")
 async def delete_user(user_email: str, role: str = Depends(get_current_role)):
     if role == 'admin':
         db = SessionLocal()
@@ -1462,7 +1462,7 @@ async def delete_user(user_email: str, role: str = Depends(get_current_role)):
         raise HTTPException(status_code=500, detail=f"No permission to to action.")
 
 # Function to report a user in validation
-@app.post("/report_user/{user_email}")
+@app.post("/validation/report_user/{user_email}")
 async def report_user(user_email: str):
     db = SessionLocal()
     try:
@@ -1477,7 +1477,7 @@ async def report_user(user_email: str):
         db.close()
 
 # Endpoint to mark that a new users has been emailed
-@app.post("/emailed_user/{user_email}")
+@app.post("/validation/emailed_user/{user_email}")
 async def emailed_user(user_email: str):
     db = SessionLocal()
     try:
@@ -1493,7 +1493,7 @@ async def emailed_user(user_email: str):
 
 
 #api gets a list of states from statecoutny table
-@app.get("/index_states/")
+@app.get("/api/index_states/")
 async def index_states():
     db = SessionLocal()
     try:
@@ -1503,7 +1503,7 @@ async def index_states():
         db.close()
 
 #api gets the names of the counties in the desired state
-@app.get("/index_counties/{state}")
+@app.get("/api/index_counties/{state}")
 async def index_counties(state: str):
     db = SessionLocal()
     try:
@@ -1519,7 +1519,7 @@ async def index_counties(state: str):
         db.close()
 
 #api gets the names of the school districts in the desired county and state
-@app.get("/index_districts/{state}/{county}")
+@app.get("/api/index_districts/{state}/{county}")
 async def index_districts(state: str, county: str):
     db = SessionLocal()
     try:
@@ -1535,7 +1535,7 @@ async def index_districts(state: str, county: str):
         db.close()
 
 #api gets the names of the school in the desired district, coutny, and state
-@app.get("/index_schools/{state}/{county}/{district}")
+@app.get("/api/index_schools/{state}/{county}/{district}")
 async def index_schools(state: str, county: str, district: str):
     db = SessionLocal()
     try:
@@ -1551,7 +1551,7 @@ async def index_schools(state: str, county: str, district: str):
         db.close()
 
 ###api gets the teachers and their url_id for the index
-@app.post("/index_teachers/")
+@app.post("/api/index_teachers/")
 async def index_teachers(state: str = Form(...),county: str = Form(None),district: str = Form(None),school: str = Form(None)):
     db: Session = SessionLocal()
     try:
@@ -1579,7 +1579,7 @@ async def index_teachers(state: str = Form(...),county: str = Form(None),distric
     finally:
         db.close()
 
-@app.post("/generate_teacher_report/")
+@app.post("/admin/generate_teacher_report/")
 async def generate_teacher_report(state: str = Form(...), county: str = Form(None), district: str = Form(None), school: str = Form(None)):
     db: Session = SessionLocal()
 
@@ -1645,7 +1645,7 @@ async def generate_teacher_report(state: str = Form(...), county: str = Form(Non
         db.close()
 
 # --- Modified API Endpoint for Promotional Items ---
-@app.get("/promo/{token}", response_class=HTMLResponse)
+@app.get("/{token}", response_class=HTMLResponse)
 async def get_promotional_page_with_hero(request: Request, token: str):
     """
     Sets a session variable with the promo token and redirects to the homepage.
@@ -1678,7 +1678,7 @@ async def get_promotional_page_with_hero(request: Request, token: str):
     return RedirectResponse(url="/pages/homepage.html")
 
 # --- API to get promo info (called by JavaScript) ---
-@app.get("/get_promo_info/")
+@app.get("/promo/get_promo_info/")
 async def get_promo_info(request: Request):
     promo_info = {
         "promo_image_url": request.session.pop("promo_image_url", None), # Pop to clear after use

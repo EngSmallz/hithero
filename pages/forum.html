@@ -448,7 +448,7 @@
             let userRole = null; 
 
             try {
-                const response = await fetch('/profile/');
+                const response = await fetch('/api/profile/');
                 if (response.ok) {
                     const data = await response.json();
                     userRole = data?.user_role;
@@ -487,7 +487,7 @@
 
         async function logout() {
             try {
-                await fetch(`/logout/`, { method: 'POST' });
+                await fetch(`/profile/logout/`, { method: 'POST' });
                 window.location.href = '/'; 
             } catch (error) {
                 console.error('Error during logout:', error);
@@ -496,7 +496,7 @@
 
         async function mypage() {
             try {
-                const response = await fetch('/myinfo/', { method: 'GET' });
+                const response = await fetch('/profile/myinfo/', { method: 'GET' });
                 if (response.ok) {
                     window.location.href = '/pages/teacher.html';
                 } else {

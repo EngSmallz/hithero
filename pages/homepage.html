@@ -219,7 +219,7 @@
             let userRole = null;
 
             try {
-                const response = await fetch('/profile/');
+                const response = await fetch('/api/profile/');
                 if (response.ok) {
                     const data = await response.json();
                     if (data && data.user_role) {
@@ -263,7 +263,7 @@
 
         async function randomTeacher() {
             try {
-                const response = await fetch('/random_teacher/');
+                const response = await fetch('/api/random_teacher/');
                 const data = await response.json();
         
                 const randomTeacherInfo = document.getElementById('randomTeacherInfo');
@@ -297,7 +297,7 @@
 
         async function logout() {
             try {
-                const response = await fetch(`/logout/`, {
+                const response = await fetch(`/profile/logout/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -364,7 +364,7 @@
 
         async function mypage() {
             try {
-                const response = await fetch('/myinfo/', {
+                const response = await fetch('/profile/myinfo/', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -385,7 +385,7 @@
         // --- NEW JAVASCRIPT FOR PROMO HERO ---
         async function displayPromoHero() {
             try {
-                const response = await fetch('/get_promo_info/');
+                const response = await fetch('/promo/get_promo_info/');
                 if (response.ok) {
                     const promoData = await response.json();
                     

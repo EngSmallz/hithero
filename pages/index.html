@@ -164,7 +164,7 @@
             let userRole = null;
 
             try {
-                const response = await fetch('/profile/');
+                const response = await fetch('/api/profile/');
                 if (response.ok) {
                     const data = await response.json();
                     if (data && data.user_role) {
@@ -216,7 +216,7 @@
 
         async function logout() {
             try {
-                const response = await fetch(`/logout/`, {
+                const response = await fetch(`/profile/logout/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -236,7 +236,7 @@
 
         async function mypage() {
             try {
-                const response = await fetch('/myinfo/', {
+                const response = await fetch('/profile/myinfo/', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -269,7 +269,7 @@
 
         async function populateStatesDropdown() {
             try {
-                const response = await fetch("/index_states/");
+                const response = await fetch("/api/index_states/");
                 const states = await response.json();
                 const stateDropdown = document.getElementById("state");
                 stateDropdown.innerHTML = `<option value="" disabled selected>Choose state</option>`; // Reset and add default
@@ -292,7 +292,7 @@
             if (!selectedState) return; // Don't fetch if no state is selected
 
             try {
-                const response = await fetch(`/index_counties/${selectedState}`);
+                const response = await fetch(`/api/index_counties/${selectedState}`);
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 const counties = await response.json();
                 counties.forEach(county => {
@@ -314,7 +314,7 @@
             if (!selectedState || !selectedCounty) return;
 
             try {
-                const response = await fetch(`/index_districts/${selectedState}/${selectedCounty}`);
+                const response = await fetch(`/api/index_districts/${selectedState}/${selectedCounty}`);
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 const districts = await response.json();
                 districts.forEach(district => {
@@ -336,7 +336,7 @@
             if (!selectedState || !selectedCounty || !selectedDistrict) return;
 
             try {
-                const response = await fetch(`/index_schools/${selectedState}/${selectedCounty}/${selectedDistrict}`);
+                const response = await fetch(`/api/index_schools/${selectedState}/${selectedCounty}/${selectedDistrict}`);
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 const schools = await response.json();
                 schools.forEach(school => {
@@ -358,7 +358,7 @@
             const formData = new FormData(searchForm);
 
             try {
-                const response = await fetch("/index_teachers/", {
+                const response = await fetch("/api/index_teachers/", {
                     method: "POST",
                     body: formData,
                 });

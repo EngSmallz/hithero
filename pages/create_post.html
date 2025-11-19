@@ -236,7 +236,7 @@
             let userRole = null; // Default to no role
 
             try {
-                const response = await fetch('/profile/');
+                const response = await fetch('/api/profile/');
                 if (response.ok) {
                     const data = await response.json();
                     if (data && data.user_role) {
@@ -282,7 +282,7 @@
         // Function to log out the user
         async function logout() {
             try {
-                const response = await fetch(`/logout/`, {
+                const response = await fetch(`/profile/logout/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -297,7 +297,7 @@
         // Function to redirect to my page
         async function mypage() {
             try {
-                const response = await fetch('/myinfo/', {
+                const response = await fetch('/profile/myinfo/', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -367,7 +367,7 @@
             const allowedRoles = ['admin', 'teacher']; // Roles that are allowed access
 
             try {
-                const response = await fetch('/profile/');
+                const response = await fetch('/api/profile/');
 
                 if (!response.ok) {
                     // Case 1: Not authenticated (e.g., 401 Unauthorized or 403 Forbidden from server)
