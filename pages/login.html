@@ -117,9 +117,8 @@
             <p>&copy; 2024 Homeroom Heroes. All rights reserved.</p>
         </div>
     </footer>
-
+    <script src="/static/common-scripts.js"></script>
     <script>
-
         document.addEventListener("DOMContentLoaded", function () {
             // Check authentication status to adjust header navigation
             checkAuthentication();
@@ -133,10 +132,18 @@
                 event.preventDefault();
                 const formData = new FormData(loginForm);
 
+                // Convert FormData to URLSearchParams to get application/x-www-form-urlencoded format
+                const urlEncodedData = new URLSearchParams(formData).toString();
+
                 try {
                     const response = await fetch("/profile/login/", {
                         method: "POST",
-                        body: formData,
+                        // 1. Explicitly set Content-Type to match server's Form(...) expectation
+                        headers: {
+                            "Content-Type": "application/x-www-form-urlencoded", 
+                        },
+                        // 2. Use the URLSearchParams string as the body
+                        body: urlEncodedData, 
                     });
 
                     const data = await response.json();
