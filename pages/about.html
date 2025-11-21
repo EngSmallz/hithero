@@ -189,8 +189,130 @@
             <p>&copy; 2024 Homeroom Heroes. All rights reserved.</p>
         </div>
     </footer>
-    <script src="/static/common-scripts.js"></script>
+
     <script>
+        // Helper function for redirection
+        function redirectTo(url) {
+            window.location.href = url;
+        }
+
+        // Function to toggle the mobile menu visibility
+        function toggleMenu() {
+            var menuItems = document.getElementById('menuItems');
+            // This robustly toggles Tailwind's 'hidden' class
+            menuItems.classList.toggle('hidden');
+        }
+
+        // Function to check user authentication role and display relevant buttons
+        async function checkAuthentication() {
+            // First, hide ALL dynamic buttons and remove any explicit display styles (like 'block')
+            // This ensures a clean slate before showing the correct ones.
+            const buttons = [
+                'loginButton', 'logoutButton', 'mypageButton',
+                'validationButton', 'createButton', 'adminButton',
+                'forumButton'
+            ];
+
+            buttons.forEach(id => {
+                const button = document.getElementById(id);
+                if (button) {
+                    button.classList.add('hidden');
+                    button.classList.remove('block'); // Important: Remove 'block' if it was added
+                }
+            });
+
+            let userRole = null; // Default to no role
+
+            try {
+                const response = await fetch('/profile/');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data && data.user_role) {
+                        userRole = data.user_role;
+                    } else {
+                        console.warn('Profile data missing user_role or is null:', data);
+                    }
+                } else {
+                    console.error('Failed to fetch profile. Status:', response.status);
+                }
+            } catch (error) {
+                console.error('Network or parsing error fetching user profile:', error);
+            }
+
+            // Based on the determined role, show specific buttons by removing 'hidden' and adding 'block'
+            if (userRole === 'teacher') {
+                document.getElementById('mypageButton').classList.remove('hidden');
+                document.getElementById('mypageButton').classList.add('block'); // Make it display as a block
+                document.getElementById('forumButton').classList.remove('hidden');
+                document.getElementById('forumButton').classList.add('block'); // Make it display as a block
+                document.getElementById('validationButton').classList.remove('hidden');
+                document.getElementById('validationButton').classList.add('block'); // Make it display as a block
+                document.getElementById('logoutButton').classList.remove('hidden');
+                document.getElementById('logoutButton').classList.add('block'); // Make it display as a block
+            } else if (userRole === 'admin') {
+                document.getElementById('adminButton').classList.remove('hidden');
+                document.getElementById('adminButton').classList.add('block'); // Make it display as a block
+                document.getElementById('forumButton').classList.remove('hidden');
+                document.getElementById('forumButton').classList.add('block'); // Make it display as a block
+                document.getElementById('validationButton').classList.remove('hidden');
+                document.getElementById('validationButton').classList.add('block'); // Make it display as a block
+                document.getElementById('createButton').classList.remove('hidden');
+                document.getElementById('createButton').classList.add('block'); // Make it display as a block
+                document.getElementById('logoutButton').classList.remove('hidden');
+                document.getElementById('logoutButton').classList.add('block'); // Make it display as a block
+            } else {
+                // Default: show login if no specific role or an error occurred (unauthenticated)
+                document.getElementById('loginButton').classList.remove('hidden');
+                document.getElementById('loginButton').classList.add('block'); // Make it display as a block
+            }
+        }
+
+        // Function to log out the user
+        async function logout() {
+            try {
+                const response = await fetch(`/logout/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+                window.location.href = '/'; // Redirect to root after logout
+            } catch (error) {
+                console.error('Error during logout:', error);
+            }
+        }
+
+        // Function to redirect to my page
+        async function mypage() {
+            try {
+                const response = await fetch('/myinfo/', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+                if (response.ok) {
+                    window.location.href = '/pages/teacher.html';
+                } else {
+                    console.error('Error:', response.status);
+                    window.location.href = '/'; // Redirect to home or login if error
+                }
+            } catch (error) {
+                console.error('Error fetching my page info:', error);
+                window.location.href = '/'; // Redirect to home or login on network error
+            }
+        }
+
+        // Function to open the T&C modal
+        function openTermsConditions() {
+            document.getElementById('termsConditionsModal').classList.remove('hidden');
+        }
+
+        // Function to close the T&C modal
+        function closeTermsConditions() {
+            document.getElementById('termsConditionsModal').classList.add('hidden');
+        }
+
         // Call checkAuthentication on page load to set initial button visibility
         window.onload = function() {
             checkAuthentication();

@@ -159,14 +159,23 @@
             <p>&copy; 2024 Homeroom Heroes. All rights reserved.</p>
         </div>
     </footer>
-    <script src="/static/common-scripts.js"></script>
 
     <script>
-
         // Store fetched posts globally for client-side sorting and filtering
         let allPosts = [];
         let currentSort = 'date-newest';
         let currentPostDisplayCount = 10;
+
+        // Helper function for redirection
+        function redirectTo(url) {
+            window.location.href = url;
+        }
+
+        // Function to toggle the mobile menu visibility
+        function toggleMenu() {
+            var menuItems = document.getElementById('menuItems');
+            menuItems.classList.toggle('hidden');
+        }
 
         // Utility function to format dates
         function formatDate(dateString) {
@@ -422,13 +431,91 @@
                 console.error("Fetch Error:", error);
             }
         }
+        
+        // --- Authentication/Navigation Functions (Unchanged) ---
+
+        async function checkAuthentication() {
+            // First, hide ALL dynamic buttons
+            const buttons = ['loginButton', 'logoutButton', 'mypageButton', 'validationButton', 'createButton', 'adminButton', 'forumButton'];
+            buttons.forEach(id => {
+                const button = document.getElementById(id);
+                if (button) {
+                    button.classList.add('hidden');
+                    button.classList.remove('block');
+                }
+            });
+
+            let userRole = null; 
+
+            try {
+                const response = await fetch('/api/profile/');
+                if (response.ok) {
+                    const data = await response.json();
+                    userRole = data?.user_role;
+                }
+            } catch (error) {
+                console.error('Network or parsing error fetching user profile:', error);
+            }
+
+            // Based on the determined role, show specific buttons by removing 'hidden' and adding 'block'
+            if (userRole === 'teacher') {
+                document.getElementById('mypageButton').classList.remove('hidden');
+                document.getElementById('mypageButton').classList.add('block'); // Make it display as a block
+                document.getElementById('forumButton').classList.remove('hidden');
+                document.getElementById('forumButton').classList.add('block'); // Make it display as a block
+                document.getElementById('validationButton').classList.remove('hidden');
+                document.getElementById('validationButton').classList.add('block'); // Make it display as a block
+                document.getElementById('logoutButton').classList.remove('hidden');
+                document.getElementById('logoutButton').classList.add('block'); // Make it display as a block
+            } else if (userRole === 'admin') {
+                document.getElementById('adminButton').classList.remove('hidden');
+                document.getElementById('adminButton').classList.add('block'); // Make it display as a block
+                document.getElementById('forumButton').classList.remove('hidden');
+                document.getElementById('forumButton').classList.add('block'); // Make it display as a block
+                document.getElementById('validationButton').classList.remove('hidden');
+                document.getElementById('validationButton').classList.add('block'); // Make it display as a block
+                document.getElementById('createButton').classList.remove('hidden');
+                document.getElementById('createButton').classList.add('block'); // Make it display as a block
+                document.getElementById('logoutButton').classList.remove('hidden');
+                document.getElementById('logoutButton').classList.add('block'); // Make it display as a block
+            } else {
+                // Default: show login if no specific role or an error occurred (unauthenticated)
+                document.getElementById('loginButton').classList.remove('hidden');
+                document.getElementById('loginButton').classList.add('block'); // Make it display as a block
+            }
+        }
+
+        async function logout() {
+            try {
+                await fetch(`/profile/logout/`, { method: 'POST' });
+                window.location.href = '/'; 
+            } catch (error) {
+                console.error('Error during logout:', error);
+            }
+        }
+
+        async function mypage() {
+            try {
+                const response = await fetch('/profile/myinfo/', { method: 'GET' });
+                if (response.ok) {
+                    window.location.href = '/pages/teacher.html';
+                } else {
+                    console.error('Error:', response.status);
+                    window.location.href = '/'; 
+                }
+            } catch (error) {
+                console.error('Error fetching my page info:', error);
+                window.location.href = '/'; 
+            }
+        }
 
         // --- Initialization ---
         document.addEventListener('DOMContentLoaded', () => {
+            // Update the header buttons visibility
+            checkAuthentication();
+            
             // Fetch and display posts
             fetchPosts();
-            checkAuthentication();
-            checkPermission();
 
 
             // Add listeners for sorting buttons
@@ -436,20 +523,6 @@
             document.getElementById('sort-date-oldest').addEventListener('click', () => sortAndRender('date-oldest'));
             document.getElementById('sort-upvotes').addEventListener('click', () => sortAndRender('upvotes'));
         });
-
-        async function checkPermission() {
-            try {
-                const response = await fetch('/api/profile/');
-                if (!response.ok) {
-                    // If response is not OK, redirect to 403.html
-                    window.location.href = '/pages/403.html';
-                    return; // Stop execution
-                }
-            } catch (error) {
-                console.error('Error checking permission:', error);
-                window.location.href = '/pages/403.html';
-            }
-        }
         
     </script>
 </body>
