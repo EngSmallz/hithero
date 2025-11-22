@@ -7,54 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="shortcut icon" type="image/x-icon" href="/static/images/favicon.ico" />
-    <style>
-        /* Ensure the font is applied globally */
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #1f2937; /* Tailwind's bg-gray-800 */
-            color: #f9fafb; /* Tailwind's text-gray-50 */
-        }
-        /* Custom styles for hamburger menu items */
-        .menu-items .listButton {
-            width: 100%;
-            text-align: left;
-            padding: 0.75rem 1rem;
-            color: white;
-            background-color: transparent;
-            border: none;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-            border-radius: 0.375rem; /* rounded-md */
-        }
-        .menu-items .listButton:hover {
-            background-color: rgba(255, 255, 255, 0.1); /* Light hover effect */
-        }
-        /* Positioning for the dropdown menu */
-        .menu-items {
-            flex-direction: column; /* Stacks buttons vertically */
-            position: absolute;
-            top: 100%; /* Position below the header or its relative parent */
-            right: 0;
-            background-color: #1a472a; /* Darker green for dropdown */
-            border-radius: 0.5rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            z-index: 20;
-            min-width: 150px;
-            padding: 0.5rem;
-        }
+    <link rel="stylesheet" href="/static/style.css"> 
 
-        /* Post Content: Ensure line breaks from the database are respected */
-        #post-content {
-            white-space: pre-wrap;
-            overflow-wrap: break-word;
-        }
-
-        /* Style for the floating success/error message */
-        #floating-message {
-            opacity: 0;
-            pointer-events: none;
-        }
-    </style>
 </head>
 <body class="bg-gray-800 text-gray-50">
     <header class="bg-gradient-to-r from-green-700 to-green-900 text-white shadow-lg py-4 md:py-6 relative">
@@ -65,7 +19,7 @@
                 </a>
                 <nav class="hidden md:flex ml-4">
                     <ul class="flex space-x-4 md:space-x-8 text-lg">
-                        <li><a href="/pages/homepage.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Homepage</a></li>
+                        <li><a href="/pages/homepage.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Home</a></li>
                         <li><a href="/pages/index.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Donate</a></li>
                         <li><a href="/pages/register.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Sign Up</a></li>
                         <li><a href="/pages/about.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">About</a></li>
@@ -76,21 +30,32 @@
             </div>
 
             <div class="relative">
-                <button id="hamburgerButton" class="text-white text-3xl focus:outline-none" onclick="toggleMenu()">☰</button>
+                <button id="hamburgerButton" class="text-white text-3xl focus:outline-none **md:hidden**" onclick="toggleMenu()">☰</button>
 
-                <div class="menu-items absolute right-0 top-full mt-2 w-48 bg-green-800 rounded-md shadow-lg py-1 z-20 hidden" id="menuItems">
+                <div class="menu-items absolute right-0 top-full mt-2 w-48 bg-green-800 rounded-md shadow-lg py-1 z-20 hidden **md:hidden**" id="menuItems">
+                    
+                    <nav class="md:hidden">
+                        <ul class="flex flex-col text-base p-1">
+                            <li><a href="/pages/homepage.html" class="listButton block">Home</a></li>
+                            <li><a href="/pages/index.html" class="listButton block">Donate</a></li>
+                            <li><a href="/pages/register.html" class="listButton block">Sign Up</a></li>
+                            <li><a href="/pages/about.html" class="listButton block">About</a></li>
+                            <li><a href="/pages/contact.html" class="listButton block">Contact</a></li>
+                            <li><a href="/pages/partners.html" class="listButton block">Radio Partners</a></li>
+                            <hr class="my-1 border-green-700"> </ul>
+                    </nav>
+                    
                     <button id="loginButton" class="listButton hidden" onclick="redirectTo('/pages/login.html')">Login</button>
                     <button id="logoutButton" class="listButton hidden" onclick="logout()">Logout</button>
                     <button id="mypageButton" class="listButton hidden" onclick="mypage()">My Page</button>
                     <button id="forumButton" class="listButton hidden" onclick="redirectTo('/pages/forum.html')">Forum</button>
                     <button id="validationButton" class="listButton hidden" onclick="redirectTo('/pages/validation.html')">Validation</button>
-                    <button id="createButton" class="listButton hidden" onclick="redirectTo('/pages/create.html')">Create Post</button>
+                    <button id="createButton" class="listButton hidden" onclick="redirectTo('/pages/create.html')">Create</button>
                     <button id="adminButton" class="listButton hidden" onclick="redirectTo('/pages/admin.html')">Admin</button>
                 </div>
             </div>
         </div>
     </header>
-
     <main class="container mx-auto px-4 py-8">
         <section class="max-w-4xl mx-auto">
             <h2 class="text-4xl font-extrabold text-white mb-8 border-b border-green-700 pb-4">Discussion Detail</h2>

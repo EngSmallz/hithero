@@ -7,43 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="shortcut icon" type="image/x-icon" href="/static/images/favicon.ico">
-    <style>
-        /* Ensure the font is applied globally */
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #1f2937; /* Tailwind's bg-gray-800 */
-            color: #f9fafb; /* Tailwind's text-gray-50 */
-        }
-        /* Custom styles for hamburger menu items */
-        .menu-items .listButton {
-            width: 100%;
-            text-align: left;
-            padding: 0.75rem 1rem;
-            color: white;
-            background-color: transparent;
-            border: none;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-            border-radius: 0.375rem; /* rounded-md */
-        }
-        .menu-items .listButton:hover {
-            background-color: rgba(255, 255, 255, 0.1); /* Light hover effect */
-        }
-        /* Positioning for the dropdown menu */
-        .menu-items {
-            flex-direction: column; /* Stacks buttons vertically */
-            position: absolute;
-            top: 100%; /* Position below the header or its relative parent */
-            right: 0;
-            background-color: #1a472a; /* Darker green for dropdown */
-            border-radius: 0.5rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            z-index: 20;
-            min-width: 150px;
-            padding: 0.5rem;
-            /* The 'hidden' class from HTML/JS will control its visibility */
-        }
-    </style>
+    <link rel="stylesheet" href="/static/style.css"> 
+
 </head>
 <body class="bg-gray-800 text-gray-50">
     <header class="bg-gradient-to-r from-green-700 to-green-900 text-white shadow-lg py-4 md:py-6 relative">
@@ -65,9 +30,21 @@
             </div>
 
             <div class="relative">
-                <button id="hamburgerButton" class="text-white text-3xl focus:outline-none" onclick="toggleMenu()">☰</button>
+                <button id="hamburgerButton" class="text-white text-3xl focus:outline-none **md:hidden**" onclick="toggleMenu()">☰</button>
 
-                <div class="menu-items absolute right-0 top-full mt-2 w-48 bg-green-800 rounded-md shadow-lg py-1 z-20 hidden" id="menuItems">
+                <div class="menu-items absolute right-0 top-full mt-2 w-48 bg-green-800 rounded-md shadow-lg py-1 z-20 hidden **md:hidden**" id="menuItems">
+                    
+                    <nav class="md:hidden">
+                        <ul class="flex flex-col text-base p-1">
+                            <li><a href="/pages/homepage.html" class="listButton block">Home</a></li>
+                            <li><a href="/pages/index.html" class="listButton block">Donate</a></li>
+                            <li><a href="/pages/register.html" class="listButton block">Sign Up</a></li>
+                            <li><a href="/pages/about.html" class="listButton block">About</a></li>
+                            <li><a href="/pages/contact.html" class="listButton block">Contact</a></li>
+                            <li><a href="/pages/partners.html" class="listButton block">Radio Partners</a></li>
+                            <hr class="my-1 border-green-700"> </ul>
+                    </nav>
+                    
                     <button id="loginButton" class="listButton hidden" onclick="redirectTo('/pages/login.html')">Login</button>
                     <button id="logoutButton" class="listButton hidden" onclick="logout()">Logout</button>
                     <button id="mypageButton" class="listButton hidden" onclick="mypage()">My Page</button>
@@ -144,19 +121,21 @@
             menuItems.classList.toggle('hidden');
         }
 
-        // Adapted checkAuthentication for admin page, strictly allowing only admin and redirecting others
+        // Function to check user authentication role and display relevant buttons
         async function checkAuthentication() {
-            // Hide all dynamic buttons by default (reset state)
+            // First, hide ALL dynamic buttons and remove any explicit display styles (like 'block')
+            // This ensures a clean slate before showing the correct ones.
             const buttons = [
                 'loginButton', 'logoutButton', 'mypageButton',
                 'validationButton', 'createButton', 'adminButton',
                 'forumButton'
             ];
+
             buttons.forEach(id => {
                 const button = document.getElementById(id);
                 if (button) {
                     button.classList.add('hidden');
-                    button.classList.remove('block'); // Ensure it's not block
+                    button.classList.remove('block'); // Important: Remove 'block' if it was added
                 }
             });
 
@@ -169,28 +148,31 @@
                     if (data && data.user_role) {
                         userRole = data.user_role;
                     } else {
+                        window.location.href = '/pages/403.html';
                         console.warn('Profile data missing user_role or is null:', data);
                     }
                 } else {
+                    window.location.href = '/pages/403.html';
                     console.error('Failed to fetch profile. Status:', response.status);
                 }
             } catch (error) {
+                window.location.href = '/pages/403.html';
                 console.error('Network or parsing error fetching user profile:', error);
             }
 
-            // Stricter logic for admin page: only allow 'admin' role, show logout button, redirect others
+            // Based on the determined role, show specific buttons by removing 'hidden' and adding 'block'
             if (userRole === 'admin') {
-                const logoutBtn = document.getElementById('logoutButton');
-                if (logoutBtn) {
-                    logoutBtn.classList.remove('hidden');
-                    logoutBtn.classList.add('block');
-                }
-                // Admin specific buttons could be shown here if they were part of the menu
-                // For example, if you wanted the 'Admin' button in the dropdown to show too:
-                // document.getElementById('adminButton').classList.remove('hidden');
-                // document.getElementById('adminButton').classList.add('block');
+                document.getElementById('adminButton').classList.remove('hidden');
+                document.getElementById('adminButton').classList.add('block'); // Make it display as a block
+                document.getElementById('forumButton').classList.remove('hidden');
+                document.getElementById('forumButton').classList.add('block'); // Make it display as a block
+                document.getElementById('validationButton').classList.remove('hidden');
+                document.getElementById('validationButton').classList.add('block'); // Make it display as a block
+                document.getElementById('createButton').classList.remove('hidden');
+                document.getElementById('createButton').classList.add('block'); // Make it display as a block
+                document.getElementById('logoutButton').classList.remove('hidden');
+                document.getElementById('logoutButton').classList.add('block'); // Make it display as a block
             } else {
-                // If not admin, redirect to 403 Forbidden page
                 window.location.href = '/pages/403.html';
             }
         }
