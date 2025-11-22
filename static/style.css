@@ -100,3 +100,10 @@ body {
     font-size: 1.125rem;
     color: #e1e1e2;
 }
+
+.sort-btn {
+    border-radius: 0.5rem; /* rounded-lg equivalent */
+    font-weight: 600; /* font-semibold equivalent */
+    transition: all 0.2s;
+    white-space: nowrap; /* Prevent button text from wrapping unless needed */
+}

@@ -74,20 +74,23 @@
             </div>
             
             <div class="flex items-center justify-between mb-6 p-4 bg-gray-700 rounded-lg shadow-inner">
-                <p class="text-lg font-semibold text-green-300">Sort By:</p>
-                <div class="flex space-x-3">
-                    <button id="sort-date-newest" class="sort-btn bg-green-600 active-sort hover:bg-green-500" data-sort="date-newest">
+                <p class="text-lg font-semibold text-green-300 mr-4 md:mr-0">Sort By:</p>
+                
+                <div class="flex flex-wrap sm:space-x-3 gap-2"> 
+                    
+                    <button id="sort-date-newest" class="sort-btn bg-green-600 active-sort hover:bg-green-500 text-sm py-2 px-3 md:text-base md:py-2 md:px-4" data-sort="date-newest">
                         Date (Newest)
                     </button>
                     
-                    <button id="sort-date-oldest" class="sort-btn bg-gray-600 hover:bg-gray-500" data-sort="date-oldest">
+                    <button id="sort-date-oldest" class="sort-btn bg-gray-600 hover:bg-gray-500 text-sm py-2 px-3 md:text-base md:py-2 md:px-4" data-sort="date-oldest">
                         Date (Oldest)
                     </button>
                     
-                    <button id="sort-upvotes" class="sort-btn bg-gray-600 hover:bg-gray-500" data-sort="upvotes">
+                    <button id="sort-upvotes" class="sort-btn bg-gray-600 hover:bg-gray-500 text-sm py-2 px-3 md:text-base md:py-2 md:px-4" data-sort="upvotes">
                         Upvotes
                     </button>
-                    <button id="create-post-btn" class="sort-btn bg-indigo-600 hover:bg-indigo-700" onclick="redirectTo('/pages/create_post.html')">
+                    
+                    <button id="create-post-btn" class="sort-btn bg-indigo-600 hover:bg-indigo-700 text-sm py-2 px-3 md:text-base md:py-2 md:px-4" onclick="redirectTo('/pages/create_post.html')">
                         + New Post
                     </button>
                 </div>
