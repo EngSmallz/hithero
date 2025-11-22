@@ -36,12 +36,17 @@ body {
 .modal {
     position: fixed;
     inset: 0;
-    background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent overlay */
-    display: flex;
+    background-color: rgba(0, 0, 0, 0.5);
+    /* 👇 CRITICAL CHANGE: Start hidden */
+    display: none; 
     align-items: center;
     justify-content: center;
-    z-index: 50; /* Higher than other content */
-    /* This will be hidden by default with Tailwind's 'hidden' class */
+    z-index: 50;
+}
+
+/* Add a separate class to show it */
+.modal.is-visible {
+    display: flex;
 }
 
 .modal-content {
