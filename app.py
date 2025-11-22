@@ -755,7 +755,7 @@ async def register_admin(name: str = Form(...), email: str = Form(...), password
             return {"message": "Admin pass invalid."}
         hashed_password = sha256_crypt.hash(password)
         role = 'admin'
-        new_user = RegisteredUsers(name=name, email=email, password=hashed_password, role=role)
+        new_user = RegisteredUsers(email=email, password=hashed_password, role=role)
         db.add(new_user)
         db.commit()
         send_registration_email(email)
