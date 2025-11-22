@@ -748,7 +748,7 @@ async def register_user(name: str = Form(...), email: str = Form(...), phone_num
         return {"message": "Registration unsuccessful", "error": str(e)}
 
 @app.post("/admin/register/")
-async def register_admin(name: str = Form(...), email: str = Form(...), password: str = Form(...), secret_password: str = Form(...)):
+async def register_admin(email: str = Form(...), password: str = Form(...), secret_password: str = Form(...)):
     db = SessionLocal()
     try:
         if (secret_password == os.getenv("admin_secret")):
