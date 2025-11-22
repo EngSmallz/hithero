@@ -747,21 +747,6 @@ async def register_user(name: str = Form(...), email: str = Form(...), phone_num
     except Exception as e:
         return {"message": "Registration unsuccessful", "error": str(e)}
 
-@app.post("/admin/register/")
-async def register_admin(email: str = Form(...), password: str = Form(...), secret_password: str = Form(...)):
-    db = SessionLocal()
-    try:
-        if (secret_password == os.getenv("admin_secret")):
-            return {"message": "Admin pass invalid."}
-        hashed_password = sha256_crypt.hash(password)
-        role = 'admin'
-        new_user = RegisteredUsers(email=email, password=hashed_password, role=role)
-        db.add(new_user)
-        db.commit()
-        send_registration_email(email)
-        return {"message": "Admin registered successfully. You should recieve an email shortly. Please check your spam folder"}
-    except Exception as e:
-        return {"message": "Registration unsuccessful", "error": str(e)}
     
 ###api used to create cookie based session via authentication with registered_user table
 @app.post("/profile/login/")
