@@ -72,9 +72,9 @@
             </div>
         </section>
 
-        <section class="bg-white p-8 rounded-lg shadow-md text-gray-800 max-w-4xl mx-auto mb-8" id="about-me-section">
+        <section class="bg-white p-8 rounded-lg shadow-md text-gray-800 max-w-4xl mx-auto mb-8 min-h-[300px]" id="about-me-section">
             <h2 class="text-3xl font-bold text-green-700 mb-4 text-center">About Me</h2>
-            <p id="about-me" class="text-gray-700 text-lg leading-relaxed"></p>
+            <p id="about-me" class="text-black-700 text-lg leading-relaxed"></p>
         </section>
 
         <section class="bg-white p-8 rounded-lg shadow-md text-gray-800 max-w-4xl mx-auto mb-8" id="wishlist-section">
@@ -247,6 +247,8 @@
                     document.getElementById('teacher-name').innerText = data.name;
                     document.getElementById('school-name').innerText = `School: ${data.school}`;
                     document.getElementById('about-me').innerText = data.about_me;
+                    setRegionBackground(data.state);
+
 
                     // Handle teacher image
                     const teacherImage = document.getElementById('teacher-image');
@@ -328,6 +330,112 @@
             } catch (error) {
                 console.error('Error:', error);
                 alert(`Error: ${error.message}`);
+            }
+        }
+
+
+        // Map of full state names to your defined region folder names.
+        const regionStateMap = {
+            // PNW (Washington, Oregon, Idaho)
+            'Washington': 'PNW', 'Oregon': 'PNW', 'Idaho': 'PNW',
+            
+            // Cali
+            'California': 'Cali',
+            
+            // Rocky Mountains (Utah, Montana, Colorado) -- Wyoming removed
+            'Utah': 'Rocky_Mountains', 'Montana': 'Rocky_Mountains', 'Colorado': 'Rocky_Mountains',
+            
+            // South West (Nevada, Arizona, New Mexico)
+            'Nevada': 'South_West', 'Arizona': 'South_West', 'New Mexico': 'South_West',
+            
+            // NEW: South Central (Texas, Oklahoma, Wyoming)
+            'Texas': 'South_Central', 'Oklahoma': 'South_Central','Wyoming': 'South_Central',
+            
+            // Plains (ND, SD, NE, KS, MN, IA) -- Oklahoma removed
+            'North Dakota': 'Plains', 'South Dakota': 'Plains', 'Nebraska': 'Plains', 'Kansas': 'Plains','Minnesota': 'Plains', 'Iowa': 'Plains',
+
+            // Lower Mississippi (MO, AR, TN, MS, LA) 
+            'Missouri': 'Lower_Mississippi','Arkansas': 'Lower_Mississippi','Tennessee': 'Lower_Mississippi','Mississippi': 'Lower_Mississippi', 'Louisiana': 'Lower_Mississippi', 
+            
+            // Great Lakes (Michigan, Wisconsin, Illinois, Indiana, Ohio)
+            'Michigan': 'Great_Lakes', 'Wisconsin': 'Great_Lakes', 'Illinois': 'Great_Lakes', 'Indiana': 'Great_Lakes', 'Ohio': 'Great_Lakes',
+            
+            // MidEast (PA, NY, NJ, DE, MD, WV, DC)
+            'Pennsylvania': 'MidEast', 'New York': 'MidEast', 'New Jersey': 'MidEast', 'Delaware': 'MidEast', 'Maryland': 'MidEast', 'West Virginia': 'MidEast', 'District of Columbia': 'MidEast',
+            
+            // South East (KY, NC, SC, GA, AL, VA)
+            'Kentucky': 'South_East', 'North Carolina': 'South_East', 'South Carolina': 'South_East', 'Georgia': 'South_East', 'Alabama': 'South_East', 'Virginia': 'South_East',
+            
+            // Florida
+            'Florida': 'Florida',
+            
+            // New England (ME, VT, NH, MA, RI, CT)
+            'Maine': 'New_England', 'Vermont': 'New_England', 'New Hampshire': 'New_England', 'Massachusetts': 'New_England', 'Rhode Island': 'New_England', 'Connecticut': 'New_England',
+            
+            // Alaska & Hawaii
+            'Alaska': 'Alaska', 'Hawaii': 'Hawaii',
+            
+            // Fallback for regions not listed
+            'DEFAULT': 'Default' 
+        };
+
+        /**
+         * Sets the opaque background image for the About Me section based on the teacher's state NAME.
+         * It directly looks up the full state name in the regionStateMap.
+         * @param {string} stateName - The full state name (e.g., 'Washington').
+         */
+        function setRegionBackground(stateName) {
+            const targetElement = document.getElementById('about-me-section');
+            if (!targetElement) return;
+
+            // Reset styles before attempting image load
+            targetElement.style.background = '';
+            targetElement.classList.remove('text-white');
+            const heading = targetElement.querySelector('h2');
+            if (heading) {
+                heading.classList.add('text-green-700');
+                heading.classList.remove('text-green-200');
+            }
+
+            // Normalize input and get the region name, falling back to 'DEFAULT'
+            const normalizedStateName = stateName
+                .split(' ')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+                
+            const regionName = regionStateMap[normalizedStateName] || regionStateMap['DEFAULT']; 
+            
+            // If the regionName is 'Default', we skip the image loading to maintain the white background
+            if (regionName === 'Default') {
+                console.warn(`State name not mapped or is set to Default. Falling back to default styling.`);
+                return;
+            }
+
+            const imageUrl = `/static/images/regions/${regionName}.jpg`;
+
+            // --- Step 3: Load and Apply Image ---
+            const img = new Image();
+            img.onload = function() {
+                
+                // 1. SET WHITE/LIGHT OVERLAY (Makes image nearly invisible/faint)
+                // Use 255, 255, 255 (white) with a high alpha (e.g., 0.8 or 0.9)
+                // 0.8 means the image is 80% washed out by white.
+                const overlayColor = 'rgba(255, 255, 255, 0.5)'; 
+
+                targetElement.style.background = `linear-gradient(${overlayColor}, ${overlayColor}), url('${imageUrl}')`;
+                targetElement.style.backgroundSize = 'cover';
+                targetElement.style.backgroundPosition = 'center';
+            };
+            
+            img.onerror = function() {
+                console.warn(`Could not load regional image for ${regionName} (${imageUrl}). Falling back to default styling.`);
+            };
+
+            img.src = imageUrl;
+            
+            // Fix for cached images
+            if (img.complete) {
+                img.onload();
             }
         }
 
