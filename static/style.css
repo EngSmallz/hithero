@@ -37,8 +37,7 @@ body {
     position: fixed;
     inset: 0;
     background-color: rgba(0, 0, 0, 0.5);
-    /* 👇 CRITICAL CHANGE: Start hidden */
-    display: none; 
+    display: flex;
     align-items: center;
     justify-content: center;
     z-index: 50;
@@ -46,7 +45,7 @@ body {
 
 /* Add a separate class to show it */
 .modal.is-visible {
-    display: flex;
+    display: none;
 }
 
 .modal-content {
