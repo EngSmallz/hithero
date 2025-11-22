@@ -74,3 +74,30 @@ body {
 .modal-content .close:hover {
     color: #1f2937; /* Darker gray on hover */
 }
+
+.teacher-home {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin-top: 1.5rem;
+    padding: 1.5rem;
+}
+.teacher-home img {
+    width: 150px;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 9999px;
+    border: 2px solid #34d399;
+    margin-bottom: 1rem;
+}
+.teacher-details h2 {
+    font-size: 1.875rem;
+    font-weight: 600;
+    color: #10b981;
+    margin-bottom: 0.5rem;
+}
+.teacher-details p {
+    font-size: 1.125rem;
+    color: #e1e1e2;
+}
