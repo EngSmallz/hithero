@@ -8,7 +8,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="shortcut icon" type="image/x-icon" href="/static/images/favicon.ico">
     <link rel="stylesheet" href="/static/style.css"> 
-
 </head>
 <body class="bg-gray-800 text-gray-50">
     <header class="bg-gradient-to-r from-green-700 to-green-900 text-white shadow-lg py-4 md:py-6 relative">
@@ -57,7 +56,48 @@
         </div>
     </header>
 
-    <main class="container mx-auto px-4 py-8">
+    <main class="container mx-auto px-4 py-8 space-y-8">
+        
+        <section class="bg-white p-8 rounded-lg shadow-md text-gray-800">
+            <h2 class="text-3xl font-bold text-red-700 mb-6 text-center">Register New Administrator</h2>
+            <form id="admin-register-form" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="admin_name" class="block text-lg font-medium text-gray-700 mb-2">Full Name:</label>
+                        <input type="text" id="admin_name" name="name" required
+                                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-base bg-gray-50 text-gray-900">
+                    </div>
+
+                    <div>
+                        <label for="admin_email" class="block text-lg font-medium text-gray-700 mb-2">Email:</label>
+                        <input type="email" id="admin_email" name="email" required
+                                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-base bg-gray-50 text-gray-900">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="admin_password" class="block text-lg font-medium text-gray-700 mb-2">Password (for new admin):</label>
+                        <input type="password" id="admin_password" name="password" required
+                                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-base bg-gray-50 text-gray-900">
+                    </div>
+
+                    <div>
+                        <label for="admin_secret" class="block text-lg font-medium text-gray-700 mb-2">Admin Secret Code (Your key):</label>
+                        <input type="password" id="admin_secret" name="secret_password" required
+                                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-base bg-gray-50 text-gray-900">
+                    </div>
+                </div>
+                
+                <button type="submit"
+                        class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md mt-6">
+                    Register New Admin
+                </button>
+            </form>
+        </section>
+
+        <hr class="border-gray-700">
+        
         <section class="bg-white p-8 rounded-lg shadow-md text-gray-800">
             <h2 class="text-3xl font-bold text-green-800 mb-6 text-center">Get Teacher Contact Info</h2>
             <form id="teacher-contact-form" class="space-y-6">
@@ -103,6 +143,7 @@
                 </button>
             </form>
         </section>
+        
     </main>
 
     <footer class="bg-gray-800 text-white py-6 mt-8 rounded-t-lg shadow-inner text-center">
@@ -123,8 +164,6 @@
 
         // Function to check user authentication role and display relevant buttons
         async function checkAuthentication() {
-            // First, hide ALL dynamic buttons and remove any explicit display styles (like 'block')
-            // This ensures a clean slate before showing the correct ones.
             const buttons = [
                 'loginButton', 'logoutButton', 'mypageButton',
                 'validationButton', 'createButton', 'adminButton',
@@ -135,11 +174,11 @@
                 const button = document.getElementById(id);
                 if (button) {
                     button.classList.add('hidden');
-                    button.classList.remove('block'); // Important: Remove 'block' if it was added
+                    button.classList.remove('block');
                 }
             });
 
-            let userRole = null; // Default to no role
+            let userRole = null; 
 
             try {
                 const response = await fetch('/api/profile/');
@@ -160,46 +199,39 @@
                 console.error('Network or parsing error fetching user profile:', error);
             }
 
-            // Based on the determined role, show specific buttons by removing 'hidden' and adding 'block'
             if (userRole === 'admin') {
                 document.getElementById('adminButton').classList.remove('hidden');
-                document.getElementById('adminButton').classList.add('block'); // Make it display as a block
+                document.getElementById('adminButton').classList.add('block');
                 document.getElementById('forumButton').classList.remove('hidden');
-                document.getElementById('forumButton').classList.add('block'); // Make it display as a block
+                document.getElementById('forumButton').classList.add('block');
                 document.getElementById('validationButton').classList.remove('hidden');
-                document.getElementById('validationButton').classList.add('block'); // Make it display as a block
+                document.getElementById('validationButton').classList.add('block');
                 document.getElementById('createButton').classList.remove('hidden');
-                document.getElementById('createButton').classList.add('block'); // Make it display as a block
+                document.getElementById('createButton').classList.add('block');
                 document.getElementById('logoutButton').classList.remove('hidden');
-                document.getElementById('logoutButton').classList.add('block'); // Make it display as a block
+                document.getElementById('logoutButton').classList.add('block');
             } else {
                 window.location.href = '/pages/403.html';
             }
         }
 
-        // Logout function (retained from previous pages)
         async function logout() {
             try {
                 const response = await fetch(`/profile/logout/`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                 });
-                window.location.href = '/'; // Redirect to root after logout
+                window.location.href = '/';
             } catch (error) {
                 console.error('Error during logout:', error);
             }
         }
 
-        // My Page function (retained from previous pages, though might not be needed for admin role)
         async function mypage() {
             try {
                 const response = await fetch('/profile/myinfo/', {
                     method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                 });
                 if (response.ok) {
                     window.location.href = '/pages/teacher.html';
@@ -212,8 +244,37 @@
                 window.location.href = '/';
             }
         }
+        
+        // 🆕 NEW: Function to handle Admin Registration
+        async function registerAdmin(event) {
+            event.preventDefault(); // Stop the form from submitting normally
 
-        // Functions for dropdown population (states, counties, districts, schools)
+            const registerForm = document.getElementById("admin-register-form");
+            const formData = new FormData(registerForm);
+
+            try {
+                const response = await fetch("/admin/register/", {
+                    method: "POST",
+                    body: formData,
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert(data.message); // Success message from backend
+                    registerForm.reset(); // Clear the form on success
+                } else {
+                    // Check for a specific message, otherwise use a generic failure message
+                    alert(data.message || "Admin registration failed. Check the Secret Code and try again.");
+                }
+            } catch (error) {
+                console.error("Error registering admin:", error);
+                alert("An error occurred during admin registration. Please check the network.");
+            }
+        }
+
+
+        // Functions for dropdown population (states, counties, districts, schools) - Existing logic moved below the new function
         async function populateStatesDropdown() {
             try {
                 const response = await fetch("/api/index_states/");
@@ -232,15 +293,14 @@
             try {
                 const selectedState = document.getElementById("state").value;
                 const countyDropdown = document.getElementById("county");
-                countyDropdown.innerHTML = '<option value="" disabled selected>Choose county</option>'; // Reset
-                if (selectedState) { // Only fetch if a state is selected
+                countyDropdown.innerHTML = '<option value="" disabled selected>Choose county</option>';
+                if (selectedState) {
                     const response = await fetch(`/api/index_counties/${selectedState}`);
                     const counties = await response.json();
                     counties.forEach(county => {
                         countyDropdown.add(new Option(county, county));
                     });
                 }
-                // Reset subsequent dropdowns
                 document.getElementById("district").innerHTML = '<option value="" disabled selected>Choose district</option>';
                 document.getElementById("school").innerHTML = '<option value="" disabled selected>Choose school</option>';
             } catch (error) {
@@ -253,15 +313,14 @@
                 const selectedState = document.getElementById("state").value;
                 const selectedCounty = document.getElementById("county").value;
                 const districtDropdown = document.getElementById("district");
-                districtDropdown.innerHTML = '<option value="" disabled selected>Choose district</option>'; // Reset
-                if (selectedState && selectedCounty) { // Only fetch if state and county are selected
+                districtDropdown.innerHTML = '<option value="" disabled selected>Choose district</option>';
+                if (selectedState && selectedCounty) {
                     const response = await fetch(`/api/index_districts/${selectedState}/${selectedCounty}`);
                     const districts = await response.json();
                     districts.forEach(district => {
                         districtDropdown.add(new Option(district, district));
                     });
                 }
-                // Reset subsequent dropdowns
                 document.getElementById("school").innerHTML = '<option value="" disabled selected>Choose school</option>';
             } catch (error) {
                 alert("Error retrieving district information. " + error.message);
@@ -274,8 +333,8 @@
                 const selectedCounty = document.getElementById("county").value;
                 const selectedDistrict = document.getElementById("district").value;
                 const schoolDropdown = document.getElementById("school");
-                schoolDropdown.innerHTML = '<option value="" disabled selected>Choose school</option>'; // Reset
-                if (selectedState && selectedCounty && selectedDistrict) { // Only fetch if all are selected
+                schoolDropdown.innerHTML = '<option value="" disabled selected>Choose school</option>';
+                if (selectedState && selectedCounty && selectedDistrict) {
                     const response = await fetch(`/api/index_schools/${selectedState}/${selectedCounty}/${selectedDistrict}`);
                     const schools = await response.json();
                     schools.forEach(school => {
@@ -289,10 +348,10 @@
 
         // Event listener for form submission
         document.addEventListener("DOMContentLoaded", function () {
+            // Existing Teacher Contact Form listener
             const searchForm = document.getElementById("teacher-contact-form");
-
             searchForm.addEventListener("submit", async function (event) {
-                event.preventDefault(); // Prevent default form submission
+                event.preventDefault();
 
                 const formData = new FormData(searchForm);
 
@@ -304,9 +363,9 @@
 
                     if (response.ok) {
                         const data = await response.json();
-                        alert(data.message); // Show success message (e.g., email sent successfully)
+                        alert(data.message);
                     } else {
-                        const errorData = await response.json(); // Attempt to parse error message
+                        const errorData = await response.json();
                         alert(errorData.message || "Failed to generate teacher report. Please try again.");
                     }
                 } catch (error) {
@@ -314,12 +373,16 @@
                     alert("An error occurred. Please try again.");
                 }
             });
+
+            // 🆕 NEW: Admin Registration Form listener
+            const registerForm = document.getElementById("admin-register-form");
+            registerForm.addEventListener("submit", registerAdmin);
         });
 
         // Initialize on page load
         window.onload = function() {
             checkAuthentication();
-            populateStatesDropdown(); // Populate dropdowns on load
+            populateStatesDropdown();
         };
     </script>
 </body>
