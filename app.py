@@ -35,7 +35,10 @@ BASE_STATIC_DIR = "static"
 
 # --- Configuration for Promotional Images Mapping ---
 PROMO_IMAGE_MAPPING = {
-    "SeattleWolf": "images/1007TheWolf.png"
+    "SeattleWolf": "images/partners/1007TheWolf.png",
+    "LiveFree": "images/partners/965CountryColor.png",
+    "BassCamp": "images/partners/BassCamp.png",
+    "Coastal": "images/partners/Coastal.png"
 }
 
 
