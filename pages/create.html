@@ -125,10 +125,10 @@
         </section>
     </main>
 
-    <div id="wishlistModal" class="modal">
-        <div class="modal-content text-gray-800">
+    <div id="wishlistModal" class="modal hidden">
+        <div class="modal-content">
             <span class="close" onclick="closeWishlistSetup()">&times;</span>
-            <iframe src="/pages/wishlist_setup.html" class="w-full h-[500px]" frameborder="0"></iframe>
+            <iframe src="/pages/wishlist_setup.html" width="100%" height="500px" class="border-none"></iframe>
         </div>
     </div>
 
@@ -321,11 +321,11 @@
 
         // Functions to open/close the modal
         function openWishlistSetup() {
-            document.getElementById('wishlistModal').style.display = 'flex';
+            document.getElementById('wishlistModal').classList.remove('hidden');
         }
 
         function closeWishlistSetup() {
-            document.getElementById('wishlistModal').style.display = 'none';
+            document.getElementById('wishlistModal').classList.add('hidden');
         }
 
         document.addEventListener("DOMContentLoaded", function () {
