@@ -107,3 +107,12 @@ body {
     transition: all 0.2s;
     white-space: nowrap; /* Prevent button text from wrapping unless needed */
 }
+
+.text-outline-black {
+            /* Standard, cross-browser technique for creating a text outline */
+            text-shadow: 
+                -1px -1px 0 #000, /* Top-left */
+                 1px -1px 0 #000, /* Top-right */
+                -1px 1px 0 #000, /* Bottom-left */
+                 1px 1px 0 #000; /* Bottom-right */
+        }

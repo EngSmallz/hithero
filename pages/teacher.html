@@ -58,26 +58,30 @@
     </header>
 
     <main id="main-container" class="container mx-auto px-4 py-8 hidden">
-        <section class="bg-white p-8 rounded-lg shadow-md text-gray-800 max-w-4xl mx-auto mb-8">
-            <div class="flex flex-col md:flex-row items-center md:items-start space-y-6 md:space-y-0 md:space-x-8" id="teacher-info">
+        
+        <section id="profile-header-bg" class="bg-white p-8 rounded-lg shadow-xl text-gray-900 max-w-4xl mx-auto mb-10">
+            <div class="flex flex-col items-center space-y-6" id="teacher-info">
+                
                 <div class="flex-shrink-0">
                     <img id="teacher-image" src="/static/images/apple.jpg" alt="Teacher Image" class="w-48 h-48 object-cover rounded-full border-4 border-green-500 shadow-lg">
                     <button id="updateImgBtn" class="hidden mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md" onclick="updateImage()">Update Image</button>
                 </div>
-                <div class="text-center md:text-left">
-                    <h2 id="teacher-name" class="text-4xl font-bold text-green-800 mb-2">Teacher Name</h2>
-                    <p id="school-name" class="text-xl text-gray-700 mb-1">School Name</p>
-                    <p id="location" class="text-lg text-gray-600">Location</p>
+                
+                <div class="text-center">
+                    <h2 id="teacher-name" class="text-4xl font-bold text-green-800 mb-2 text-outline-black"> Teacher Name</h2>
+                    <p id="school-name" class="text-xl text-gray-900 font-bold mb-1">School Name</p>
+                    <p id="location" class="text-lg text-gray-900 font-bold">Location</p>
                 </div>
             </div>
         </section>
-
-        <section class="bg-white p-8 rounded-lg shadow-md text-gray-800 max-w-4xl mx-auto mb-8 min-h-[300px]" id="about-me-section">
+        
+        <section class="bg-white p-8 rounded-lg shadow-md text-gray-900 max-w-4xl mx-auto mb-8 min-h-[300px]" id="about-me-section">
+            
             <h2 class="text-3xl font-bold text-green-700 mb-4 text-center">About Me</h2>
-            <p id="about-me" class="text-black-700 text-lg leading-relaxed"></p>
-        </section>
+            <p id="about-me" class="text-gray-700 text-lg leading-relaxed"></p>
 
-        <section class="bg-white p-8 rounded-lg shadow-md text-gray-800 max-w-4xl mx-auto mb-8" id="wishlist-section">
+            <hr class="my-8 border-gray-200">
+
             <h2 class="text-3xl font-bold text-green-700 mb-4 text-center">Amazon Wishlist</h2>
             <p class="text-gray-700 text-lg leading-relaxed text-center mb-6">Here is my Amazon wishlist where you can help support my classroom:</p>
             <div class="text-center">
@@ -380,32 +384,31 @@
         };
 
         /**
-         * Sets the opaque background image for the About Me section based on the teacher's state NAME.
-         * It directly looks up the full state name in the regionStateMap.
+         * Sets the opaque background image for the new Profile Header box only.
+         * The About Me section is now left alone (plain white).
          * @param {string} stateName - The full state name (e.g., 'Washington').
          */
         function setRegionBackground(stateName) {
-            const targetElement = document.getElementById('about-me-section');
+            // Target only the new profile header box
+            const targetElement = document.getElementById('profile-header-bg');
+            
             if (!targetElement) return;
 
             // Reset styles before attempting image load
             targetElement.style.background = '';
             targetElement.classList.remove('text-white');
-            const heading = targetElement.querySelector('h2');
-            if (heading) {
-                heading.classList.add('text-green-700');
-                heading.classList.remove('text-green-200');
-            }
-
-            // Normalize input and get the region name, falling back to 'DEFAULT'
+            
+            // Note: We no longer need to check the heading color as that text remains dark (text-gray-900)
+            
+            // Normalize input and get the region name
             const normalizedStateName = stateName
                 .split(' ')
                 .map(word => word.charAt(0).toUpperCase() + word.slice(1))
                 .join(' ');
                 
+            // Assuming regionStateMap is defined elsewhere, including a 'DEFAULT' key
             const regionName = regionStateMap[normalizedStateName] || regionStateMap['DEFAULT']; 
             
-            // If the regionName is 'Default', we skip the image loading to maintain the white background
             if (regionName === 'Default') {
                 console.warn(`State name not mapped or is set to Default. Falling back to default styling.`);
                 return;
@@ -413,19 +416,20 @@
 
             const imageUrl = `/static/images/regions/${regionName}.jpg`;
 
-            // --- Step 3: Load and Apply Image ---
+            // --- Load and Apply Image ---
             const img = new Image();
-            img.onload = function() {
-                
-                // 1. SET WHITE/LIGHT OVERLAY (Makes image nearly invisible/faint)
-                // Use 255, 255, 255 (white) with a high alpha (e.g., 0.8 or 0.9)
-                // 0.8 means the image is 80% washed out by white.
-                const overlayColor = 'rgba(255, 255, 255, 0.5)'; 
+            
+            // Define the light overlay for the header box
+            const overlayColor = 'rgba(255, 255, 255, 0.5)'; 
 
+            function applyBackgrounds() {
+                // Apply background to the entire header section
                 targetElement.style.background = `linear-gradient(${overlayColor}, ${overlayColor}), url('${imageUrl}')`;
                 targetElement.style.backgroundSize = 'cover';
                 targetElement.style.backgroundPosition = 'center';
-            };
+            }
+            
+            img.onload = applyBackgrounds;
             
             img.onerror = function() {
                 console.warn(`Could not load regional image for ${regionName} (${imageUrl}). Falling back to default styling.`);
@@ -435,7 +439,7 @@
             
             // Fix for cached images
             if (img.complete) {
-                img.onload();
+                applyBackgrounds();
             }
         }
 
