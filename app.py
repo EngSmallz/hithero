@@ -35,10 +35,10 @@ BASE_STATIC_DIR = "static"
 
 # --- Configuration for Promotional Images Mapping ---
 PROMO_IMAGE_MAPPING = {
-    "SeattleWolf": "images/partners/1007TheWolf.png",
-    "LiveFree": "images/partners/965CountryColor.png",
-    "BassCamp": "images/partners/BassCamp.png",
-    "Coastal": "images/partners/Coastal.png"
+    "seattlewolf": "images/partners/1007TheWolf.png",
+    "livefree": "images/partners/965CountryColor.png",
+    "basscamp": "images/partners/BassCamp.png",
+    "coastal": "images/partners/Coastal.png"
 }
 
 
@@ -1654,7 +1654,8 @@ async def get_promotional_page_with_hero(request: Request, token: str):
     Sets a session variable with the promo token and redirects to the homepage.
     The homepage's JavaScript will then pick up this token and display the promo hero.
     """
-    relative_image_path = PROMO_IMAGE_MAPPING.get(token)
+    lookup_token = token.lower()
+    relative_image_path = PROMO_IMAGE_MAPPING.get(lookup_token)
 
     if not relative_image_path:
         relative_image_path = PROMO_IMAGE_MAPPING.get("default")
