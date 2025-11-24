@@ -37,7 +37,7 @@ BASE_STATIC_DIR = "static"
 PROMO_IMAGE_MAPPING = {
     "seattlewolf": "images/partners/1007TheWolf.png",
     "livefree": "images/partners/965CountryColor.png",
-    "basscamp": "images/partners/BassCamp.png",
+    "basecamp": "images/partners/BaseCamp.png",
     "coastal": "images/partners/Coastal.png"
 }
 
