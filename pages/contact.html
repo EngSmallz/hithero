@@ -51,8 +51,6 @@
                     <button id="mypageButton" class="listButton hidden" onclick="mypage()">My Page</button>
                     <button id="forumButton" class="listButton hidden" onclick="redirectTo('/pages/forum.html')">Forum</button>
                     <button id="validationButton" class="listButton hidden" onclick="redirectTo('/pages/validation.html')">Validation</button>
-                    <button id="createButton" class="listButton hidden" onclick="redirectTo('/pages/create.html')">Create</button>
-                    <button id="adminButton" class="listButton hidden" onclick="redirectTo('/pages/admin.html')">Admin</button>
                 </div>
             </div>
         </div>
@@ -166,7 +164,7 @@
         async function checkAuthentication() {
             const buttons = [
                 'loginButton', 'logoutButton', 'mypageButton',
-                'validationButton', 'createButton', 'adminButton',
+                'validationButton',
                 'forumButton'
             ];
             buttons.forEach(id => document.getElementById(id)?.classList.add('hidden'));
@@ -184,8 +182,6 @@
                         document.getElementById('logoutButton')?.classList.remove('hidden');
                         document.getElementById('validationButton')?.classList.remove('hidden');
                         document.getElementById('forumButton')?.classList.remove('hidden');
-                        document.getElementById('createButton')?.classList.remove('hidden');
-                        document.getElementById('adminButton')?.classList.remove('hidden');
                     }
                 } else {
                     document.getElementById('loginButton')?.classList.remove('hidden');

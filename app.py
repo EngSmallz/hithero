@@ -2088,6 +2088,65 @@ async def update_comment(comment_id: int, content: str = Form(...), user: int = 
         db.close()
 
 
+@app.post("/profile/delete/")
+async def admin_delete_user_account(target_email: str = Form(...), admin_secret_input: str = Form(...),current_role: str = Depends(get_current_role)):
+    """
+    Allows an authenticated 'admin' user to delete *any* user account 
+    by providing the target user's email and a secret key via form submission.
+    Deletes the associated teacher entry and the registered user account.
+    """
+    db: Session = SessionLocal()
+    
+    # 1. ROLE CHECK: Ensure the current user is an admin
+    if not current_role or current_role != 'admin':
+        raise HTTPException(status_code=403, detail="Forbidden. Only administrators can delete user accounts.")
+
+    # 2. SECRET CHECK: Ensure the provided secret matches the server configuration
+    # The user-provided prompt suggests checking os.getenv("DATABASE_SERVER")
+    ADMIN_SECRET = os.getenv("DATABASE_SERVER")
+    
+    if not ADMIN_SECRET or admin_secret_input != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Invalid administrator secret provided.")
+
+    try:
+        # 3. FIND THE TARGET USER ID
+        # Select the ID of the user to be deleted based on the target email.
+        user_id_query = select(RegisteredUsers.id).where(
+            cast(RegisteredUsers.email, String) == cast(target_email, String)
+        )
+        user_id_result = db.execute(user_id_query).fetchone()
+
+        if not user_id_result:
+            raise HTTPException(status_code=404, detail=f"User account linked to '{target_email}' not found.")
+
+        target_user_id = user_id_result[0]
+
+        # 4. DELETE FROM teacher_list
+        # Delete the entry in the teacher_list linked to this user ID (regUserID).
+        delete_teacher_query = delete(TeacherList).where(
+            TeacherList.regUserID == target_user_id
+        )
+        teacher_result = db.execute(delete_teacher_query)
+
+        # 5. DELETE FROM registered_users
+        # Delete the user account itself using the email.
+        delete_user_query = delete(RegisteredUsers).where(
+            cast(RegisteredUsers.email, String) == cast(target_email, String)
+        )
+        user_result = db.execute(delete_user_query)
+        db.commit()
+        return {"message": f"Successfully deleted account and associated data for target user: {target_email}."}
+
+    except HTTPException as h:
+        raise h
+    except Exception as e:
+        db.rollback()
+        print(f"Error during administrative account deletion for {target_email}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal Server Error during deletion: {str(e)}")
+    finally:
+        db.close()
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)

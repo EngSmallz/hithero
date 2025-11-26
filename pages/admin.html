@@ -49,8 +49,6 @@
                     <button id="mypageButton" class="listButton hidden" onclick="mypage()">My Page</button>
                     <button id="forumButton" class="listButton hidden" onclick="redirectTo('/pages/forum.html')">Forum</button>
                     <button id="validationButton" class="listButton hidden" onclick="redirectTo('/pages/validation.html')">Validation</button>
-                    <button id="createButton" class="listButton hidden" onclick="redirectTo('/pages/create.html')">Create</button>
-                    <button id="adminButton" class="listButton hidden" onclick="redirectTo('/pages/admin.html')">Admin</button>
                 </div>
             </div>
         </div>
@@ -103,6 +101,28 @@
                 </button>
             </form>
         </section>
+
+        <section class="bg-white p-8 rounded-lg shadow-xl text-gray-800 mt-8">
+            <h2 class="text-3xl font-bold text-red-700 mb-6 text-center">Delete User Account (Admin)</h2>
+            <form id="delete-user-form" class="space-y-6">
+                <div>
+                    <label for="delete-email" class="block text-lg font-medium text-gray-700 mb-2">Target User Email:</label>
+                    <input type="email" id="delete-email" name="target_email" required
+                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-base bg-gray-50 text-gray-900"
+                           placeholder="user.to.delete@example.com">
+                </div>
+                <div>
+                    <label for="admin-secret" class="block text-lg font-medium text-gray-700 mb-2">Admin Secret Key:</label>
+                    <input type="password" id="admin-secret" name="admin_secret_input" required
+                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-base bg-gray-50 text-gray-900"
+                           placeholder="Enter DATABASE_SERVER secret">
+                </div>
+
+                <button type="submit"
+                        class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md mt-6">
+                    Permanently Delete Account
+                </button>
+            </form>
         
     </main>
 
@@ -126,7 +146,7 @@
         async function checkAuthentication() {
             const buttons = [
                 'loginButton', 'logoutButton', 'mypageButton',
-                'validationButton', 'createButton', 'adminButton',
+                'validationButton',
                 'forumButton'
             ];
 
@@ -160,14 +180,10 @@
             }
 
             if (userRole === 'admin') {
-                document.getElementById('adminButton').classList.remove('hidden');
-                document.getElementById('adminButton').classList.add('block');
                 document.getElementById('forumButton').classList.remove('hidden');
                 document.getElementById('forumButton').classList.add('block');
                 document.getElementById('validationButton').classList.remove('hidden');
                 document.getElementById('validationButton').classList.add('block');
-                document.getElementById('createButton').classList.remove('hidden');
-                document.getElementById('createButton').classList.add('block');
                 document.getElementById('logoutButton').classList.remove('hidden');
                 document.getElementById('logoutButton').classList.add('block');
             } else {
@@ -283,6 +299,8 @@
         document.addEventListener("DOMContentLoaded", function () {
             // Teacher Contact Form listener (The only one remaining)
             const searchForm = document.getElementById("teacher-contact-form");
+            const deleteForm = document.getElementById("delete-user-form");
+            deleteForm.addEventListener("submit", deleteUserAccount);
             searchForm.addEventListener("submit", async function (event) {
                 event.preventDefault();
 
@@ -305,7 +323,8 @@
                     console.error("Error:", error);
                     alert("An error occurred. Please try again.");
                 }
-            });
+            }
+        );
         });
 
         // Initialize on page load

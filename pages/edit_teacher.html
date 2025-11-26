@@ -50,8 +50,6 @@
                     <button id="mypageButton" class="listButton hidden" onclick="mypage()">My Page</button>
                     <button id="forumButton" class="listButton hidden" onclick="redirectTo('/pages/forum.html')">Forum</button>
                     <button id="validationButton" class="listButton hidden" onclick="redirectTo('/pages/validation.html')">Validation</button>
-                    <button id="createButton" class="listButton hidden" onclick="redirectTo('/pages/create.html')">Create</button>
-                    <button id="adminButton" class="listButton hidden" onclick="redirectTo('/pages/admin.html')">Admin</button>
                 </div>
             </div>
         </div>
@@ -200,7 +198,7 @@
         async function checkAuthentication() {
             const buttons = [
                 'loginButton', 'logoutButton', 'mypageButton',
-                'validationButton', 'createButton', 'adminButton',
+                'validationButton',
                 'forumButton'
             ];
             buttons.forEach(id => {
@@ -244,10 +242,6 @@
                 document.getElementById('forumButton')?.classList.add('block');
                 document.getElementById('validationButton')?.classList.remove('hidden');
                 document.getElementById('validationButton')?.classList.add('block');
-                document.getElementById('createButton')?.classList.remove('hidden');
-                document.getElementById('createButton')?.classList.add('block');
-                document.getElementById('adminButton')?.classList.remove('hidden'); // Show admin button in menu
-                document.getElementById('adminButton')?.classList.add('block');
             } else {
                 window.location.href = '/pages/403.html';
             }
