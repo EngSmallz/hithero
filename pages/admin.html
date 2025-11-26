@@ -300,7 +300,30 @@
             // Teacher Contact Form listener (The only one remaining)
             const searchForm = document.getElementById("teacher-contact-form");
             const deleteForm = document.getElementById("delete-user-form");
-            deleteForm.addEventListener("submit", deleteUserAccount);
+            deleteForm.addEventListener("submit",  async function (event) {
+                event.preventDefault();
+
+                const formData = new FormData(deleteForm);
+
+                try {
+                    const response = await fetch("/profile/delete/", {
+                        method: "POST",
+                        body: formData,
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        alert(data.message);
+                    } else {
+                        const errorData = await response.json();
+                        alert(errorData.message || "Failed to delete user");
+                    }
+                } catch (error) {
+                    console.error("Error:", error);
+                    alert("An error occurred. Please try again.");
+                }
+            }
+        );
             searchForm.addEventListener("submit", async function (event) {
                 event.preventDefault();
 
