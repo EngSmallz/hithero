@@ -2103,7 +2103,7 @@ async def admin_delete_user_account(target_email: str = Form(...), admin_secret_
 
     # 2. SECRET CHECK: Ensure the provided secret matches the server configuration
     # The user-provided prompt suggests checking os.getenv("DATABASE_SERVER")
-    ADMIN_SECRET = os.getenv("DATABASE_SERVER")
+    ADMIN_SECRET = os.getenv("admin_secret")
     
     if not ADMIN_SECRET or admin_secret_input != ADMIN_SECRET:
         raise HTTPException(status_code=403, detail="Invalid administrator secret provided.")
