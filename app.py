@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.applications import Starlette
 from starlette.middleware.sessions import SessionMiddleware
+from starlette.responses import FileResponse
 from passlib.hash import sha256_crypt
 from sqlalchemy import create_engine, Column, Integer, String, func, LargeBinary, DateTime, ForeignKey, UniqueConstraint, select, desc
 from sqlalchemy.ext.declarative import declarative_base
@@ -31,7 +32,22 @@ app.redoc_url = None
 # Determine the path to the directory
 app.mount("/pages", StaticFiles(directory="pages"), name="pages")
 app.mount("/static", StaticFiles(directory="static"), name="static")
-BASE_STATIC_DIR = "static" 
+BASE_STATIC_DIR = "static"
+
+ADS_TXT_PATH = f"{BASE_STATIC_DIR}/ads.txt"
+SITEMAP_XML_PATH = f"{BASE_STATIC_DIR}/sitemap.xml"
+
+# 1. Route for ads.txt (media_type='text/plain')
+@app.get("/ads.txt", include_in_schema=False)
+async def get_ads_txt():
+    """Serves ads.txt from the static folder at the root URL."""
+    return FileResponse(ADS_TXT_PATH, media_type='text/plain')
+
+# 2. Route for sitemap.xml (media_type='application/xml')
+@app.get("/sitemap.xml", include_in_schema=False)
+async def get_sitemap_xml():
+    """Serves sitemap.xml from the static folder at the root URL."""
+    return FileResponse(SITEMAP_XML_PATH, media_type='application/xml')
 
 # --- Configuration for Promotional Images Mapping ---
 PROMO_IMAGE_MAPPING = {
