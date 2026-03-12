@@ -15,8 +15,8 @@ from sqlalchemy.orm import sessionmaker, Session, relationship
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import select, cast, delete, insert, update
 from typing import Optional, List
-import brevo_python
-from brevo_python.rest import ApiException
+from brevo import Brevo
+from brevo.core.api_error import ApiError
 from tweepy import Client
 
 app = FastAPI()
