@@ -116,3 +116,27 @@ body {
                 -1px 1px 0 #000, /* Bottom-left */
                  1px 1px 0 #000; /* Bottom-right */
         }
+        
+.metrics-card {
+background: rgba(255, 255, 255, 0.07);
+border: 1px solid rgba(255, 255, 255, 0.12);
+border-radius: 10px;
+padding: 1rem 1.25rem;
+}
+.metrics-number {
+font-family: 'Fraunces', serif;
+font-size: 28px;
+font-weight: 500;
+line-height: 1;
+color: #ffffff;
+}
+.metrics-number .suffix {
+font-size: 16px;
+font-weight: 400;
+}
+.metrics-divider {
+width: 24px;
+height: 2px;
+border-radius: 2px;
+margin: 7px 0 8px;
+}

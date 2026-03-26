@@ -15,9 +15,10 @@ from sqlalchemy.orm import sessionmaker, Session, relationship
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import select, cast, delete, insert, update
 from typing import Optional, List
-from brevo import Brevo
-from brevo.core.api_error import ApiError
+# from brevo import Brevo
+# from brevo.core.api_error import ApiError
 from tweepy import Client
+from azure.communication.email import EmailClient
 
 app = FastAPI()
 load_dotenv()
@@ -261,76 +262,108 @@ def render_email_template(template_path: str, data: dict) -> str:
     
     return template_content
 
-def send_email(recipient_email: str, subject: str, html_message: str, plain_message: str):
-    """
-    Sends an email with HTML content and a plain text fallback using the Brevo API.
-    """
-    configuration = brevo_python.Configuration()
-    configuration.api_key['api-key'] = os.environ.get('BREVO_API_KEY')
-    api_instance = brevo_python.TransactionalEmailsApi(brevo_python.ApiClient(configuration))
+# def send_email(recipient_email: str, subject: str, html_message: str, plain_message: str):
+#     """
+#     Sends an email with HTML content and a plain text fallback using the Brevo API.
+#     """
+#     configuration = brevo_python.Configuration()
+#     configuration.api_key['api-key'] = os.environ.get('BREVO_API_KEY')
+#     api_instance = brevo_python.TransactionalEmailsApi(brevo_python.ApiClient(configuration))
     
-    send_smtp_email = brevo_python.SendSmtpEmail(
-        to=[{"email": recipient_email}],
-        subject=subject,
-        html_content=html_message,
-        text_content=plain_message,
-        sender={"name": "Homeroom Heroes", "email": "homeroom.heroes.contact@gmail.com"}
-    )
+#     send_smtp_email = brevo_python.SendSmtpEmail(
+#         to=[{"email": recipient_email}],
+#         subject=subject,
+#         html_content=html_message,
+#         text_content=plain_message,
+#         sender={"name": "Homeroom Heroes", "email": "homeroom.heroes.contact@gmail.com"}
+#     )
     
-    try:
-        api_response = api_instance.send_transac_email(send_smtp_email)
-        print("Email sent successfully!")
-        return api_response
-    except ApiException as e:
-        print(f"Exception when calling Brevo API: {e}")
-        return None
-        return None
+#     try:
+#         api_response = api_instance.send_transac_email(send_smtp_email)
+#         print("Email sent successfully!")
+#         return api_response
+#     except ApiException as e:
+#         print(f"Exception when calling Brevo API: {e}")
+#         return None
+#         return None
 
-def send_attachment(recipient_email: str, subject: str, message: str, attachment_path: str):
-    """
-    Sends an email with an attachment using the Brevo API.
+# def send_attachment(recipient_email: str, subject: str, message: str, attachment_path: str):
+#     """
+#     Sends an email with an attachment using the Brevo API.
     
-    Args:
-        recipient_email (str): The email address of the recipient.
-        subject (str): The subject line of the email.
-        message (str): The plain text body of the email.
-        attachment_path (str): The local file path to the attachment.
-    """
-    # Configure API key authorization
-    configuration = brevo_python.Configuration()
-    configuration.api_key['api-key'] = os.environ.get('BREVO_API_KEY')
+#     Args:
+#         recipient_email (str): The email address of the recipient.
+#         subject (str): The subject line of the email.
+#         message (str): The plain text body of the email.
+#         attachment_path (str): The local file path to the attachment.
+#     """
+#     # Configure API key authorization
+#     configuration = brevo_python.Configuration()
+#     configuration.api_key['api-key'] = os.environ.get('BREVO_API_KEY')
 
-    api_instance = brevo_python.TransactionalEmailsApi(brevo_python.ApiClient(configuration))
+#     api_instance = brevo_python.TransactionalEmailsApi(brevo_python.ApiClient(configuration))
     
-    attachments = []
-    if os.path.exists(attachment_path):
-        with open(attachment_path, "rb") as f:
-            file_data = f.read()
-            encoded_content = base64.b64encode(file_data).decode('utf-8')
+#     attachments = []
+#     if os.path.exists(attachment_path):
+#         with open(attachment_path, "rb") as f:
+#             file_data = f.read()
+#             encoded_content = base64.b64encode(file_data).decode('utf-8')
             
-            attachments.append({
-                "content": encoded_content,
-                "name": os.path.basename(attachment_path)
-            })
-    else:
-        print(f"Attachment file {attachment_path} not found. Sending email without attachment.")
+#             attachments.append({
+#                 "content": encoded_content,
+#                 "name": os.path.basename(attachment_path)
+#             })
+#     else:
+#         print(f"Attachment file {attachment_path} not found. Sending email without attachment.")
 
-    # Create the email message object
-    send_smtp_email = brevo_python.SendSmtpEmail(
-        to=[{"email": recipient_email}],
-        subject=subject,
-        html_content=f"<html><body>{message.replace('\\n', '<br>')}</body></html>",
-        sender={"name": "Homeroom Heroes", "email": "homeroom.heroes.contact@gmail.com"},
-        attachment=attachments
-    )
+#     # Create the email message object
+#     send_smtp_email = brevo_python.SendSmtpEmail(
+#         to=[{"email": recipient_email}],
+#         subject=subject,
+#         html_content=f"<html><body>{message.replace('\\n', '<br>')}</body></html>",
+#         sender={"name": "Homeroom Heroes", "email": "homeroom.heroes.contact@gmail.com"},
+#         attachment=attachments
+#     )
     
+#     try:
+#         api_response = api_instance.send_transac_email(send_smtp_email)
+#         print("Email sent successfully with attachment!")
+#         return api_response
+#     except ApiException as e:
+#         print(f"Exception when calling TransactionalEmailsApi->send_transac_email: {e}")
+#         return None
+
+def send_email(recipient_email: str, subject: str, html_message: str, plain_message: str): ###AZURE REPLACEMENT###
+    """
+    Sends an email using Azure Communication Services Email.
+    """
     try:
-        api_response = api_instance.send_transac_email(send_smtp_email)
-        print("Email sent successfully with attachment!")
-        return api_response
-    except ApiException as e:
-        print(f"Exception when calling TransactionalEmailsApi->send_transac_email: {e}")
-        return None
+        connection_string = os.getenv("AZURE_EMAIL_CONNECTION_STRING")
+        sender_address = os.getenv("AZURE_EMAIL_SENDER")
+
+        client = EmailClient.from_connection_string(connection_string)
+
+        message = {
+            "senderAddress": sender_address,
+            "recipients": {
+                "to": [{"address": recipient_email}]
+            },
+            "content": {
+                "subject": subject,
+                "html": html_message,
+                "plainText": plain_message
+            }
+        }
+
+        poller = client.begin_send(message)
+        result = poller.result()
+
+        print("Azure email sent:", result.message_id)
+        return True
+
+    except Exception as ex:
+        print("Azure email error:", ex)
+        return False
 
 def send_registration_email(recipient_email: str):
     """
@@ -353,7 +386,7 @@ def send_registration_email(recipient_email: str):
     plain_message = (
         f"Dear {template_data['recipient_name']},\n\n"
         f"{template_data['message_body']}\n\n"
-        "Best regards,\nHomeroom Heroes Team"
+        "Best regards,\nHomeroom Heroes Team\nhomeroom.heroes.contact@gmail.com\nhomeroom.heroes.contact@gmail.com"
     )
 
     # Call the core send_email function
@@ -386,7 +419,7 @@ def send_validation_email(recipient_email: str):
         f"Dear {template_data['recipient_name']},\n\n"
         f"{template_data['message_body']}\n\n"
         "If you have any questions or need assistance, please do not hesitate to contact us.\n\n"
-        "Best regards,\nHomeroom Heroes Team"
+        "Best regards,\nHomeroom Heroes Team\nhomeroom.heroes.contact@gmail.com"
     )
 
     # Call the core send_email function
@@ -463,7 +496,7 @@ def send_teacher_of_the_day_email(recipient_email: str, recipient_name: str, url
     plain_message = (
         f"Dear {template_data['recipient_name']},\n\n"
         f"{template_data['message_body']}\n\n"
-        "Best regards,\nHomeroom Heroes Team"
+        "Best regards,\nHomeroom Heroes Team\nhomeroom.heroes.contact@gmail.com"
     )
 
     # Call the core send_email function
@@ -615,7 +648,7 @@ def send_profile_reminder_email(recipient_email: str):
         f"Dear {template_data['recipient_name']},\n\n"
         f"{template_data['message_body']}\n\n"
         "If you have any questions or need assistance, please do not hesitate to contact us.\n\n"
-        "Best regards,\nHomeroom Heroes Team"
+        "Best regards,\nHomeroom Heroes Team\nhomeroom.heroes.contact@gmail.com"
     )
 
     # Call the core send_email function
@@ -673,7 +706,7 @@ def send_validation_reminder_email(recipient_email: str):
     plain_message = (
         f"Dear {template_data['recipient_name']},\n\n"
         f"{template_data['message_body']}\n\n"
-        "Best regards,\nHomeroom Heroes Team"
+        "Best regards,\nHomeroom Heroes Team\nhomeroom.heroes.contact@gmail.com"
     )
 
     # Call the core send_email function
@@ -1356,7 +1389,7 @@ async def forgot_password(email: str = Form(...)):
                 f"Please use this password the next time you login and update it immediately.\n\n"
                 f"If you did not request this password reset or have any concerns, "
                 f"please contact our support team.\n\n"
-                f"Best regards,\nHomeroom Heroes Team"
+                f"Best regards,\nHomeroom Heroes Team\nhomeroom.heroes.contact@gmail.com"
             )
 
             # Send the email using the updated send_email function
