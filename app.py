@@ -582,8 +582,79 @@ def first_of_month_job():
     else:
         print('Not the first.')
 
+def wednesday_job():
+    db = SessionLocal()
+    try:
+        # 1. Find all districts with pending teachers
+        pending_groups = (
+            db.query(
+                NewUsers.state,
+                NewUsers.county,
+                NewUsers.district
+            )
+            .distinct()
+            .all()
+        )
+        for state, county, district in pending_groups:
+            # 2. Find validated teachers in this district (recipients)
+            recipients = (
+                db.query(RegisteredUsers.email)
+                .join(TeacherList, TeacherList.regUserID == RegisteredUsers.id)
+                .filter(
+                    TeacherList.state == state,
+                    TeacherList.county == county,
+                    TeacherList.district == district
+                )
+                .all()
+            )
+            recipient_emails = [r.email for r in recipients]
+            if not recipient_emails:
+                print(f"No validated teachers found for {district}. Skipping.")
+                continue
+            # 3. Get pending teachers in this district
+            pending_teachers = (
+                db.query(NewUsers)
+                .filter(
+                    NewUsers.state == state,
+                    NewUsers.county == county,
+                    NewUsers.district == district
+                )
+                .all()
+            )
+            if not pending_teachers:
+                continue
+            # 4. Build email body
+            teacher_lines = [
+                f"- {t.name} ({t.school})"
+                for t in pending_teachers
+            ]
+            email_body = (
+                f"Hello,\n\n"
+                f"The following teachers in {district} are waiting to be validated:\n\n"
+                + "\n".join(teacher_lines)
+                + "\n\nPlease log in to validate them.\n\n"
+                "Thank you!"
+            )
+            # 5. Send the email
+            try:
+                send_validation_notification_email(
+                    recipients=recipient_emails,
+                    district=district,
+                    body=email_body
+                )
+                print(f"Sent validation email to {district} ({len(recipient_emails)} recipients).")
+            except Exception as e:
+                print(f"Failed to send email for {district}: {e}")
+                continue
+    except Exception as e:
+        print(f"Error in wednesday_validation_job: {e}")
+    finally:
+        db.close()
+
+
 def schedule_jobs():
     schedule.every().tuesday.at("15:00").do(tuesday_job)
+    schedule.every().wednesday.at("15:00").do(wednesday_job)
     schedule.every().thursday.at("15:00").do(thursday_job)
     schedule.every().day.at("10:00").do(daily_job)
     #schedule.every().monday.at("10:00").do(monday_job)
