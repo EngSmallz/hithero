@@ -582,17 +582,23 @@ def first_of_month_job():
     else:
         print('Not the first.')
 
+from sqlalchemy import cast, String
+
 def wednesday_job():
     db = SessionLocal()
     try:
         # 1. Find all districts with pending teachers
         pending_groups = (
             db.query(
-                NewUsers.state,
-                NewUsers.county,
-                NewUsers.district
+                cast(NewUsers.state, String),
+                cast(NewUsers.county, String),
+                cast(NewUsers.district, String)
             )
-            .distinct()
+            .group_by(
+                cast(NewUsers.state, String),
+                cast(NewUsers.county, String),
+                cast(NewUsers.district, String)
+            )
             .all()
         )
         for state, county, district in pending_groups:
@@ -654,7 +660,7 @@ def wednesday_job():
 
 def schedule_jobs():
     schedule.every().tuesday.at("15:00").do(tuesday_job)
-    schedule.every().thursday.at("1:30").do(wednesday_job)
+    schedule.every().thursday.at("1:45").do(wednesday_job)
     schedule.every().thursday.at("15:00").do(thursday_job)
     schedule.every().day.at("10:00").do(daily_job)
     #schedule.every().monday.at("10:00").do(monday_job)
@@ -2266,10 +2272,6 @@ async def admin_delete_user_account(target_email: str = Form(...), admin_secret_
     finally:
         db.close()
 
-@app.post("/email_test/")
-async def test():
-    wednesday_job()
- 
 
 if __name__ == "__main__":
     import uvicorn
