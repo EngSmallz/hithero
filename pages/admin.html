@@ -127,6 +127,7 @@
                     Permanently Delete Account
                 </button>
             </form>
+            
         
     </main>
 
@@ -197,7 +198,8 @@
 
         async function logout() {
             try {
-                const response = await fetch(`/profile/logout/`, {
+                // const response = await fetch(`/profile/logout/`, {
+                const response = await fetch(`/email_test/`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                 });
