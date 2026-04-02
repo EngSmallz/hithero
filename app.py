@@ -570,7 +570,7 @@ def wednesday_job():
             )
             # 5. Send the email
             try:
-                send_validation_notification_email(
+                send_email(
                     recipients=recipient_emails,
                     district=district,
                     body=email_body
@@ -616,6 +616,12 @@ async def run_daily_job(request: Request):
         raise HTTPException(status_code=403, detail="Forbidden")
     threading.Thread(target=daily_job, daemon=True).start()
     return {"status": "daily job started"}
+
+
+#####################################################
+
+
+
 def verify_recaptcha(recaptcha_response: str):
     """Verifies the reCAPTCHA response with Google's servers."""
     url = "https://www.google.com/recaptcha/api/siteverify"
@@ -623,9 +629,6 @@ def verify_recaptcha(recaptcha_response: str):
     response = requests.post(url, params=params)
     data = response.json()
     return data["success"]
-
-#####################################################
-
 
 def send_profile_creation_reminders():
     """
