@@ -654,7 +654,7 @@ def wednesday_job():
 
 def schedule_jobs():
     schedule.every().tuesday.at("15:00").do(tuesday_job)
-    schedule.every().wednesday.at("00:00").do(wednesday_job)
+    schedule.every().thursday.at("00:05").do(wednesday_job)
     schedule.every().thursday.at("15:00").do(thursday_job)
     schedule.every().day.at("10:00").do(daily_job)
     #schedule.every().monday.at("10:00").do(monday_job)
