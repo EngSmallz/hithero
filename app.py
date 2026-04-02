@@ -9,7 +9,7 @@ from starlette.applications import Starlette
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import FileResponse
 from passlib.hash import sha256_crypt
-from sqlalchemy import create_engine, Column, Integer, String, func, LargeBinary, DateTime, ForeignKey, UniqueConstraint, select, desc
+from sqlalchemy import create_engine, Column, Integer, String, func, LargeBinary, DateTime, ForeignKey, UniqueConstraint, select, desc, cast
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session, relationship
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -262,77 +262,6 @@ def render_email_template(template_path: str, data: dict) -> str:
     
     return template_content
 
-# def send_email(recipient_email: str, subject: str, html_message: str, plain_message: str):
-#     """
-#     Sends an email with HTML content and a plain text fallback using the Brevo API.
-#     """
-#     configuration = brevo_python.Configuration()
-#     configuration.api_key['api-key'] = os.environ.get('BREVO_API_KEY')
-#     api_instance = brevo_python.TransactionalEmailsApi(brevo_python.ApiClient(configuration))
-    
-#     send_smtp_email = brevo_python.SendSmtpEmail(
-#         to=[{"email": recipient_email}],
-#         subject=subject,
-#         html_content=html_message,
-#         text_content=plain_message,
-#         sender={"name": "Homeroom Heroes", "email": "homeroom.heroes.contact@gmail.com"}
-#     )
-    
-#     try:
-#         api_response = api_instance.send_transac_email(send_smtp_email)
-#         print("Email sent successfully!")
-#         return api_response
-#     except ApiException as e:
-#         print(f"Exception when calling Brevo API: {e}")
-#         return None
-#         return None
-
-# def send_attachment(recipient_email: str, subject: str, message: str, attachment_path: str):
-#     """
-#     Sends an email with an attachment using the Brevo API.
-    
-#     Args:
-#         recipient_email (str): The email address of the recipient.
-#         subject (str): The subject line of the email.
-#         message (str): The plain text body of the email.
-#         attachment_path (str): The local file path to the attachment.
-#     """
-#     # Configure API key authorization
-#     configuration = brevo_python.Configuration()
-#     configuration.api_key['api-key'] = os.environ.get('BREVO_API_KEY')
-
-#     api_instance = brevo_python.TransactionalEmailsApi(brevo_python.ApiClient(configuration))
-    
-#     attachments = []
-#     if os.path.exists(attachment_path):
-#         with open(attachment_path, "rb") as f:
-#             file_data = f.read()
-#             encoded_content = base64.b64encode(file_data).decode('utf-8')
-            
-#             attachments.append({
-#                 "content": encoded_content,
-#                 "name": os.path.basename(attachment_path)
-#             })
-#     else:
-#         print(f"Attachment file {attachment_path} not found. Sending email without attachment.")
-
-#     # Create the email message object
-#     send_smtp_email = brevo_python.SendSmtpEmail(
-#         to=[{"email": recipient_email}],
-#         subject=subject,
-#         html_content=f"<html><body>{message.replace('\\n', '<br>')}</body></html>",
-#         sender={"name": "Homeroom Heroes", "email": "homeroom.heroes.contact@gmail.com"},
-#         attachment=attachments
-#     )
-    
-#     try:
-#         api_response = api_instance.send_transac_email(send_smtp_email)
-#         print("Email sent successfully with attachment!")
-#         return api_response
-#     except ApiException as e:
-#         print(f"Exception when calling TransactionalEmailsApi->send_transac_email: {e}")
-#         return None
-
 def send_email(recipient_email: str, subject: str, html_message: str, plain_message: str): ###AZURE REPLACEMENT###
     """
     Sends an email using Azure Communication Services Email.
@@ -582,8 +511,6 @@ def first_of_month_job():
     else:
         print('Not the first.')
 
-from sqlalchemy import cast, String
-
 def wednesday_job():
     db = SessionLocal()
     try:
@@ -607,9 +534,9 @@ def wednesday_job():
                 db.query(RegisteredUsers.email)
                 .join(TeacherList, TeacherList.regUserID == RegisteredUsers.id)
                 .filter(
-                    TeacherList.state == state,
-                    TeacherList.county == county,
-                    TeacherList.district == district
+                    cast(TeacherList.state, String) == state,
+                    cast(TeacherList.county, String) == county,
+                    cast(TeacherList.district, String) == district
                 )
                 .all()
             )
@@ -621,9 +548,9 @@ def wednesday_job():
             pending_teachers = (
                 db.query(NewUsers)
                 .filter(
-                    NewUsers.state == state,
-                    NewUsers.county == county,
-                    NewUsers.district == district
+                    cast(NewUsers.state, String) == state,
+                    cast(NewUsers.county, String) == county,
+                    cast(NewUsers.district, String) == district
                 )
                 .all()
             )
