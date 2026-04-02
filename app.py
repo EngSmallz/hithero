@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Request, Form, Depends, Body, File, UploadFile, Response, status, Path
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, FileResponse
 from pydantic import BaseModel, Field
-import os, logging, smtplib, secrets, string, pyodbc, time, ssl, schedule, threading, datetime, base64, random, requests
+import os, logging, smtplib, secrets, string, pyodbc, time, ssl, datetime, base64, random, requests, threading
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -657,20 +657,38 @@ def wednesday_job():
     finally:
         db.close()
 
+######   EMAILER FUNCTIONS FOR CRONJOBS  ###########
+@app.post("/internal/run-wednesday-job")
+async def run_wednesday_job(request: Request):
+    secret = request.headers.get("x-secret-key")
+    if secret != os.getenv("INTERNAL_JOB_SECRET"):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    threading.Thread(target=wednesday_job, daemon=True).start()
+    return {"status": "wednesday job started"}
 
-def schedule_jobs():
-    schedule.every().tuesday.at("15:00").do(tuesday_job)
-    schedule.every().thursday.at("02:03").do(wednesday_job)
-    schedule.every().thursday.at("15:00").do(thursday_job)
-    schedule.every().day.at("10:00").do(daily_job)
-    #schedule.every().monday.at("10:00").do(monday_job)
-    #schedule.every().day.at("10:00").do(first_of_month_job)
+@app.post("/internal/run-tuesday-job")
+async def run_tuesday_job(request: Request):
+    secret = request.headers.get("x-secret-key")
+    if secret != os.getenv("INTERNAL_JOB_SECRET"):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    threading.Thread(target=tuesday_job, daemon=True).start()
+    return {"status": "tuesday job started"}
 
-    # Run the schedule in a separate thread
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
+@app.post("/internal/run-thursday-job")
+async def run_thursday_job(request: Request):
+    secret = request.headers.get("x-secret-key")
+    if secret != os.getenv("INTERNAL_JOB_SECRET"):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    threading.Thread(target=thursday_job, daemon=True).start()
+    return {"status": "thursday job started"}
 
+@app.post("/internal/run-daily-job")
+async def run_daily_job(request: Request):
+    secret = request.headers.get("x-secret-key")
+    if secret != os.getenv("INTERNAL_JOB_SECRET"):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    threading.Thread(target=daily_job, daemon=True).start()
+    return {"status": "daily job started"}
 def verify_recaptcha(recaptcha_response: str):
     """Verifies the reCAPTCHA response with Google's servers."""
     url = "https://www.google.com/recaptcha/api/siteverify"
@@ -678,6 +696,9 @@ def verify_recaptcha(recaptcha_response: str):
     response = requests.post(url, params=params)
     data = response.json()
     return data["success"]
+
+#####################################################
+
 
 def send_profile_creation_reminders():
     """
@@ -826,13 +847,6 @@ def post_tweet_x(tweet_text: str):
         print(f"X Response ID: {response.data['id']}")
     except Exception as e:
         print(f"X POST ERROR: Failed to post tweet. {e}")
-
-# Start scheduling the jobs
-@app.on_event("startup")
-async def start_scheduler():
-    schedule_thread = threading.Thread(target=schedule_jobs, daemon=True)
-    schedule_thread.start()
-    print("Scheduler started.")
 
 def model_to_dict(model):
     """Converts a SQLAlchemy model instance to a dictionary, handling dates for JSON serialization."""
