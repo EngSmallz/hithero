@@ -198,8 +198,7 @@
 
         async function logout() {
             try {
-                // const response = await fetch(`/profile/logout/`, {
-                const response = await fetch(`/email_test/`, {
+                const response = await fetch(`/profile/logout/`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                 });
@@ -312,7 +311,8 @@
                 const formData = new FormData(deleteForm);
 
                 try {
-                    const response = await fetch("/profile/delete/", {
+                    // const response = await fetch("/profile/delete/", {
+                    const response = await fetch("/email_test/", {
                         method: "POST",
                         body: formData,
                     });
