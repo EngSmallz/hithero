@@ -287,7 +287,7 @@ def send_email(recipient_email: str, subject: str, html_message: str, plain_mess
         poller = client.begin_send(message)
         result = poller.result()
 
-        print("Azure email sent:", result.message_id)
+        print("Azure email sent:", result)
         return True
 
     except Exception as ex:
