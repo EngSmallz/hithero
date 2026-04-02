@@ -570,11 +570,13 @@ def wednesday_job():
             )
             # 5. Send the email
             try:
-                send_email(
-                    recipients=recipient_emails,
-                    district=district,
-                    body=email_body
-                )
+                for email in recipient_emails:
+                    send_email(
+                        recipient_email=email,
+                        subject=f"Pending Teachers in {district} Need Validation",
+                        html_message=f"<html><body><p>{email_body.replace(chr(10), '<br>')}</p></body></html>",
+                        plain_message=email_body
+                    )
                 print(f"Sent validation email to {district} ({len(recipient_emails)} recipients).")
             except Exception as e:
                 print(f"Failed to send email for {district}: {e}")
