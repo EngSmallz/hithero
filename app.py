@@ -660,7 +660,7 @@ def wednesday_job():
 
 def schedule_jobs():
     schedule.every().tuesday.at("15:00").do(tuesday_job)
-    schedule.every().thursday.at("1:45").do(wednesday_job)
+    schedule.every().thursday.at("2:00").do(wednesday_job)
     schedule.every().thursday.at("15:00").do(thursday_job)
     schedule.every().day.at("10:00").do(daily_job)
     #schedule.every().monday.at("10:00").do(monday_job)
@@ -828,8 +828,11 @@ def post_tweet_x(tweet_text: str):
         print(f"X POST ERROR: Failed to post tweet. {e}")
 
 # Start scheduling the jobs
-schedule_thread = threading.Thread(target=schedule_jobs)
-schedule_thread.start()
+@app.on_event("startup")
+async def start_scheduler():
+    schedule_thread = threading.Thread(target=schedule_jobs, daemon=True)
+    schedule_thread.start()
+    print("Scheduler started.")
 
 def model_to_dict(model):
     """Converts a SQLAlchemy model instance to a dictionary, handling dates for JSON serialization."""
