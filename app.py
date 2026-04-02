@@ -588,11 +588,15 @@ def wednesday_job():
         # 1. Find all districts with pending teachers
         pending_groups = (
             db.query(
-                NewUsers.state,
-                NewUsers.county,
-                NewUsers.district
+                cast(NewUsers.state, String),
+                cast(NewUsers.county, String),
+                cast(NewUsers.district, String)
             )
-            .distinct()
+            .group_by(
+                cast(NewUsers.state, String),
+                cast(NewUsers.county, String),
+                cast(NewUsers.district, String)
+            )
             .all()
         )
         for state, county, district in pending_groups:
