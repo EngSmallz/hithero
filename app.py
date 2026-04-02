@@ -571,11 +571,21 @@ def wednesday_job():
             # 5. Send the email
             try:
                 for email in recipient_emails:
+                    template_data = {
+                        'recipient_name': email,
+                        'message_body': email_body
+                    }
+                    html_message = render_email_template('static/email_template.html', template_data)
+                    plain_message = (
+                        f"Dear {email},\n\n"
+                        f"{email_body}\n\n"
+                        "Best regards,\nHomeroom Heroes Team\nhomeroom.heroes.contact@gmail.com"
+                    )
                     send_email(
-                        recipient_email=email,
-                        subject=f"Pending Teachers in {district} Need Validation",
-                        html_message=f"<html><body><p>{email_body.replace(chr(10), '<br>')}</p></body></html>",
-                        plain_message=email_body
+                        email,
+                        f"Pending Teachers in {district} Need Validation",
+                        html_message,
+                        plain_message
                     )
                 print(f"Sent validation email to {district} ({len(recipient_emails)} recipients).")
             except Exception as e:
