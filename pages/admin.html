@@ -127,7 +127,6 @@
                     Permanently Delete Account
                 </button>
             </form>
-            
         
     </main>
 
@@ -311,8 +310,7 @@
                 const formData = new FormData(deleteForm);
 
                 try {
-                    // const response = await fetch("/profile/delete/", {
-                    const response = await fetch("/email_test/", {
+                    const response = await fetch("/profile/delete/", {
                         method: "POST",
                         body: formData,
                     });
