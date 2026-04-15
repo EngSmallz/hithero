@@ -15,16 +15,29 @@ from sqlalchemy.orm import sessionmaker, Session, relationship
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import select, cast, delete, insert, update
 from typing import Optional, List
-# from brevo import Brevo
-# from brevo.core.api_error import ApiError
 from tweepy import Client
 from azure.communication.email import EmailClient
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 app = FastAPI()
 load_dotenv()
 logger = logging.getLogger(__name__)
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY"))
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://www.helpteachers.net", "https://helpteachers.net"],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PATCH", "DELETE"],
+    allow_headers=["*"],
+)
 RECAPTCHA_SECRET_KEY=os.getenv("SERVER_KEY_CAPTCHA")
+
+##limiter
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Disable documentation routes
 app.openapi_url = None
@@ -211,6 +224,15 @@ class PostUpdate(BaseModel):
     """Schema for the data received when updating a post."""
     title: str
     content: str
+
+class PasswordResetToken(Base):
+    __tablename__ = "password_reset_tokens"
+
+    id = Column(Integer, primary_key=True)
+    email = Column(String, nullable=False)
+    token = Column(String, nullable=False, unique=True)
+    expires_at = Column(DateTime, nullable=False)
+    used = Column(Integer, default=0)
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -806,6 +828,7 @@ def model_to_dict(model):
 #######apis#######
 ###api used to register a new user (and only a new user) into the new_user list
 @app.post("/profile/register/")
+@limiter.limit("5/minute")
 async def register_user(name: str = Form(...), email: str = Form(...), phone_number: str = Form(...), password: str = Form(...), confirm_password: str = Form(...), state: str = Form(...),county: str = Form(...),district: str = Form(...), school: str = Form(...), recaptcha_response: str = Form(...)):
     # Verify reCAPTCHA
     if not verify_recaptcha(recaptcha_response):
@@ -838,6 +861,7 @@ async def register_user(name: str = Form(...), email: str = Form(...), phone_num
     
 ###api used to create cookie based session via authentication with registered_user table
 @app.post("/profile/login/")
+@limiter.limit("5/minute")
 async def login_user(request: Request, email: str = Form(...), password: str = Form(...)):
     db = SessionLocal()
     try:
@@ -1192,6 +1216,9 @@ async def edit_teacher_image(request: Request, role: str = Depends(get_current_r
     try:
         if image.size > MAX_FILE_SIZE:
             raise HTTPException(status_code=400, detail="File size exceeds the allowed limit")
+        ALLOWED_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
+        if image.content_type not in ALLOWED_TYPES:
+            raise HTTPException(status_code=400, detail="Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.")
         if role:
             state = get_index_cookie('state', request)
             county = get_index_cookie('county', request)
@@ -1390,56 +1417,73 @@ async def get_schools(state: str, county: str, district: str):
     finally:
         db.close()
 
-# api for forgotten password reset, currently does not do anything exceptional
 @app.post("/profile/forgot_password/")
-async def forgot_password(email: str = Form(...)):
+@limiter.limit("5/minute")
+async def forgot_password(request: Request, email: str = Form(...)):
     db = SessionLocal()
     try:
         query = select(RegisteredUsers.id).where(cast(RegisteredUsers.email, String) == cast(email, String))
         result = db.execute(query)
         user = result.fetchone()
         if user:
-            recipient_email = email
-            temp_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(10))
-            
-            # --- Prepare data for the HTML template ---
+            # Generate a secure token
+            token = secrets.token_urlsafe(32)
+            expires_at = datetime.datetime.utcnow() + datetime.timedelta(hours=1)
+            # Store the token
+            reset_token = PasswordResetToken(email=email, token=token, expires_at=expires_at)
+            db.add(reset_token)
+            db.commit()
+            # Send email with link instead of temp password
+            reset_link = f"https://www.helpteachers.net/pages/reset_password.html?token={token}"
             template_data = {
-                'recipient_name': email, # Using email as the name for the template
+                'recipient_name': email,
                 'message_body': (
-                    f"We have received a request for a password reset for your account. "
-                    f"Here is your new temporary password: <strong>{temp_password}</strong>. " # Bold the temporary password
-                    f"Please use this password the next time you login and update it immediately.\n\n"
-                    f"If you did not request this password reset or have any concerns, "
-                    f"please contact our support team."
+                    f"We received a request to reset your password. "
+                    f"Click the link below to reset it (expires in 1 hour):\n\n"
+                    f"{reset_link}\n\n"
+                    f"If you did not request this, you can ignore this email."
                 )
             }
-
-            # Generate the HTML message from the template file
             html_message = render_email_template('static/email_template.html', template_data)
-
-            # Create the plain text fallback message
-            plain_message = (
-                f"Dear {email},\n\n"
-                f"We have received a request for a password reset for your account. "
-                f"Here is your new temporary password: {temp_password}. "
-                f"Please use this password the next time you login and update it immediately.\n\n"
-                f"If you did not request this password reset or have any concerns, "
-                f"please contact our support team.\n\n"
-                f"Best regards,\nHomeroom Heroes Team\nhomeroom.heroes.contact@gmail.com"
-            )
-
-            # Send the email using the updated send_email function
-            send_email(recipient_email, 'Forgot Password', html_message, plain_message)
-            
-            # Update the user's temporary password in the database
-            update_temp_password(db, recipient_email, temp_password)
+            plain_message = f"Dear {email},\n\nReset your password here: {reset_link}\n\nExpires in 1 hour."
+            send_email(email, 'Password Reset Request', html_message, plain_message)
         else:
-            # Add a small delay for security reasons even if the email doesn't exist
-            time.sleep(1) 
-        message = "If an account exists, instructions for password reset will be sent to your email. Check your spam folder."
-        return JSONResponse(content={"message": message})
+            time.sleep(1)
+        return JSONResponse(content={"message": "If an account exists, a reset link will be sent to your email."})
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+    finally:
+        db.close()
+    
+@app.post("/profile/reset_password/")
+async def reset_password(token: str = Form(...), new_password: str = Form(...), confirm_password: str = Form(...)):
+    db = SessionLocal()
+    try:
+        if new_password != confirm_password:
+            raise HTTPException(status_code=400, detail="Passwords do not match.")
+        # Look up the token
+        reset = db.query(PasswordResetToken).filter(
+            PasswordResetToken.token == token,
+            PasswordResetToken.used == 0,
+            PasswordResetToken.expires_at > datetime.datetime.utcnow()
+        ).first()
+        if not reset:
+            raise HTTPException(status_code=400, detail="Invalid or expired reset token.")
+        # Update the password
+        hashed = sha256_crypt.hash(new_password)
+        db.execute(update(RegisteredUsers).where(
+            cast(RegisteredUsers.email, String) == cast(reset.email, String)
+        ).values(password=hashed))
+        # Mark token as used
+        reset.used = 1
+        db.commit()
+        return JSONResponse(content={"message": "Password reset successfully. You can now log in."})
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Internal Server Error")
     finally:
         db.close()
 
@@ -1551,7 +1595,9 @@ async def delete_user(user_email: str, role: str = Depends(get_current_role)):
 
 # Function to report a user in validation
 @app.post("/validation/report_user/{user_email}")
-async def report_user(user_email: str):
+async def report_user(user_email: str, role: str = Depends(get_current_role)):
+    if role not in ('admin', 'teacher'):
+        raise HTTPException(status_code=403, detail="Access denied.")
     db = SessionLocal()
     try:
         update_query = update(NewUsers).where(cast(NewUsers.email, String) == cast(user_email, String)).values(report=1)
@@ -1566,7 +1612,9 @@ async def report_user(user_email: str):
 
 # Endpoint to mark that a new users has been emailed
 @app.post("/validation/emailed_user/{user_email}")
-async def emailed_user(user_email: str):
+async def emailed_user(user_email: str, role: str = Depends(get_current_role)):
+    if role not in ('admin', 'teacher'):
+        raise HTTPException(status_code=403, detail="Access denied.")
     db = SessionLocal()
     try:
         update_query = update(NewUsers).where(cast(NewUsers.email, String) == cast(user_email, String)).values(emailed=1)
@@ -1668,9 +1716,10 @@ async def index_teachers(state: str = Form(...),county: str = Form(None),distric
         db.close()
 
 @app.post("/admin/generate_teacher_report/")
-async def generate_teacher_report(state: str = Form(...), county: str = Form(None), district: str = Form(None), school: str = Form(None)):
+async def generate_teacher_report(state: str = Form(...), county: str = Form(None), district: str = Form(None), school: str = Form(None), role: str = Depends(get_current_role)):
+    if role != 'admin':
+        raise HTTPException(status_code=403, detail="Access denied: Only administrators can generate reports.")
     db: Session = SessionLocal()
-
     try:
         # Step 1: Dynamically filter TeacherList based on provided fields (excluding regUserID)
         query = select(
