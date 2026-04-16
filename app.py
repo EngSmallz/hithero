@@ -47,7 +47,6 @@ app.redoc_url = None
 ###content cleanup and formatting for forum
 ALLOWED_TAGS = ["b", "i", "em", "strong", "a", "p", "br"]
 ALLOWED_ATTRS = {"a": ["href"]}
-bleach.clean(content, tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRS, strip=True)
 
 # Determine the path to the directory
 app.mount("/pages", StaticFiles(directory="pages"), name="pages")
@@ -1865,8 +1864,8 @@ def create_post(title: str = Form(...),content: str = Form(...),user_id: int = D
     Handles the creation of a new forum post, linking it to the authenticated user.
     """
     db: Session = SessionLocal()
-    clean_title = bleach.clean(title, tags=[], strip=True)
-    clean_content = bleach.clean(content, tags=[], strip=True)
+    clean_title = bleach.clean(title, tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRS, strip=True)
+    clean_content = bleach.clean(content, tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRS, strip=True)
     # 1. Create a new ForumPost instance
     new_post = ForumPost(title=clean_title, content=clean_content, user_id=user_id,)
     try:
@@ -2047,7 +2046,7 @@ def add_comment_to_post(
         new_comment = ForumComment(
             post_id=post_id,
             user_id=user_id,
-            content=bleach.clean(content, tags=[], strip=True),
+            content=bleach.clean(content, tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRS, strip=True),
             parent_comment_id=parent_comment_id
         )
 
@@ -2197,8 +2196,8 @@ async def update_post(post_id: int, post_data: PostUpdate, id: int = Depends(get
             )
             
         # 3. Update the post data in the SQLAlchemy model
-        existing_post.title = bleach.clean(post_data.title, tags=[], strip=True)
-        existing_post.content = bleach.clean(post_data.content, tags=[], strip=True)
+        existing_post.title = bleach.clean(post_data.title, tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRS, strip=True)
+        existing_post.content = bleach.clean(post_data.content, tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRS, strip=True)
         
         # 4. Commit the changes to the database
         db.commit()
@@ -2241,7 +2240,8 @@ async def update_comment(comment_id: int, content: str = Form(...), user: int = 
             )
             
         # 3. Update the content
-        existing_comment.content = bleach.clean(content, tags=[], strip=True)
+        existing_comment.content = bleach.clean(content, tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRS, strip=True)
+        
         
         # 4. Commit and Refresh
         db.commit()
