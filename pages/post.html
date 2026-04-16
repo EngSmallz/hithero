@@ -598,9 +598,11 @@
             // --- NEW: Generate the Edit Post Button HTML (only if the user is the author) ---
             let editButtonHtml = '';
             if (currentUserId === post.user_id) {
-                 editButtonHtml = `
+                editButtonHtml = `
                     <button id="edit-post-btn"
-                        onclick="showEditForm(${post.id}, '${safeTitle}', '${safeContent}')"
+                        data-post-id="${post.id}"
+                        data-post-title="${post.title.replace(/"/g, '&quot;')}" 
+                        onclick="prepareEditForm(this)"
                         title="Edit Post"
                         class="mt-4 mr-2 px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition duration-300 ease-in-out flex items-center">
                         <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
@@ -622,6 +624,8 @@
                     </button>
                 `;
             }
+
+
 
             // Updated HTML to include Comment Form and Comment List container
             card.innerHTML = `
@@ -727,6 +731,17 @@
          * @param {string} title - The current title of the post (escaped).
          * @param {string} content - The current content of the post (escaped).
          */
+        function prepareEditForm(buttonElement) {
+            const postId = buttonElement.getAttribute('data-post-id');
+            const title = buttonElement.getAttribute('data-post-title');
+            
+            // Instead of passing content through the button's HTML, 
+            // we pull it directly from the text already on the page.
+            const content = document.getElementById('post-content').textContent;
+            
+            showEditForm(postId, title, content);
+        }
+        
         function showEditForm(postId, title, content) {
             const displayArea = document.getElementById('post-display-area');
             const editArea = document.getElementById('post-edit-area');
