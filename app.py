@@ -20,6 +20,7 @@ from azure.communication.email import EmailClient
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+import bleach
 
 app = FastAPI()
 load_dotenv()
@@ -42,6 +43,11 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # Disable documentation routes
 app.openapi_url = None
 app.redoc_url = None
+
+###content cleanup and formatting for forum
+ALLOWED_TAGS = ["b", "i", "em", "strong", "a", "p", "br"]
+ALLOWED_ATTRS = {"a": ["href"]}
+bleach.clean(content, tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRS, strip=True)
 
 # Determine the path to the directory
 app.mount("/pages", StaticFiles(directory="pages"), name="pages")
@@ -69,6 +75,15 @@ PROMO_IMAGE_MAPPING = {
     "livefree": "images/partners/965CountryColor.png",
     "basecamp": "images/partners/BaseCamp.png",
     "coastal": "images/partners/Coastal.png"
+}
+
+###cronjob ip white list
+CRONJOB_ALLOWED_IPS = {
+    "116.203.129.16",
+    "116.203.134.67",
+    "23.88.105.37",
+    "128.140.8.200",
+    "91.99.23.109",
 }
 
 
@@ -267,7 +282,8 @@ def store_my_cookies(request: Request, id: int = Depends(get_current_id)):
         else:
             raise HTTPException(status_code=404, detail="Your account does not have a database listing")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        logger.error(f"Internal Server Error: {str(e)}") 
+        raise HTTPException(status_code=500, detail="Internal Server Error")
     finally:
         db.close()
 
@@ -619,35 +635,28 @@ def wednesday_job():
         db.close()
 
 ######   EMAILER FUNCTIONS FOR CRONJOBS  ###########
-@app.post("/internal/run-wednesday-job")
-async def run_wednesday_job(request: Request):
+def verify_cronjob_request(request: Request):
     secret = request.headers.get("x-secret-key")
-    if secret != os.getenv("INTERNAL_JOB_SECRET"):
+    if not secret or secret != os.getenv("INTERNAL_JOB_SECRET"):
         raise HTTPException(status_code=403, detail="Forbidden")
+
+@app.post("/internal/run-wednesday-job")
+async def run_wednesday_job(request: Request, _: None = Depends(verify_cronjob_request)):
     threading.Thread(target=wednesday_job, daemon=True).start()
     return {"status": "wednesday job started"}
 
 @app.post("/internal/run-tuesday-job")
-async def run_tuesday_job(request: Request):
-    secret = request.headers.get("x-secret-key")
-    if secret != os.getenv("INTERNAL_JOB_SECRET"):
-        raise HTTPException(status_code=403, detail="Forbidden")
+async def run_tuesday_job(request: Request, _: None = Depends(verify_cronjob_request)):
     threading.Thread(target=tuesday_job, daemon=True).start()
     return {"status": "tuesday job started"}
 
 @app.post("/internal/run-thursday-job")
-async def run_thursday_job(request: Request):
-    secret = request.headers.get("x-secret-key")
-    if secret != os.getenv("INTERNAL_JOB_SECRET"):
-        raise HTTPException(status_code=403, detail="Forbidden")
+async def run_thursday_job(request: Request, _: None = Depends(verify_cronjob_request)):
     threading.Thread(target=thursday_job, daemon=True).start()
     return {"status": "thursday job started"}
 
 @app.post("/internal/run-daily-job")
-async def run_daily_job(request: Request):
-    secret = request.headers.get("x-secret-key")
-    if secret != os.getenv("INTERNAL_JOB_SECRET"):
-        raise HTTPException(status_code=403, detail="Forbidden")
+async def run_daily_job(request: Request, _: None = Depends(verify_cronjob_request)):
     threading.Thread(target=daily_job, daemon=True).start()
     return {"status": "daily job started"}
 
@@ -877,12 +886,13 @@ async def login_user(request: Request, email: str = Form(...), password: str = F
                 request.session["user_id"] = user[0].id
                 return JSONResponse(content={"message": message, "createCount": user[0].createCount, "role": user[0].role})
             else:
-                message = "Invalid password."
+                message = "Invalid login credentials."
         else:
-            message = "Invalid email."
+            message = "Invalid login credentials."
         return JSONResponse(content={"message": message})
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        logger.error(f"Internal Server Error: {str(e)}") 
+        raise HTTPException(status_code=500, detail="Internal Server Error")
     finally:
         db.close()
 
@@ -897,7 +907,9 @@ async def logout_user(request: Request):
 
 # Endpoint to move a user from new_users to registered_users and delete item in new_users
 @app.post("/validation/validate_user/{user_email}")
-async def move_user(user_email: str):
+async def move_user(user_email: str, role: str = Depends(get_current_role)):
+    if role not in ('admin', 'teacher'):
+        raise HTTPException(status_code=403, detail="Access denied.")
     db = SessionLocal()
     try:
         query = select(NewUsers).where(cast(NewUsers.email, String) == cast(user_email, String))
@@ -914,7 +926,8 @@ async def move_user(user_email: str):
         return {"message": "User validated."}
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        logger.error(f"Internal Server Error: {str(e)}") 
+        raise HTTPException(status_code=500, detail="Internal Server Error")
     finally:
         db.close()
 
@@ -958,7 +971,8 @@ async def create_teacher_profile(request: Request, name: str = Form(...), state:
         else:
             return {"message": "No user logged in."}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        logger.error(f"Internal Server Error: {str(e)}") 
+        raise HTTPException(status_code=500, detail="Internal Server Error")
     finally:
         db.close()
 
@@ -990,7 +1004,8 @@ async def get_random_teacher(request: Request):
             request.session["teacher"] = data["name"]
         return data
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        logger.error(f"Internal Server Error: {str(e)}") 
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
 ###api gets the current session info of the logged in user
@@ -1038,7 +1053,8 @@ async def contact_us(name: str = Form(...), email: str = Form(...), subject: str
         send_email(recipient_email, subject, html_message, plain_message)
         return {"message": "Email sent successfully!"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        logger.error(f"Internal Server Error: {str(e)}") 
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 #homepage get
 @app.get("/")
@@ -1097,7 +1113,8 @@ async def get_teacher_info(request: Request):
         else:
             raise HTTPException(status_code=404, detail="Teacher not found")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        logger.error(f"Internal Server Error: {str(e)}") 
+        raise HTTPException(status_code=500, detail="Internal Server Error")
     finally:
         db.close()
 
@@ -1114,7 +1131,8 @@ async def update_info(request: Request, aboutMe: str = Form(...), id: int = Depe
         else:
             raise HTTPException(status_code=403, detail="Permission denied.")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        logger.error(f"Internal Server Error: {str(e)}") 
+        raise HTTPException(status_code=500, detail="Internal Server Error")
     finally:
         db.close()
 
@@ -1145,7 +1163,8 @@ async def update_teacher_school(
             raise HTTPException(status_code=403, detail="Permission denied. Not logged in.")
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        logger.error(f"Internal Server Error: {str(e)}") 
+        raise HTTPException(status_code=500, detail="Internal Server Error")
     finally:
         db.close()
 
@@ -1163,7 +1182,8 @@ async def update_teacher_name(request: Request, teacher: str = Form(...), id: in
             raise HTTPException(status_code=403, detail="Permission denied.")
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        logger.error(f"Internal Server Error: {str(e)}") 
+        raise HTTPException(status_code=500, detail="Internal Server Error")
     finally:
         db.close()
 
@@ -1181,7 +1201,8 @@ async def update_wishlist(request: Request, wishlist: str = Form(...), id: int =
         else:
             raise HTTPException(status_code=403, detail="Permission denied.")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        logger.error(f"Internal Server Error: {str(e)}") 
+        raise HTTPException(status_code=500, detail="Internal Server Error")
     finally:
         db.close()
 
@@ -1204,7 +1225,8 @@ async def update_url_id(request: Request, url_id: str = Form(...), id: int = Dep
     except HTTPException as e:
         raise e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        logger.error(f"Internal Server Error: {str(e)}") 
+        raise HTTPException(status_code=500, detail="Internal Server Error")
     finally:
         db.close()
 
@@ -1241,7 +1263,8 @@ async def edit_teacher_image(request: Request, role: str = Depends(get_current_r
     except HTTPException as he:
         raise he
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        logger.error(f"Internal Server Error: {str(e)}") 
+        raise HTTPException(status_code=500, detail="Internal Server Error")
     finally:
         db.close()
 
@@ -1269,7 +1292,8 @@ async def get_myinfo(request: Request, id: int = Depends(get_current_id)):
         else:
             return {"message": "Your account does not have a database listing"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        logger.error(f"Internal Server Error: {str(e)}") 
+        raise HTTPException(status_code=500, detail="Internal Server Error")
     finally:
         db.close()
 
@@ -1294,7 +1318,8 @@ async def update_password(request: Request, id: int = Depends(get_current_id), o
         else:
             return {"message": "New passwords do not match."}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        logger.error(f"Internal Server Error: {str(e)}") 
+        raise HTTPException(status_code=500, detail="Internal Server Error")
     finally:
         db.close()
 
@@ -1323,7 +1348,8 @@ async def check_access_teacher(request: Request, id: int = Depends(get_current_i
                 return {"status": "success", "message": "Access granted"}
         raise HTTPException(status_code=403, detail="No access")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        logger.error(f"Internal Server Error: {str(e)}") 
+        raise HTTPException(status_code=500, detail="Internal Server Error")
     finally:
         db.close()
 
@@ -1354,7 +1380,8 @@ async def validation_page(request: Request, role: str = Depends(get_current_role
         else:
             raise HTTPException(status_code=403, detail="You don't have permission to access this page.")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")          
+        logger.error(f"Internal Server Error: {str(e)}") 
+        raise HTTPException(status_code=500, detail="Internal Server Error")          
     finally:
         db.close()
 
@@ -1452,6 +1479,7 @@ async def forgot_password(request: Request, email: str = Form(...)):
         return JSONResponse(content={"message": "If an account exists, a reset link will be sent to your email."})
     except Exception as e:
         db.rollback()
+        logger.error(f"Internal Server Error: {str(e)}") 
         raise HTTPException(status_code=500, detail="Internal Server Error")
     finally:
         db.close()
@@ -1483,6 +1511,7 @@ async def reset_password(token: str = Form(...), new_password: str = Form(...), 
         raise
     except Exception as e:
         db.rollback()
+        logger.error(f"Internal Server Error: {str(e)}") 
         raise HTTPException(status_code=500, detail="Internal Server Error")
     finally:
         db.close()
@@ -1520,7 +1549,8 @@ async def get_spotlight_info(request: Request, token: str):
         else:
             raise HTTPException(status_code=404, detail="Spotlight info not found for the given token")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
+        logger.error(f"Internal Server Error: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"Internal server error")
     finally:
         db.close()
 
@@ -1548,7 +1578,8 @@ async def get_teacher_url(request: Request):
         url = "www.HelpTeachers.net/teacher/" + token[0]
         return {"url": url}  # Return as JSON
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        logger.error(f"Internal Server Error: {str(e)}") 
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 ##this api gets the token, gets the data, sets the data, then redirects
 @app.get("/teacher/{url_id}")
@@ -1587,7 +1618,8 @@ async def delete_user(user_email: str, role: str = Depends(get_current_role)):
             return {"message": "User deleted successfully."}
         except Exception as e:
             db.rollback()
-            raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+            logger.error(f"Internal Server Error: {str(e)}") 
+            raise HTTPException(status_code=500, detail="Internal Server Error")
         finally:
             db.close()
     else:
@@ -1606,7 +1638,8 @@ async def report_user(user_email: str, role: str = Depends(get_current_role)):
         return {"message": "User reported."}
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        logger.error(f"Internal Server Error: {str(e)}") 
+        raise HTTPException(status_code=500, detail="Internal Server Error")
     finally:
         db.close()
 
@@ -1623,7 +1656,8 @@ async def emailed_user(user_email: str, role: str = Depends(get_current_role)):
         return {"message": "User emailed."}
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        logger.error(f"Internal Server Error: {str(e)}") 
+        raise HTTPException(status_code=500, detail="Internal Server Error")
     finally:
         db.close()
 
@@ -1773,7 +1807,7 @@ async def generate_teacher_report(state: str = Form(...), county: str = Form(Non
         )
 
         # Step 7: Return response
-        return {"message": f"Teacher report saved and sent via email. The report is located at {file_path}"}
+        return {"message": f"Teacher report saved and sent via email."}
 
     except Exception as e:
         raise e
@@ -1831,8 +1865,10 @@ def create_post(title: str = Form(...),content: str = Form(...),user_id: int = D
     Handles the creation of a new forum post, linking it to the authenticated user.
     """
     db: Session = SessionLocal()
+    clean_title = bleach.clean(title, tags=[], strip=True)
+    clean_content = bleach.clean(content, tags=[], strip=True)
     # 1. Create a new ForumPost instance
-    new_post = ForumPost(title=title,content=content,user_id=user_id,)
+    new_post = ForumPost(title=clean_title, content=clean_content, user_id=user_id,)
     try:
         # 2. Add to session and commit
         db.add(new_post)
@@ -2011,7 +2047,7 @@ def add_comment_to_post(
         new_comment = ForumComment(
             post_id=post_id,
             user_id=user_id,
-            content=content,
+            content=bleach.clean(content, tags=[], strip=True),
             parent_comment_id=parent_comment_id
         )
 
@@ -2161,8 +2197,8 @@ async def update_post(post_id: int, post_data: PostUpdate, id: int = Depends(get
             )
             
         # 3. Update the post data in the SQLAlchemy model
-        existing_post.title = post_data.title
-        existing_post.content = post_data.content
+        existing_post.title = bleach.clean(post_data.title, tags=[], strip=True)
+        existing_post.content = bleach.clean(post_data.content, tags=[], strip=True)
         
         # 4. Commit the changes to the database
         db.commit()
@@ -2205,7 +2241,7 @@ async def update_comment(comment_id: int, content: str = Form(...), user: int = 
             )
             
         # 3. Update the content
-        existing_comment.content = content
+        existing_comment.content = bleach.clean(content, tags=[], strip=True)
         
         # 4. Commit and Refresh
         db.commit()
@@ -2276,7 +2312,8 @@ async def admin_delete_user_account(target_email: str = Form(...), admin_secret_
     except Exception as e:
         db.rollback()
         print(f"Error during administrative account deletion for {target_email}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Internal Server Error during deletion: {str(e)}")
+        logger.error(f"Internal Server Error: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"Internal Server Error")
     finally:
         db.close()
 
