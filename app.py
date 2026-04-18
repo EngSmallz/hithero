@@ -1889,7 +1889,7 @@ async def get_promo_info(request: Request):
 
 @app.post("/forum/create_post")
 @limiter.limit("5/minute")
-def create_post(title: str = Form(...), content: str = Form(...), user_id: int = Depends(get_current_id)):
+def create_post(request: Request, title: str = Form(...), content: str = Form(...), user_id: int = Depends(get_current_id)):
     if not user_id:
         raise HTTPException(status_code=401, detail="You must be logged in to post.")
     db: Session = SessionLocal()
@@ -2042,7 +2042,7 @@ def handle_post_vote(post_id: int, vote_data: VoteInput, user_id: int = Depends(
 
 @app.post("/forum/posts/{post_id}/comment", summary="Add a new comment to a specific post")
 @limiter.limit("5/minute")
-def add_comment_to_post(post_id: int, content: str = Form(...), parent_comment_id: Optional[int] = Form(None), user_id: int = Depends(get_current_id)):
+def add_comment_to_post(request: Request, post_id: int, content: str = Form(...), parent_comment_id: Optional[int] = Form(None), user_id: int = Depends(get_current_id)):
     if not user_id:
         raise HTTPException(status_code=401, detail="You must be logged in to post.")
     # Assuming SessionLocal() correctly creates a DB session
