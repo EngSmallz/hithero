@@ -443,11 +443,13 @@
         }
         // =============================================================
 
-        window.onload = function() {
-            checkAuthentication();
-            getTeacherDay();
-            displayPromoHero();
-            initMetrics(); // ← metrics animation init
+        window.onload = async function() {
+            await Promise.all([
+                checkAuthentication(),
+                getTeacherDay(),
+                displayPromoHero()
+            ]);
+            initMetrics();
         };
     </script>
 </body>
