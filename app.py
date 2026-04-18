@@ -20,7 +20,7 @@ from azure.communication.email import EmailClient
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
-import bleach, magic, re
+import bleach, puremagic, re
 
 app = FastAPI()
 load_dotenv()
@@ -1264,9 +1264,8 @@ async def edit_teacher_image(request: Request, role: str = Depends(get_current_r
         image_bytes = await image.read()
         
         # Validate by actual file signature, not client-supplied content_type
-        import magic
         ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
-        detected_type = magic.from_buffer(image_bytes, mime=True)
+        detected_type = puremagic.from_buffer(image_bytes, mime=True)
         if detected_type not in ALLOWED_MIME_TYPES:
             raise HTTPException(status_code=400, detail="Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.")
         
