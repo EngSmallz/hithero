@@ -152,13 +152,15 @@
             try {
                 const response = await fetch('/api/profile/');
                 if (!response.ok) {
-                    // If response is not OK, redirect to 403.html
                     window.location.href = '/pages/403.html';
-                    return; // Stop execution
+                    return;
                 }
                 const data = await response.json();
-                // If profile is valid, proceed to get the list
-                get_list(data.user_role); // Pass the user role to get_list
+                if (data.user_role !== 'admin' && data.user_role !== 'teacher') {
+                    window.location.href = '/pages/403.html';
+                    return;
+                }
+                get_list(data.user_role);
             } catch (error) {
                 console.error('Error checking permission:', error);
                 window.location.href = '/pages/403.html';
@@ -230,7 +232,7 @@
         
         async function validate(email) {
             try {
-                const validateResponse = await fetch(`/validation/validate_user/${email}`, {
+                const validateResponse = await fetch(`/validation/validate_user/${encodeURIComponent(email)}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -255,7 +257,7 @@
                 return;
             }
             try {
-                const deleteResponse = await fetch(`/validation/delete_user/${email}`, {
+                const deleteResponse = await fetch(`/validation/delete_user/${encodeURIComponent(email)}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -280,7 +282,7 @@
                 return;
             }
             try {
-                const reportResponse = await fetch(`/validation/report_user/${email}`, {
+                const reportResponse = await fetch(`/validation/report_user/${encodeURIComponent(email)}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -302,7 +304,7 @@
 
         async function emailUser(email) {
             try {
-                const emailResponse = await fetch(`/validation/emailed_user/${email}`, {
+                const emailResponse = await fetch(`/validation/emailed_user/${encodeURIComponent(email)}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

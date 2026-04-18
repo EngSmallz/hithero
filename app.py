@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Request, Form, Depends, Body, File, UploadFile, Response, status, Path
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, FileResponse
 from pydantic import BaseModel, Field
-import os, logging, smtplib, secrets, string, pyodbc, time, ssl, datetime, base64, random, requests, threading
+import os, logging, smtplib, secrets, string, pyodbc, time, ssl, datetime, base64, requests, threading
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -20,12 +20,12 @@ from azure.communication.email import EmailClient
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
-import bleach
+import bleach, magic, re
 
 app = FastAPI()
 load_dotenv()
 logger = logging.getLogger(__name__)
-app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY"))
+app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY"), https_only=True)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://www.helpteachers.net", "https://helpteachers.net"],
@@ -864,7 +864,8 @@ async def register_user(request: Request, name: str = Form(...), email: str = Fo
         send_registration_email(email)
         return {"message": "User registered successfully. You should recieve an email shortly. Please check your spam folder"}
     except Exception as e:
-        return {"message": "Registration unsuccessful", "error": str(e)}
+        logger.error(f"Registration error: {str(e)}")
+        return {"message": "Registration unsuccessful. Please try again later."}
 
     
 ###api used to create cookie based session via authentication with registered_user table
@@ -906,7 +907,7 @@ async def logout_user(request: Request):
 
 # Endpoint to move a user from new_users to registered_users and delete item in new_users
 @app.post("/validation/validate_user/{user_email}")
-async def move_user(user_email: str, role: str = Depends(get_current_role)):
+async def move_user(user_email: str, role: str = Depends(get_current_role), request: Request = None):
     if role not in ('admin', 'teacher'):
         raise HTTPException(status_code=403, detail="Access denied.")
     db = SessionLocal()
@@ -916,6 +917,18 @@ async def move_user(user_email: str, role: str = Depends(get_current_role)):
         user = result.fetchone()
         if not user:
             raise HTTPException(status_code=404, detail="User not found in new_users")
+
+        # Teachers can only validate users within their own district
+        if role == 'teacher':
+            id = get_current_id(request)
+            teacher_record = db.execute(select(TeacherList).where(TeacherList.regUserID == id)).fetchone()
+            if not teacher_record or (
+                user[0].state != teacher_record[0].state or
+                user[0].county != teacher_record[0].county or
+                user[0].district != teacher_record[0].district
+            ):
+                raise HTTPException(status_code=403, detail="You can only validate teachers in your own district.")
+        
         query = insert(RegisteredUsers).values(email=user[0].email, password=user[0].password, role=user[0].role, phone_number = user[0].phone_number)
         db.execute(query)
         delete_query = delete(NewUsers).where(cast(NewUsers.email, String) == cast(user_email, String))
@@ -923,6 +936,8 @@ async def move_user(user_email: str, role: str = Depends(get_current_role)):
         db.commit()
         send_validation_email(user[0].email)        
         return {"message": "User validated."}
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         logger.error(f"Internal Server Error: {str(e)}") 
@@ -943,10 +958,10 @@ async def create_teacher_profile(request: Request, name: str = Form(...), state:
                 aa_link = wishlist + "&tag=h0mer00mher0-20" 
                 email = get_current_email(request)
                 first_part_email = email.split('@')[0]
-                random_number = random.randint(1, 9999)
+                random_number = secrets.randbelow(9999)
                 auto_url_id = f"{first_part_email}{random_number}"
                 while db.execute(select(TeacherList).where(cast(TeacherList.url_id, String) == cast(auto_url_id, String))).first():
-                    random_number = random.randint(1, 9999)
+                    random_number = secrets.randbelow(9999)
                     auto_url_id = f"{first_part_email}{random_number}"
 
                 insert_query = insert(TeacherList).values(
@@ -1030,10 +1045,15 @@ async def contact_us(name: str = Form(...), email: str = Form(...), subject: str
     if not is_valid:
         raise HTTPException(status_code=400, detail="Invalid reCAPTCHA")
 
-    # Define the data to populate the template
+    #clean and Define the data to populate the template
+    clean_name = bleach.clean(name, tags=[], attributes={}, strip=True)
+    clean_email = bleach.clean(email, tags=[], attributes={}, strip=True)
+    clean_message = bleach.clean(message, tags=[], attributes={}, strip=True)
+    clean_subject = bleach.clean(subject, tags=[], attributes={}, strip=True)
+
     template_data = {
         'recipient_name': 'Homeroom Heroes Team',
-        'message_body': f"Message from {name} ({email}):\n\n{message}"
+        'message_body': f"Message from {clean_name} ({clean_email}):\n\n{clean_message}"
     }
 
     # 1. Generate the HTML message from the template
@@ -1042,14 +1062,14 @@ async def contact_us(name: str = Form(...), email: str = Form(...), subject: str
 
     # 2. Create a plain text fallback version
     plain_message = (
-        f"Subject: {subject}\n"
-        f"Message from {name} ({email}):\n\n"
-        f"{message}"
+        f"Subject: {clean_subject}\n"
+        f"Message from {clean_name} ({clean_email}):\n\n"
+        f"{clean_message}"
     )
 
     recipient_email = 'Homeroom.heroes.contact@gmail.com'
     try:
-        send_email(recipient_email, subject, html_message, plain_message)
+        send_email(recipient_email, clean_subject, html_message, plain_message)
         return {"message": "Email sent successfully!"}
     except Exception as e:
         logger.error(f"Internal Server Error: {str(e)}") 
@@ -1212,6 +1232,8 @@ async def update_url_id(request: Request, url_id: str = Form(...), id: int = Dep
     db = SessionLocal()
     try:
         if role:
+            if not re.match(r'^[a-zA-Z0-9_-]{3,50}$', url_id):
+                raise HTTPException(status_code=400, detail="URL ID may only contain letters, numbers, hyphens, and underscores (3–50 characters).")
             existing_teacher = db.query(TeacherList).where(cast(TeacherList.url_id, String) == cast(url_id, String)).first()
             if existing_teacher:
                 raise HTTPException(status_code=409, detail="URL ID already in use.")
@@ -1232,27 +1254,25 @@ async def update_url_id(request: Request, url_id: str = Form(...), id: int = Dep
     
 ###api used to update the logged in users teacher page image
 @app.post("/profile/update_teacher_image/")
-async def edit_teacher_image(request: Request, role: str = Depends(get_current_role), image: UploadFile = Form(...)):
+async def edit_teacher_image(request: Request, role: str = Depends(get_current_role), image: UploadFile = Form(...), id: int = Depends(get_current_id)):
     db: Session = SessionLocal()
     try:
         if image.size > MAX_FILE_SIZE:
             raise HTTPException(status_code=400, detail="File size exceeds the allowed limit")
-        ALLOWED_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
-        if image.content_type not in ALLOWED_TYPES:
+        
+        # Read bytes once, then use for both magic check and DB storage
+        image_bytes = await image.read()
+        
+        # Validate by actual file signature, not client-supplied content_type
+        import magic
+        ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
+        detected_type = magic.from_buffer(image_bytes, mime=True)
+        if detected_type not in ALLOWED_MIME_TYPES:
             raise HTTPException(status_code=400, detail="Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.")
+        
         if role:
-            state = get_index_cookie('state', request)
-            county = get_index_cookie('county', request)
-            district = get_index_cookie('district', request)
-            school = get_index_cookie('school', request)
-            name = get_index_cookie('teacher', request)
-            new_image_data = image.file.read()
-            update_query = update(TeacherList).values(image_data=new_image_data).where(
-                (cast(TeacherList.state, String) == state) &
-                (cast(TeacherList.county, String) == county) &
-                (cast(TeacherList.district, String) == district) &
-                (cast(TeacherList.school, String) == school) &
-                (cast(TeacherList.name, String) == name)
+            update_query = update(TeacherList).values(image_data=image_bytes).where(
+                TeacherList.regUserID == id
             )
             db.execute(update_query)
             db.commit()
@@ -1622,7 +1642,7 @@ async def delete_user(user_email: str, role: str = Depends(get_current_role)):
         finally:
             db.close()
     else:
-        raise HTTPException(status_code=500, detail=f"No permission to to action.")
+        raise HTTPException(status_code=403, detail=f"No permission to to action.")
 
 # Function to report a user in validation
 @app.post("/validation/report_user/{user_email}")
@@ -1797,19 +1817,23 @@ async def generate_teacher_report(state: str = Form(...), county: str = Form(Non
         with open(file_path, 'w') as temp_file:
             temp_file.write(file_content)  # Save your report data to the file
 
-        # Step 6: Send the attachment
+        # Step 6: Send the attachment and delete remnant on disk
         send_attachment(
             recipient_email="homeroom.heroes.main@gmail.com",
             subject="Teacher Report",
             message="Please find the attached teacher report.",
             attachment_path=file_path  # Use the specific file path
         )
-
+        try:
+            os.remove(file_path)
+        except OSError:
+            logger.error("Failed to delete temporary report file.")
         # Step 7: Return response
         return {"message": f"Teacher report saved and sent via email."}
 
     except Exception as e:
-        raise e
+        logger.error(f"Report generation error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
     finally:
         db.close()
@@ -1859,15 +1883,17 @@ async def get_promo_info(request: Request):
     return JSONResponse(content=promo_info)
 
 @app.post("/forum/create_post")
-def create_post(title: str = Form(...),content: str = Form(...),user_id: int = Depends(get_current_id) ):
-    """
-    Handles the creation of a new forum post, linking it to the authenticated user.
-    """
+@limiter.limit("5/minute")
+def create_post(title: str = Form(...), content: str = Form(...), user_id: int = Depends(get_current_id)):
+    if not user_id:
+        raise HTTPException(status_code=401, detail="You must be logged in to post.")
     db: Session = SessionLocal()
-    clean_title = bleach.clean(title, tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRS, strip=True)
-    clean_content = bleach.clean(content, tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRS, strip=True)
     # 1. Create a new ForumPost instance
-    new_post = ForumPost(title=clean_title, content=clean_content, user_id=user_id,)
+    new_post = ForumPost(
+        title=bleach.clean(title, tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRS, strip=True),
+        content=bleach.clean(content, tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRS, strip=True),
+        user_id=user_id
+    )
     try:
         # 2. Add to session and commit
         db.add(new_post)
@@ -1943,10 +1969,9 @@ def get_post(post_id: int):
 
 @app.post("/forum/posts/{post_id}/vote")
 def handle_post_vote(post_id: int, vote_data: VoteInput, user_id: int = Depends(get_current_id)):
-    """
-    Allows a user to cast, change, or retract an upvote (1) or downvote (-1) on a post.
-    The final updated post data, including the new upvote_count, is returned.
-    """
+    if not user_id:
+        raise HTTPException(status_code=401, detail="You must be logged in to post.")
+
     db: Session = SessionLocal()
     vote_type = vote_data.vote_type
 
@@ -2011,16 +2036,10 @@ def handle_post_vote(post_id: int, vote_data: VoteInput, user_id: int = Depends(
     return post
 
 @app.post("/forum/posts/{post_id}/comment", summary="Add a new comment to a specific post")
-def add_comment_to_post(
-    post_id: int, 
-    content: str = Form(...), 
-    parent_comment_id: Optional[int] = Form(None), 
-    user_id: int = Depends(get_current_id) # Dependency to get the authenticated user's ID
-):
-    """
-    Handles the creation of a new comment, linking it to a specific forum post
-    and the authenticated user.
-    """
+@limiter.limit("5/minute")
+def add_comment_to_post(post_id: int, content: str = Form(...), parent_comment_id: Optional[int] = Form(None), user_id: int = Depends(get_current_id)):
+    if not user_id:
+        raise HTTPException(status_code=401, detail="You must be logged in to post.")
     # Assuming SessionLocal() correctly creates a DB session
     db: Session = SessionLocal() 
 
@@ -2049,7 +2068,6 @@ def add_comment_to_post(
             content=bleach.clean(content, tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRS, strip=True),
             parent_comment_id=parent_comment_id
         )
-
         # 4. Add to session
         db.add(new_comment)
         
