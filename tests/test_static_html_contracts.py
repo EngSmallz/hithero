@@ -172,3 +172,13 @@ def test_shared_school_dropdown_script_is_used_without_inline_dropdown_function_
     assert "async function populateCountiesDropdown(" not in source
     assert "async function populateDistrictsDropdown(" not in source
     assert "async function populateSchoolsDropdown(" not in source
+
+
+@pytest.mark.parametrize("page_name", ["login.html", "forgot.html", "update_password.html", "reset_password.html", "register.html"])
+def test_shared_forms_helpers_script_is_used_on_account_pages(page_name):
+    source = read_page(page_name)
+
+    assert '<script src="/static/js/forms.js"></script>' in source
+    assert "function postForm(" not in source
+    assert "function postFormData(" not in source
+    assert "function parseJsonSafe(" not in source

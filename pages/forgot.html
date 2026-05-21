@@ -90,6 +90,7 @@
     </footer>
 
     <script src="/static/js/auth.js"></script>
+    <script src="/static/js/forms.js"></script>
     <script>
         // This function is included for consistency with other pages, though its full functionality
         // might not be strictly necessary on a public 'forgot password' page.
@@ -104,15 +105,10 @@
 
             submitButton.addEventListener("click", async function (event) {
                 event.preventDefault(); // Prevent default form submission
-                const formData = new FormData(forgotForm);
 
                 try {
-                    const response = await fetch("/profile/forgot_password/", {
-                        method: "POST",
-                        body: formData,
-                    });
-
-                    const data = await response.json(); // Always try to parse JSON for more details
+                    const response = await forms.postForm("/profile/forgot_password/", forgotForm);
+                    const data = (await forms.parseJsonSafe(response)) || {};
 
                     if (response.ok) {
                         alert(data.message);

@@ -173,6 +173,7 @@
 
     <script src="/static/js/auth.js"></script>
     <script src="/static/js/school-dropdowns.js"></script>
+    <script src="/static/js/forms.js"></script>
     <script>
         configureSchoolDropdowns({
             stateUrl: "/api/get_states/",
@@ -240,24 +241,13 @@
                 formData.append('recaptcha_response', recaptchaResponse); // Correct form field name
 
                 try {
-                    const response = await fetch("/profile/register/", {
-                        method: "POST",
-                        body: formData,
-                    });
-
-                    // Parse JSON response. FastAPI's HTTPException returns JSON.
-                    let data;
-                    try {
-                        data = await response.json();
-                    } catch (jsonError) {
-                        // If response is not JSON (e.g., a server crash returning plain text/HTML)
-                        console.error('Server response was not valid JSON:', jsonError);
-                        // Fallback for non-JSON responses
+                    const response = await forms.postFormData("/profile/register/", formData);
+                    const data = await forms.parseJsonSafe(response);
+                    if (!data) {
                         alert(`An unexpected error occurred. Server responded with status: ${response.status}. Please try again later.`);
                         grecaptcha.reset();
                         return;
                     }
-
 
                     if (response.ok) {
                         // Success: Prioritize 'detail' for more descriptive message

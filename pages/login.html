@@ -98,6 +98,7 @@
     </footer>
 
     <script src="/static/js/auth.js"></script>
+    <script src="/static/js/forms.js"></script>
     <script>
         // This function dynamically shows/hides menu items based on user authentication and role.
         document.addEventListener("DOMContentLoaded", function () {
@@ -111,15 +112,10 @@
 
             submitButton.addEventListener("click", async function (event) {
                 event.preventDefault();
-                const formData = new FormData(loginForm);
 
                 try {
-                    const response = await fetch("/profile/login/", {
-                        method: "POST",
-                        body: formData,
-                    });
-
-                    const data = await response.json();
+                    const response = await forms.postForm("/profile/login/", loginForm);
+                    const data = (await forms.parseJsonSafe(response)) || {};
 
                     if (response.ok) {
                         alert(data.message);
