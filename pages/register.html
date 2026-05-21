@@ -172,113 +172,24 @@
     </footer>
 
     <script src="/static/js/auth.js"></script>
+    <script src="/static/js/school-dropdowns.js"></script>
     <script>
-        // This function dynamically shows/hides menu items based on user authentication and role.
-        async function populateStatesDropdown() {
-            try {
-                const response = await fetch("/api/get_states/");
-                if (!response.ok) throw new Error('Network response was not ok.');
-                const states = await response.json();
-                const stateDropdown = document.getElementById("state");
-                stateDropdown.innerHTML = "";
-                const chooseStateOption = new Option("Choose state", "", true, true); // selected and disabled
-                chooseStateOption.disabled = true;
-                stateDropdown.add(chooseStateOption);
-                states.forEach(state => {
-                    const option = new Option(state, state);
-                    stateDropdown.add(option);
-                });
-            } catch (error) {
-                console.error("Error retrieving state information:", error);
-                alert("Error retrieving state information. Please try again later.");
-            }
-        }
-
-        async function populateCountiesDropdown() {
-            try {
-                const selectedState = document.getElementById("state").value;
-                if (!selectedState) {
-                    document.getElementById("county").innerHTML = '<option value="" disabled selected>Choose county</option>';
-                    document.getElementById("district").innerHTML = '<option value="" disabled selected>Choose district</option>';
-                    document.getElementById("school").innerHTML = '<option value="" disabled selected>Choose school</option>';
-                    return;
-                }
-                const response = await fetch(`/api/get_counties/${selectedState}`);
-                if (!response.ok) throw new Error('Network response was not ok.');
-                const counties = await response.json();
-                const countyDropdown = document.getElementById("county");
-                countyDropdown.innerHTML = "";
-                const chooseCountyOption = new Option("Choose county", "", true, true);
-                chooseCountyOption.disabled = true;
-                countyDropdown.add(chooseCountyOption);
-                counties.forEach(county => {
-                    const option = new Option(county, county);
-                    countyDropdown.add(option);
-                });
-                // Reset subsequent dropdowns
-                document.getElementById("district").innerHTML = '<option value="" disabled selected>Choose district</option>';
-                document.getElementById("school").innerHTML = '<option value="" disabled selected>Choose school</option>';
-            } catch (error) {
-                console.error("Error retrieving county information:", error);
-                alert("Error retrieving county information. Please try again later.");
-            }
-        }
-
-        async function populateDistrictsDropdown() {
-            try {
-                const selectedState = document.getElementById("state").value;
-                const selectedCounty = document.getElementById("county").value;
-                if (!selectedState || !selectedCounty) {
-                    document.getElementById("district").innerHTML = '<option value="" disabled selected>Choose district</option>';
-                    document.getElementById("school").innerHTML = '<option value="" disabled selected>Choose school</option>';
-                    return;
-                }
-                const response = await fetch(`/api/get_districts/${selectedState}/${selectedCounty}`);
-                if (!response.ok) throw new Error('Network response was not ok.');
-                const districts = await response.json();
-                const districtDropdown = document.getElementById("district");
-                districtDropdown.innerHTML = "";
-                const chooseDistrictOption = new Option("Choose district", "", true, true);
-                chooseDistrictOption.disabled = true;
-                districtDropdown.add(chooseDistrictOption);
-                districts.forEach(district => {
-                    const option = new Option(district, district);
-                    districtDropdown.add(option);
-                });
-                // Reset subsequent dropdowns
-                document.getElementById("school").innerHTML = '<option value="" disabled selected>Choose school</option>';
-            } catch (error) {
-                console.error("Error retrieving district information:", error);
-                alert("Error retrieving district information. Please try again later.");
-            }
-        }
-
-        async function populateSchoolsDropdown() {
-            try {
-                const selectedState = document.getElementById("state").value;
-                const selectedCounty = document.getElementById("county").value;
-                const selectedDistrict = document.getElementById("district").value;
-                if (!selectedState || !selectedCounty || !selectedDistrict) {
-                    document.getElementById("school").innerHTML = '<option value="" disabled selected>Choose school</option>';
-                    return;
-                }
-                const response = await fetch(`/api/get_schools/${selectedState}/${selectedCounty}/${selectedDistrict}`);
-                if (!response.ok) throw new Error('Network response was not ok.');
-                const schools = await response.json();
-                const schoolDropdown = document.getElementById("school");
-                schoolDropdown.innerHTML = "";
-                const chooseSchoolOption = new Option("Choose school", "", true, true);
-                chooseSchoolOption.disabled = true;
-                schoolDropdown.add(chooseSchoolOption);
-                schools.forEach(school => {
-                    const option = new Option(school, school);
-                    schoolDropdown.add(option);
-                });
-            } catch (error) {
-                console.error("Error retrieving school information:", error);
-                alert("Error retrieving school information. Please try again later.");
-            }
-        }
+        configureSchoolDropdowns({
+            stateUrl: "/api/get_states/",
+            countiesUrl: function (state) {
+                return "/api/get_counties/" + state;
+            },
+            districtsUrl: function (state, county) {
+                return "/api/get_districts/" + state + "/" + county;
+            },
+            schoolsUrl: function (state, county, district) {
+                return "/api/get_schools/" + state + "/" + county + "/" + district;
+            },
+            stateError: "Error retrieving state information. Please try again later.",
+            countyError: "Error retrieving county information. Please try again later.",
+            districtError: "Error retrieving district information. Please try again later.",
+            schoolError: "Error retrieving school information. Please try again later."
+        });
 
         // Function to open the T&C modal
         function openTermsConditions() {

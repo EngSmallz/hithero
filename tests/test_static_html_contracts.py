@@ -159,3 +159,15 @@ def test_shared_auth_script_is_used_without_inline_shared_function_defs(page_nam
     assert "async function checkAuthentication(" not in source
     assert "async function logout(" not in source
     assert "async function mypage(" not in source
+
+
+@pytest.mark.parametrize("page_name", ["index.html", "register.html"])
+def test_shared_school_dropdown_script_is_used_without_inline_dropdown_function_defs(page_name):
+    source = read_page(page_name)
+
+    assert '<script src="/static/js/school-dropdowns.js"></script>' in source
+    assert "configureSchoolDropdowns(" in source
+    assert "async function populateStatesDropdown(" not in source
+    assert "async function populateCountiesDropdown(" not in source
+    assert "async function populateDistrictsDropdown(" not in source
+    assert "async function populateSchoolsDropdown(" not in source
