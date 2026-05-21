@@ -85,7 +85,9 @@ def test_contact_form_contract():
     assert_element(document, "contact-message")
     assert_element(document, "submitButton")
     assert document.find_all("div", **{"class": "g-recaptcha"})
-    assert "/api/contact_us/" in source
+    assert '<script src="/static/js/contact-form.js"></script>' in source
+    assert "function updateCharacterCount(" not in source
+    assert "/api/contact_us/" not in source
 
 
 def test_forgot_password_form_contract():
@@ -131,7 +133,6 @@ def test_auth_header_javascript_contracts_exist_on_form_pages(page_name):
     for button_id in ["loginButton", "logoutButton", "mypageButton", "forumButton", "validationButton"]:
         assert_element(document, button_id)
 
-    assert "checkAuthentication" in source
     assert '/static/js/auth.js' in source
 
 
