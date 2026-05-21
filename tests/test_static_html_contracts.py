@@ -137,7 +137,39 @@ def test_update_password_form_contract():
         assert "required" in field_attrs
 
     assert_element(document, "submitButton")
+    assert source.count('class="auth-label"') == 3
+    assert source.count('class="auth-input-lg"') == 3
+    assert 'class="auth-submit-lg"' in source
+    assert "block w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-lg" not in source
+    assert "w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md text-xl" not in source
     assert "/profile/update_password/" in source
+
+
+def test_reset_password_form_contract():
+    document = parse_page("reset_password.html")
+    source = read_page("reset_password.html")
+
+    assert_element(document, "invalid-token-section")
+    assert_element(document, "reset-form-section")
+    assert_element(document, "success-section")
+    assert_element(document, "reset-form")
+    assert_element(document, "error-message")
+    token_field = assert_element(document, "token")
+    assert token_field["name"] == "token"
+    assert token_field["type"] == "hidden"
+
+    for field in ["new_password", "confirm_password"]:
+        field_attrs = assert_named_field(document, field)
+        assert field_attrs["type"] == "password"
+        assert "required" in field_attrs
+
+    assert_element(document, "submitButton")
+    assert source.count('class="auth-label"') == 2
+    assert source.count('class="auth-input-lg"') == 2
+    assert 'class="auth-submit-lg"' in source
+    assert "block w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-lg" not in source
+    assert "w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md text-xl" not in source
+    assert "/profile/reset_password/" in source
 
 
 @pytest.mark.parametrize("page_name", ["register.html", "login.html", "contact.html", "forgot.html", "update_password.html"])
