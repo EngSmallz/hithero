@@ -132,4 +132,30 @@ def test_auth_header_javascript_contracts_exist_on_form_pages(page_name):
         assert_element(document, button_id)
 
     assert "checkAuthentication" in source
-    assert "/api/profile/" in source
+    assert '/static/js/auth.js' in source
+
+
+@pytest.mark.parametrize(
+    "page_name",
+    [
+        "homepage.html",
+        "index.html",
+        "about.html",
+        "contact.html",
+        "register.html",
+        "login.html",
+        "partners.html",
+        "forgot.html",
+        "update_password.html",
+        "reset_password.html",
+    ],
+)
+def test_shared_auth_script_is_used_without_inline_shared_function_defs(page_name):
+    source = read_page(page_name)
+
+    assert '<script src="/static/js/auth.js"></script>' in source
+    assert "function redirectTo(" not in source
+    assert "function toggleMenu(" not in source
+    assert "async function checkAuthentication(" not in source
+    assert "async function logout(" not in source
+    assert "async function mypage(" not in source
