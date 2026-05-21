@@ -65,18 +65,18 @@
             <p class="text-gray-700 mb-6 text-center">Enter your email address below, and we'll send you instructions on how to reset your password.</p>
             <form id="forgot-form" method="post" class="space-y-4">
                 <div>
-                    <label for="email" class="block text-lg font-medium text-gray-700 mb-2">Email:</label>
+                    <label for="email" class="auth-label">Email:</label>
                     <input type="email" id="email" name="email" required
-                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-base bg-gray-50 text-gray-900">
+                           class="auth-input">
                 </div>
                 <button type="submit" id="submitButton"
-                        class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md">
+                        class="auth-submit">
                     Submit
                 </button>
             </form>
             <p class="mt-6 text-center">
                 <button id="loginButton"
-                        class="text-blue-600 hover:text-blue-800 font-medium transition duration-300 ease-in-out">
+                        class="auth-link">
                     Back to Login
                 </button>
             </p>
