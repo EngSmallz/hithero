@@ -194,3 +194,24 @@ def test_shared_forms_helpers_script_is_used_on_account_pages(page_name):
     assert "function postForm(" not in source
     assert "function postFormData(" not in source
     assert "function parseJsonSafe(" not in source
+
+
+@pytest.mark.parametrize(
+    ("page_name", "preserved_css"),
+    [
+        ("403.html", ()),
+        ("404.html", ()),
+        ("terms_conditions.html", ()),
+        ("wishlist_setup.html", ("li::marker", "list-style-type: decimal")),
+    ],
+)
+def test_static_pages_use_shared_body_theme_without_inline_body_rule(page_name, preserved_css):
+    source = read_page(page_name)
+
+    assert '<link rel="stylesheet" href="/static/style.css">' in source
+    assert "font-family: 'Inter', sans-serif;" not in source
+    assert "background-color: #1f2937;" not in source
+    assert "color: #f9fafb;" not in source
+
+    for css_snippet in preserved_css:
+        assert css_snippet in source
