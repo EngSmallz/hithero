@@ -162,6 +162,18 @@ def test_shared_auth_script_is_used_without_inline_shared_function_defs(page_nam
     assert "async function mypage(" not in source
 
 
+@pytest.mark.parametrize("page_name", ["validation.html", "teacher.html"])
+def test_shared_auth_script_is_used_without_inline_shared_function_defs_on_role_pages(page_name):
+    source = read_page(page_name)
+
+    assert '<script src="/static/js/auth.js"></script>' in source
+    assert "function redirectTo(" not in source
+    assert "function toggleMenu(" not in source
+    assert "async function checkAuthentication(" not in source
+    assert "async function logout(" not in source
+    assert "async function mypage(" not in source
+
+
 @pytest.mark.parametrize("page_name", ["index.html", "register.html"])
 def test_shared_school_dropdown_script_is_used_without_inline_dropdown_function_defs(page_name):
     source = read_page(page_name)
