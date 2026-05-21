@@ -1,0 +1,135 @@
+import pytest
+
+from tests.conftest import parse_page, read_page
+
+
+def assert_element(document, element_id, message=None):
+    element = document.find_by_id(element_id)
+    assert element is not None, message or f"Expected element with id={element_id!r}"
+    return element
+
+
+def assert_named_field(document, field_name, field_id=None, tag_names=("input", "select", "textarea")):
+    field_id = field_id or field_name
+    matches = []
+    for tag_name in tag_names:
+        matches.extend(
+            attrs for attrs in document.find_all(tag_name)
+            if attrs.get("name") == field_name and attrs.get("id") == field_id
+        )
+    assert matches, f"Expected field name={field_name!r} id={field_id!r}"
+    assert document.find_all("label", **{"for": field_id}), f"Expected label for {field_id!r}"
+    return matches[0]
+
+
+def test_register_form_contract():
+    document = parse_page("register.html")
+    source = read_page("register.html")
+
+    form = assert_element(document, "registration-form")
+    assert form["method"].lower() == "post"
+
+    for field in ["name", "email", "phone_number", "password", "confirm_password"]:
+        field_attrs = assert_named_field(document, field)
+        assert "required" in field_attrs
+
+    for field in ["state", "county", "district", "school"]:
+        field_attrs = assert_named_field(document, field, tag_names=("select",))
+        assert "required" in field_attrs
+
+    assert "populateCountiesDropdown()" in source
+    assert "populateDistrictsDropdown()" in source
+    assert "populateSchoolsDropdown()" in source
+    assert_element(document, "termsButton")
+    assert_element(document, "termsConditionsModal")
+    assert_named_field(document, "termsCheckbox", tag_names=("input",))
+    assert document.find_all("iframe")[0]["src"] == "/pages/terms_conditions.html"
+    assert document.find_all("div", **{"class": "g-recaptcha mt-4"})
+    assert_element(document, "submitButton")
+
+
+def test_login_form_contract():
+    document = parse_page("login.html")
+    source = read_page("login.html")
+
+    form = assert_element(document, "login-form")
+    assert form["method"].lower() == "post"
+
+    email = assert_named_field(document, "email")
+    password = assert_named_field(document, "password")
+    assert email["type"] == "email"
+    assert password["type"] == "password"
+    assert "required" in email
+    assert "required" in password
+    assert_element(document, "submitButton")
+    assert_element(document, "forgotPasswordButton")
+    assert_element(document, "registerButton")
+    assert "/profile/login/" in source
+    assert "/pages/forgot.html" in source
+    assert "/pages/register.html" in source
+
+
+def test_contact_form_contract():
+    document = parse_page("contact.html")
+    source = read_page("contact.html")
+
+    form = assert_element(document, "contact-form")
+    assert form["method"].lower() == "post"
+    assert form["enctype"] == "multipart/form-data"
+
+    for field in ["name", "email", "subject"]:
+        assert_named_field(document, field)
+    message = assert_named_field(document, "message", tag_names=("textarea",))
+    assert message["maxlength"] == "250"
+    assert_element(document, "charCount")
+    assert_element(document, "contact-message")
+    assert_element(document, "submitButton")
+    assert document.find_all("div", **{"class": "g-recaptcha"})
+    assert "/api/contact_us/" in source
+
+
+def test_forgot_password_form_contract():
+    document = parse_page("forgot.html")
+    source = read_page("forgot.html")
+
+    form = assert_element(document, "forgot-form")
+    assert form["method"].lower() == "post"
+
+    email = assert_named_field(document, "email")
+    assert email["type"] == "email"
+    assert "required" in email
+    assert_element(document, "submitButton")
+    assert_element(document, "loginButton")
+    assert "/profile/forgot_password/" in source
+    assert "/pages/login.html" in source
+
+
+def test_update_password_form_contract():
+    document = parse_page("update_password.html")
+    source = read_page("update_password.html")
+
+    form = assert_element(document, "update-form")
+    assert form["method"].lower() == "post"
+    assert form["enctype"] == "multipart/form-data"
+
+    for field in ["old_password", "new_password", "new_password_confirmed"]:
+        field_attrs = assert_named_field(document, field)
+        assert field_attrs["type"] == "password"
+        assert "required" in field_attrs
+
+    assert_element(document, "submitButton")
+    assert "/profile/update_password/" in source
+
+
+@pytest.mark.parametrize("page_name", ["register.html", "login.html", "contact.html", "forgot.html", "update_password.html"])
+def test_auth_header_javascript_contracts_exist_on_form_pages(page_name):
+    source = read_page(page_name)
+    document = parse_page(page_name)
+
+    assert_element(document, "hamburgerButton")
+    assert_element(document, "menuItems")
+    for button_id in ["loginButton", "logoutButton", "mypageButton", "forumButton", "validationButton"]:
+        assert_element(document, button_id)
+
+    assert "checkAuthentication" in source
+    assert "/api/profile/" in source

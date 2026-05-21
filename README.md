@@ -9,3 +9,32 @@ Teacher Profiles: Teachers can create and manage a profile to share their story 
 User Authentication: Secure login and registration for teachers.
 
 District and County Spotlights: Weekly and monthly spotlights on schools and districts.
+
+Testing
+Install runtime and test dependencies, then install the Chromium browser used by Playwright:
+
+```bash
+make install-dev
+```
+
+Run the static and import regression tests with:
+
+```bash
+make test-static
+```
+
+Run the browser smoke tests with:
+
+```bash
+make test-e2e
+```
+
+Run the full regression baseline with:
+
+```bash
+make test
+```
+
+The test commands set `APP_ENV=test`, which imports the FastAPI app with an isolated SQLite database URL and skips automatic table creation. In test mode the app does not require the SQL Server `pyodbc` driver to be importable.
+
+The Makefile also sets `PYTHONPATH=tests/stubs`. That path contains a test-only `readline` stub because the local Python 3.13 build used for this project segfaults when pytest imports the system readline extension during startup. The stub is not used by the application runtime.
