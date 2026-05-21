@@ -72,11 +72,13 @@ def test_login_form_contract():
     assert_element(document, "submitButton")
     assert_element(document, "forgotPasswordButton")
     assert_element(document, "registerButton")
+    assert 'class="auth-card"' in source
     assert 'class="auth-label"' in source
     assert 'class="auth-input"' in source
     assert 'class="auth-submit"' in source
     assert 'class="auth-link mr-4"' in source
     assert 'class="auth-link"' in source
+    assert "bg-white p-8 rounded-lg shadow-md text-gray-800 max-w-lg mx-auto" not in source
     assert "block text-lg font-medium text-gray-700 mb-2" not in source
     assert "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-base bg-gray-50 text-gray-900" not in source
     assert "w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md" not in source
@@ -119,10 +121,12 @@ def test_forgot_password_form_contract():
     assert "required" in email
     assert_element(document, "submitButton")
     assert_element(document, "loginButton")
+    assert 'class="auth-card"' in source
     assert 'class="auth-label"' in source
     assert 'class="auth-input"' in source
     assert 'class="auth-submit"' in source
     assert 'class="auth-link"' in source
+    assert "bg-white p-8 rounded-lg shadow-md text-gray-800 max-w-lg mx-auto" not in source
     assert "block text-lg font-medium text-gray-700 mb-2" not in source
     assert "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-base bg-gray-50 text-gray-900" not in source
     assert "w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md" not in source
