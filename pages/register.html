@@ -64,67 +64,67 @@
     <main class="container mx-auto px-4 py-8">
         <section class="bg-white p-8 rounded-lg shadow-md text-gray-800 max-w-2xl mx-auto">
             <h2 class="text-3xl font-bold text-green-800 mb-4 text-center">User Registration</h2>
-            <p class="text-gray-700 text-lg mb-6 text-center">Please fill out the form below. If your school is not present in the list, please go to the <a href="/pages/contact.html" class="text-blue-600 hover:text-blue-800 font-medium transition duration-300 ease-in-out">Contact page</a> and send us a message.</p>
+            <p class="text-gray-700 text-lg mb-6 text-center">Please fill out the form below. If your school is not present in the list, please go to the <a href="/pages/contact.html" class="auth-link">Contact page</a> and send us a message.</p>
 
             <form id="registration-form" method="post" class="space-y-4">
                 <div>
-                    <label for="name" class="block text-lg font-medium text-gray-700 mb-2">Name:</label>
+                    <label for="name" class="auth-label">Name:</label>
                     <input type="text" id="name" name="name" required
-                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-base bg-gray-50 text-gray-900">
+                           class="auth-input">
                 </div>
 
                 <div>
-                    <label for="email" class="block text-lg font-medium text-gray-700 mb-2">Email:</label>
+                    <label for="email" class="auth-label">Email:</label>
                     <input type="email" id="email" name="email" required
-                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-base bg-gray-50 text-gray-900">
+                           class="auth-input">
                 </div>
 
                 <div>
-                    <label for="phone_number" class="block text-lg font-medium text-gray-700 mb-2">Phone Number:</label>
+                    <label for="phone_number" class="auth-label">Phone Number:</label>
                     <input type="text" id="phone_number" name="phone_number" required
-                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-base bg-gray-50 text-gray-900">
+                           class="auth-input">
                 </div>
 
                 <div>
-                    <label for="password" class="block text-lg font-medium text-gray-700 mb-2">Password:</label>
+                    <label for="password" class="auth-label">Password:</label>
                     <input type="password" id="password" name="password" required
-                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-base bg-gray-50 text-gray-900">
+                           class="auth-input">
                 </div>
 
                 <div>
-                    <label for="confirm_password" class="block text-lg font-medium text-gray-700 mb-2">Confirm Password:</label>
+                    <label for="confirm_password" class="auth-label">Confirm Password:</label>
                     <input type="password" id="confirm_password" name="confirm_password" required
-                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-base bg-gray-50 text-gray-900">
+                           class="auth-input">
                 </div>
 
                 <div>
-                    <label for="state" class="block text-lg font-medium text-gray-700 mb-2">State:</label>
+                    <label for="state" class="auth-label">State:</label>
                     <select id="state" name="state" onchange="populateCountiesDropdown()" required
-                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-base bg-gray-50 text-gray-900">
+                            class="auth-input">
                         <option value="" disabled selected>Choose state</option>
                     </select>
                 </div>
 
                 <div>
-                    <label for="county" class="block text-lg font-medium text-gray-700 mb-2">County:</label>
+                    <label for="county" class="auth-label">County:</label>
                     <select id="county" name="county" onchange="populateDistrictsDropdown()" required
-                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-base bg-gray-50 text-gray-900">
+                            class="auth-input">
                         <option value="" disabled selected>Choose county</option>
                     </select>
                 </div>
 
                 <div>
-                    <label for="district" class="block text-lg font-medium text-gray-700 mb-2">School District:</label>
+                    <label for="district" class="auth-label">School District:</label>
                     <select id="district" name="district" onchange="populateSchoolsDropdown()" required
-                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-base bg-gray-50 text-gray-900">
+                            class="auth-input">
                         <option value="" disabled selected>Choose district</option>
                     </select>
                 </div>
 
                 <div>
-                    <label for="school" class="block text-lg font-medium text-gray-700 mb-2">School:</label>
+                    <label for="school" class="auth-label">School:</label>
                     <select id="school" name="school" required
-                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-base bg-gray-50 text-gray-900">
+                            class="auth-input">
                         <option value="" disabled selected>Choose school</option>
                     </select>
                 </div>
@@ -153,7 +153,7 @@
 
                 <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 mt-6">
                     <button id="submitButton" type="submit"
-                            class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md">
+                            class="auth-submit">
                         Submit
                     </button>
                     <button id="loginButton" type="button" onclick="redirectTo('/pages/login.html')"
