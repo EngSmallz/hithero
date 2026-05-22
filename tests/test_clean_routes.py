@@ -21,12 +21,25 @@ CLEAN_ROUTE_CASES = [
     ("/404", "404.html", ("404", "Page Does Not Exist")),
 ]
 
-LEGACY_ROUTE_CASES = [
-    ("/pages/homepage.html", "homepage.html", "Support Teachers, Empower Futures"),
-    ("/pages/index.html", "index.html", "Find a Teacher"),
-    ("/pages/about.html", "about.html", "About Us"),
-    ("/pages/contact.html", "contact.html", "Contact Information"),
-    ("/pages/login.html", "login.html", "Log In to Your Account"),
+LEGACY_REDIRECT_CASES = [
+    ("/pages/homepage.html", "/"),
+    ("/pages/index.html", "/teachers"),
+    ("/pages/about.html", "/about"),
+    ("/pages/contact.html", "/contact"),
+    ("/pages/partners.html", "/partners"),
+    ("/pages/register.html", "/register"),
+    ("/pages/login.html", "/login"),
+    ("/pages/forgot.html", "/forgot"),
+    ("/pages/terms_conditions.html", "/terms"),
+    ("/pages/403.html", "/403"),
+    ("/pages/404.html", "/404"),
+]
+
+LEGACY_DIRECT_CASES = [
+    ("/pages/update_password.html", "update_password.html", "Update Your Password"),
+    ("/pages/wishlist_setup.html", "wishlist_setup.html", "Steps to Setup Wishlist"),
+    ("/pages/create.html", "create.html", "Create Teacher Profile"),
+    ("/pages/validation.html", "validation.html", "How Validation Works"),
 ]
 
 
@@ -47,11 +60,21 @@ def test_clean_route_aliases_serve_expected_pages(app_module):
             assert expected in response.text, route_path
 
 
-def test_legacy_page_urls_still_serve_existing_static_pages(app_module):
+def test_redirect_ready_legacy_public_pages_redirect_to_clean_aliases(app_module):
     client = TestClient(app_module.app)
 
-    for route_path, page_name, expected_text in LEGACY_ROUTE_CASES:
-        response = client.get(route_path)
+    for route_path, expected_location in LEGACY_REDIRECT_CASES:
+        response = client.get(route_path, follow_redirects=False)
+
+        assert response.status_code == 307, route_path
+        assert response.headers["location"] == expected_location
+
+
+def test_deferred_legacy_and_private_pages_still_serve_directly(app_module):
+    client = TestClient(app_module.app)
+
+    for route_path, page_name, expected_text in LEGACY_DIRECT_CASES:
+        response = client.get(route_path, follow_redirects=False)
 
         assert response.status_code == 200, route_path
         assert "text/html" in response.headers["content-type"]

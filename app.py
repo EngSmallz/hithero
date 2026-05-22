@@ -93,7 +93,6 @@ ALLOWED_TAGS = ["b", "i", "em", "strong", "a", "p", "br"]
 ALLOWED_ATTRS = {"a": ["href"]}
 
 # Determine the path to the directory
-app.mount("/pages", StaticFiles(directory="pages"), name="pages")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 BASE_STATIC_DIR = "static"
 PAGES_DIR = "pages"
@@ -113,6 +112,20 @@ PUBLIC_PAGE_ALIASES = {
     "/teachers": "index.html",
     "/403": "403.html",
     "/404": "404.html",
+}
+
+LEGACY_PUBLIC_PAGE_REDIRECTS = {
+    "/pages/homepage.html": "/",
+    "/pages/index.html": "/teachers",
+    "/pages/about.html": "/about",
+    "/pages/contact.html": "/contact",
+    "/pages/partners.html": "/partners",
+    "/pages/register.html": "/register",
+    "/pages/login.html": "/login",
+    "/pages/forgot.html": "/forgot",
+    "/pages/terms_conditions.html": "/terms",
+    "/pages/403.html": "/403",
+    "/pages/404.html": "/404",
 }
 
 ADS_TXT_PATH = f"{BASE_STATIC_DIR}/ads.txt"
@@ -1165,6 +1178,16 @@ for route_path, page_name in PUBLIC_PAGE_ALIASES.items():
         return serve_page(page_name)
 
     app.add_api_route(route_path, public_page_alias, methods=["GET"], include_in_schema=False)
+
+
+for legacy_path, clean_path in LEGACY_PUBLIC_PAGE_REDIRECTS.items():
+    async def legacy_public_page_redirect(_request: Request, clean_path: str = clean_path):
+        return RedirectResponse(url=clean_path, status_code=307)
+
+    app.add_api_route(legacy_path, legacy_public_page_redirect, methods=["GET"], include_in_schema=False)
+
+
+app.mount("/pages", StaticFiles(directory="pages"), name="pages")
 
 
 @app.get("/teachers/{teacher_id_or_slug}", include_in_schema=False)
