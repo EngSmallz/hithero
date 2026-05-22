@@ -19,17 +19,17 @@
     <header class="bg-gradient-to-r from-green-700 to-green-900 text-white shadow-lg py-4 md:py-6 relative">
         <div class="container mx-auto px-4 flex justify-between items-center">
             <div class="flex items-center">
-                <a href="/pages/homepage.html" class="flex items-center">
+                <a href="/" class="flex items-center">
                     <img src="/static/images/logo_transparent.png" alt="Homeroom Heroes Logo" class="h-16 md:h-20 mr-3">
                 </a>
                 <nav class="hidden md:flex ml-4">
                     <ul class="flex space-x-4 md:space-x-8 text-lg">
-                        <li><a href="/pages/homepage.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Home</a></li>
-                        <li><a href="/pages/index.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Donate</a></li>
-                        <li><a href="/pages/register.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Sign Up</a></li>
-                        <li><a href="/pages/about.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">About</a></li>
-                        <li><a href="/pages/contact.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Contact</a></li>
-                        <li><a href="/pages/partners.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Partners</a></li>
+                        <li><a href="/" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Home</a></li>
+                        <li><a href="/teachers" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Donate</a></li>
+                        <li><a href="/register" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Sign Up</a></li>
+                        <li><a href="/about" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">About</a></li>
+                        <li><a href="/contact" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Contact</a></li>
+                        <li><a href="/partners" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Partners</a></li>
                     </ul>
                 </nav>
             </div>
@@ -41,16 +41,16 @@
                     
                     <nav class="md:hidden">
                         <ul class="flex flex-col text-base p-1">
-                            <li><a href="/pages/homepage.html" class="listButton block">Home</a></li>
-                            <li><a href="/pages/index.html" class="listButton block">Donate</a></li>
-                            <li><a href="/pages/register.html" class="listButton block">Sign Up</a></li>
-                            <li><a href="/pages/about.html" class="listButton block">About</a></li>
-                            <li><a href="/pages/contact.html" class="listButton block">Contact</a></li>
-                            <li><a href="/pages/partners.html" class="listButton block">Partners</a></li>
+                            <li><a href="/" class="listButton block">Home</a></li>
+                            <li><a href="/teachers" class="listButton block">Donate</a></li>
+                            <li><a href="/register" class="listButton block">Sign Up</a></li>
+                            <li><a href="/about" class="listButton block">About</a></li>
+                            <li><a href="/contact" class="listButton block">Contact</a></li>
+                            <li><a href="/partners" class="listButton block">Partners</a></li>
                             <hr class="my-1 border-green-700"> </ul>
                     </nav>
                     
-                    <button id="loginButton" class="listButton hidden" onclick="redirectTo('/pages/login.html')">Login</button>
+                    <button id="loginButton" class="listButton hidden" onclick="redirectTo('/login')">Login</button>
                     <button id="logoutButton" class="listButton hidden" onclick="logout()">Logout</button>
                     <button id="mypageButton" class="listButton hidden" onclick="mypage()">My Page</button>
                     <button id="forumButton" class="listButton hidden" onclick="redirectTo('/pages/forum.html')">Forum</button>
@@ -84,7 +84,7 @@
         <div id="termsConditionsModal" class="modal hidden">
             <div class="modal-content">
                 <span class="close" onclick="closeTermsConditions()">&times;</span>
-                <iframe src="/pages/terms_conditions.html" width="100%" height="500px" class="border-none"></iframe>
+                <iframe src="/terms" width="100%" height="500px" class="border-none"></iframe>
             </div>
         </div>
 

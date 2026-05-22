@@ -2,6 +2,108 @@ import pytest
 
 from tests.conftest import parse_page, read_page
 
+PUBLIC_ALIAS_EXPECTATIONS = {
+    "homepage.html": ("/", "/teachers", "/register", "/about", "/contact", "/partners", "/login"),
+    "index.html": ("/", "/teachers", "/register", "/about", "/contact", "/partners", "/login"),
+    "about.html": ("/", "/teachers", "/register", "/about", "/contact", "/partners", "/login", "/terms"),
+    "contact.html": ("/", "/teachers", "/register", "/about", "/contact", "/partners", "/login"),
+    "partners.html": ("/", "/teachers", "/register", "/about", "/contact", "/partners", "/login"),
+    "register.html": ("/", "/teachers", "/register", "/about", "/contact", "/partners", "/login", "/terms"),
+    "login.html": ("/", "/teachers", "/register", "/about", "/contact", "/partners", "/login", "/forgot"),
+    "forgot.html": ("/", "/teachers", "/register", "/about", "/contact", "/partners", "/login"),
+    "403.html": ("/",),
+    "404.html": ("/",),
+}
+
+DEFERRED_LEGACY_LINKS = {
+    "homepage.html": ("/pages/forum.html", "/pages/validation.html", "/pages/teacher.html"),
+    "index.html": ("/pages/forum.html", "/pages/validation.html"),
+    "about.html": ("/pages/forum.html", "/pages/validation.html"),
+    "contact.html": ("/pages/forum.html", "/pages/validation.html"),
+    "partners.html": ("/pages/forum.html", "/pages/validation.html"),
+    "register.html": ("/pages/forum.html", "/pages/validation.html", "/pages/homepage.html"),
+    "login.html": ("/pages/forum.html", "/pages/validation.html", "/pages/create.html", "/pages/homepage.html"),
+    "forgot.html": ("/pages/forum.html", "/pages/validation.html"),
+}
+
+REMOVED_LEGACY_PUBLIC_LINKS = {
+    "homepage.html": (
+        "/pages/homepage.html",
+        "/pages/index.html",
+        "/pages/register.html",
+        "/pages/about.html",
+        "/pages/contact.html",
+        "/pages/partners.html",
+        "/pages/login.html",
+    ),
+    "index.html": (
+        "/pages/homepage.html",
+        "/pages/index.html",
+        "/pages/register.html",
+        "/pages/about.html",
+        "/pages/contact.html",
+        "/pages/partners.html",
+        "/pages/login.html",
+    ),
+    "about.html": (
+        "/pages/homepage.html",
+        "/pages/index.html",
+        "/pages/register.html",
+        "/pages/about.html",
+        "/pages/contact.html",
+        "/pages/partners.html",
+        "/pages/login.html",
+        "/pages/terms_conditions.html",
+    ),
+    "contact.html": (
+        "/pages/homepage.html",
+        "/pages/index.html",
+        "/pages/register.html",
+        "/pages/about.html",
+        "/pages/contact.html",
+        "/pages/partners.html",
+        "/pages/login.html",
+    ),
+    "partners.html": (
+        "/pages/homepage.html",
+        "/pages/index.html",
+        "/pages/register.html",
+        "/pages/about.html",
+        "/pages/contact.html",
+        "/pages/partners.html",
+        "/pages/login.html",
+    ),
+    "register.html": (
+        "/pages/index.html",
+        "/pages/register.html",
+        "/pages/about.html",
+        "/pages/contact.html",
+        "/pages/partners.html",
+        "/pages/login.html",
+        "/pages/terms_conditions.html",
+    ),
+    "login.html": (
+        "/pages/index.html",
+        "/pages/register.html",
+        "/pages/about.html",
+        "/pages/contact.html",
+        "/pages/partners.html",
+        "/pages/login.html",
+        "/pages/forgot.html",
+    ),
+    "forgot.html": (
+        "/pages/homepage.html",
+        "/pages/index.html",
+        "/pages/register.html",
+        "/pages/about.html",
+        "/pages/contact.html",
+        "/pages/partners.html",
+        "/pages/login.html",
+    ),
+    "403.html": ("/pages/homepage.html",),
+    "404.html": ("/pages/homepage.html",),
+}
+
 
 def assert_element(document, element_id, message=None):
     element = document.find_by_id(element_id)
@@ -51,7 +153,7 @@ def test_register_form_contract():
     assert_element(document, "termsButton")
     assert_element(document, "termsConditionsModal")
     assert_named_field(document, "termsCheckbox", tag_names=("input",))
-    assert document.find_all("iframe")[0]["src"] == "/pages/terms_conditions.html"
+    assert document.find_all("iframe")[0]["src"] == "/terms"
     assert document.find_all("div", **{"class": "g-recaptcha mt-4"})
     assert_element(document, "submitButton")
 
@@ -84,8 +186,8 @@ def test_login_form_contract():
     assert "w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md" not in source
     assert "text-blue-600 hover:text-blue-800 font-medium transition duration-300 ease-in-out" not in source
     assert "/profile/login/" in source
-    assert "/pages/forgot.html" in source
-    assert "/pages/register.html" in source
+    assert "/forgot" in source
+    assert "/register" in source
 
 
 def test_contact_form_contract():
@@ -132,7 +234,7 @@ def test_forgot_password_form_contract():
     assert "w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md" not in source
     assert "text-blue-600 hover:text-blue-800 font-medium transition duration-300 ease-in-out" not in source
     assert "/profile/forgot_password/" in source
-    assert "/pages/login.html" in source
+    assert "/login" in source
 
 
 def test_update_password_form_contract():
@@ -281,3 +383,27 @@ def test_static_pages_use_shared_body_theme_without_inline_body_rule(page_name, 
 
     for css_snippet in preserved_css:
         assert css_snippet in source
+
+
+@pytest.mark.parametrize(("page_name", "expected_targets"), PUBLIC_ALIAS_EXPECTATIONS.items())
+def test_public_navigation_and_cta_links_use_clean_aliases(page_name, expected_targets):
+    source = read_page(page_name)
+
+    for target in expected_targets:
+        assert target in source, f"Expected {target!r} in {page_name}"
+
+
+@pytest.mark.parametrize(("page_name", "deferred_targets"), DEFERRED_LEGACY_LINKS.items())
+def test_deferred_private_or_session_dependent_links_may_remain_legacy(page_name, deferred_targets):
+    source = read_page(page_name)
+
+    for target in deferred_targets:
+        assert target in source, f"Expected deferred legacy target {target!r} in {page_name}"
+
+
+@pytest.mark.parametrize(("page_name", "legacy_targets"), REMOVED_LEGACY_PUBLIC_LINKS.items())
+def test_migrated_public_links_no_longer_use_legacy_page_urls(page_name, legacy_targets):
+    source = read_page(page_name)
+
+    for target in legacy_targets:
+        assert target not in source, f"Did not expect legacy public target {target!r} in {page_name}"

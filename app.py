@@ -96,9 +96,31 @@ ALLOWED_ATTRS = {"a": ["href"]}
 app.mount("/pages", StaticFiles(directory="pages"), name="pages")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 BASE_STATIC_DIR = "static"
+PAGES_DIR = "pages"
+
+PUBLIC_PAGE_ALIASES = {
+    "/": "homepage.html",
+    "/home": "homepage.html",
+    "/about": "about.html",
+    "/contact": "contact.html",
+    "/partners": "partners.html",
+    "/register": "register.html",
+    "/login": "login.html",
+    "/forgot": "forgot.html",
+    "/update-password": "update_password.html",
+    "/wishlist-setup": "wishlist_setup.html",
+    "/terms": "terms_conditions.html",
+    "/teachers": "index.html",
+    "/403": "403.html",
+    "/404": "404.html",
+}
 
 ADS_TXT_PATH = f"{BASE_STATIC_DIR}/ads.txt"
 SITEMAP_XML_PATH = f"{BASE_STATIC_DIR}/sitemap.xml"
+
+
+def serve_page(page_name: str, status_code: int = 200) -> FileResponse:
+    return FileResponse(os.path.join(PAGES_DIR, page_name), status_code=status_code)
 
 # 1. Route for ads.txt (media_type='text/plain')
 @app.get("/ads.txt", include_in_schema=False)
@@ -1138,24 +1160,26 @@ async def contact_us(name: str = Form(...), email: str = Form(...), subject: str
         logger.error(f"Internal Server Error: {str(e)}") 
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
-#homepage get
-@app.get("/")
-def read_root():
-    return RedirectResponse("/pages/homepage.html")
+for route_path, page_name in PUBLIC_PAGE_ALIASES.items():
+    async def public_page_alias(_request: Request, page_name: str = page_name):
+        return serve_page(page_name)
+
+    app.add_api_route(route_path, public_page_alias, methods=["GET"], include_in_schema=False)
+
+
+@app.get("/teachers/{teacher_id_or_slug}", include_in_schema=False)
+async def read_teacher_page_alias(teacher_id_or_slug: str):
+    return serve_page("teacher.html")
 
 # Custom 404 error handler
 @app.exception_handler(404)
 async def not_found(request: Request, exc: HTTPException):
-    with open(os.path.join("pages/", "404.html"), "r", encoding="utf-8") as file:
-        content = file.read()
-    return HTMLResponse(content=content, status_code=404)
+    return serve_page("404.html", status_code=404)
 
 # Custom 403 error handler
 @app.exception_handler(403)
 async def forbidden(request: Request, exc: HTTPException):
-    with open(os.path.join("pages/", "403.html"), "r", encoding="utf-8") as file:
-        content = file.read()
-    return HTMLResponse(content=content, status_code=403)
+    return serve_page("403.html", status_code=403)
 
 ###api gets a teacher data from teacher_list table
 @app.get("/api/get_teacher_info/")

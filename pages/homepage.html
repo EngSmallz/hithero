@@ -19,17 +19,17 @@
     <header class="bg-gradient-to-r from-green-700 to-green-900 text-white shadow-lg py-4 md:py-6 relative">
         <div class="container mx-auto px-4 flex justify-between items-center">
             <div class="flex items-center">
-                <a href="/pages/homepage.html" class="flex items-center">
+                <a href="/" class="flex items-center">
                     <img src="/static/images/logo_transparent.png" alt="Homeroom Heroes Logo" class="h-16 md:h-20 mr-3">
                 </a>
                 <nav class="hidden md:flex ml-4">
                     <ul class="flex space-x-4 md:space-x-8 text-lg">
-                        <li><a href="/pages/homepage.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Home</a></li>
-                        <li><a href="/pages/index.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Donate</a></li>
-                        <li><a href="/pages/register.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Sign Up</a></li>
-                        <li><a href="/pages/about.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">About</a></li>
-                        <li><a href="/pages/contact.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Contact</a></li>
-                        <li><a href="/pages/partners.html" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Partners</a></li>
+                        <li><a href="/" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Home</a></li>
+                        <li><a href="/teachers" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Donate</a></li>
+                        <li><a href="/register" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Sign Up</a></li>
+                        <li><a href="/about" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">About</a></li>
+                        <li><a href="/contact" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Contact</a></li>
+                        <li><a href="/partners" class="hover:text-green-200 transition duration-300 ease-in-out rounded-md p-2">Partners</a></li>
                     </ul>
                 </nav>
             </div>
@@ -41,16 +41,16 @@
                     
                     <nav class="md:hidden">
                         <ul class="flex flex-col text-base p-1">
-                            <li><a href="/pages/homepage.html" class="listButton block">Home</a></li>
-                            <li><a href="/pages/index.html" class="listButton block">Donate</a></li>
-                            <li><a href="/pages/register.html" class="listButton block">Sign Up</a></li>
-                            <li><a href="/pages/about.html" class="listButton block">About</a></li>
-                            <li><a href="/pages/contact.html" class="listButton block">Contact</a></li>
-                            <li><a href="/pages/partners.html" class="listButton block">Partners</a></li>
+                            <li><a href="/" class="listButton block">Home</a></li>
+                            <li><a href="/teachers" class="listButton block">Donate</a></li>
+                            <li><a href="/register" class="listButton block">Sign Up</a></li>
+                            <li><a href="/about" class="listButton block">About</a></li>
+                            <li><a href="/contact" class="listButton block">Contact</a></li>
+                            <li><a href="/partners" class="listButton block">Partners</a></li>
                             <hr class="my-1 border-green-700"> </ul>
                     </nav>
                     
-                    <button id="loginButton" class="listButton hidden" onclick="redirectTo('/pages/login.html')">Login</button>
+                    <button id="loginButton" class="listButton hidden" onclick="redirectTo('/login')">Login</button>
                     <button id="logoutButton" class="listButton hidden" onclick="logout()">Logout</button>
                     <button id="mypageButton" class="listButton hidden" onclick="mypage()">My Page</button>
                     <button id="forumButton" class="listButton hidden" onclick="redirectTo('/pages/forum.html')">Forum</button>
@@ -78,7 +78,7 @@
             <div class="absolute inset-0 bg-black opacity-50 rounded-lg"></div> <div class="relative z-10 text-center p-4">
                 <h2 class="text-4xl md:text-6xl font-extrabold mb-4 drop-shadow-lg">Support Teachers, Empower Futures!</h2>
                 <p class="text-xl md:text-2xl font-light drop-shadow-md mb-8">Connecting generous donors with teachers in need of classroom supplies.</p>
-                <button onclick="redirectTo('/pages/index.html')" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-lg">
+                <button onclick="redirectTo('/teachers')" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-lg">
                     Find Teachers to Support
                 </button>
             </div>
@@ -154,7 +154,7 @@
                 <div class="absolute inset-0 bg-black opacity-50 rounded-lg"></div> <div class="relative z-10">
                     <h2 class="text-3xl font-bold text-white mb-4">Are You a Teacher?</h2>
                     <p class="text-lg leading-relaxed mb-6 text-white">If you're an educator in need of support, register to create your profile.</p>
-                    <button onclick="redirectTo('/pages/register.html')" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md">
+                    <button onclick="redirectTo('/register')" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md">
                         Register
                     </button>
                 </div>
