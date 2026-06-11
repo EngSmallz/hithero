@@ -220,7 +220,7 @@
                                 <p class="text-lg text-white"> from ${data.school || 'Unknown'} in ${data.county || 'Unknown'}, ${data.state || 'Unknown'}</p>
                             </div>
                         </div>
-                        <button onclick="redirectTo('/pages/teacher.html')" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md mt-4">View Random Teacher</button>
+                        <button onclick="redirectTo('/teacher')" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md mt-4">View Random Teacher</button>
                     `;
                 } else {
                     randomTeacherInfo.innerHTML = "<p class='text-red-500'>Unable to fetch random teacher information. We are sorry.</p>";
@@ -240,7 +240,7 @@
                     },
                 });
                 if (response.ok) {
-                    window.location.href = '/pages/teacher.html';
+                    window.location.href = '/teacher';
                 } else {
                     console.error('Error:', response.status);
                     const teacherDayElement = document.getElementById('teacherDay');

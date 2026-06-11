@@ -94,7 +94,7 @@
                 },
             });
             if (response.ok) {
-                window.location.href = "/pages/teacher.html";
+                window.location.href = "/teacher";
             } else {
                 console.error("Error fetching my page info:", response.status);
                 window.location.href = "/";

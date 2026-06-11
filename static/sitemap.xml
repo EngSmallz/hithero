@@ -1,129 +1,129 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
-        <loc>https://www.helpteachers.net/pages/homepage.html</loc>
+        <loc>https://www.helpteachers.net/</loc>
         <lastmod>2025-12-06</lastmod>
         <changefreq>weekly</changefreq>
         <priority>1</priority>
     </url>
     <url>
-        <loc>https://www.helpteachers.net/pages/index.html</loc>
+        <loc>https://www.helpteachers.net/teachers</loc>
         <lastmod>2025-12-06</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.8</priority>
     </url>
     
     <url>
-        <loc>https://www.helpteachers.net/pages/about.html</loc>
+        <loc>https://www.helpteachers.net/about</loc>
         <lastmod>2025-12-06</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.6</priority>
     </url>
     <url>
-        <loc>https://www.helpteachers.net/pages/contact.html</loc>
+        <loc>https://www.helpteachers.net/contact</loc>
         <lastmod>2025-12-06</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.6</priority>
     </url>
     <url>
-        <loc>https://www.helpteachers.net/pages/forgot.html</loc>
+        <loc>https://www.helpteachers.net/forgot</loc>
         <lastmod>2025-12-06</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.4</priority>
     </url>
     <url>
-        <loc>https://www.helpteachers.net/pages/login.html</loc>
+        <loc>https://www.helpteachers.net/login</loc>
         <lastmod>2025-12-06</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.4</priority>
     </url>
     <url>
-        <loc>https://www.helpteachers.net/pages/register.html</loc>
+        <loc>https://www.helpteachers.net/register</loc>
         <lastmod>2025-12-06</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.8</priority>
     </url>
     <url>
-        <loc>https://www.helpteachers.net/pages/terms_conditions.html</loc>
+        <loc>https://www.helpteachers.net/terms</loc>
         <lastmod>2025-12-06</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.6</priority>
     </url>
     <url>
-        <loc>https://www.helpteachers.net/pages/wishlist_setup.html</loc>
+        <loc>https://www.helpteachers.net/wishlist-setup</loc>
         <lastmod>2025-12-06</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.6</priority>
     </url>
     <url>
-        <loc>https://www.helpteachers.net/pages/partners.html</loc>
+        <loc>https://www.helpteachers.net/partners</loc>
         <lastmod>2025-12-06</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.6</priority>
     </url>
     <url>
-        <loc>https://www.helpteachers.net/pages/post.html</loc>
+        <loc>https://www.helpteachers.net/forum/post</loc>
         <lastmod>2025-12-06</lastmod>
         <changefreq>daily</changefreq>
         <priority>0.4</priority>
     </url>
     <url>
-        <loc>https://www.helpteachers.net/pages/teacher.html</loc>
+        <loc>https://www.helpteachers.net/teacher</loc>
         <lastmod>2025-12-06</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.4</priority>
     </url>
     <url>
-        <loc>https://www.helpteachers.net/pages/update_password.html</loc>
+        <loc>https://www.helpteachers.net/update-password</loc>
         <lastmod>2025-12-06</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.4</priority>
     </url>
     <url>
-        <loc>https://www.helpteachers.net/pages/validation.html</loc>
+        <loc>https://www.helpteachers.net/validation</loc>
         <lastmod>2025-12-06</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
-        <loc>https://www.helpteachers.net/pages/create.html</loc>
+        <loc>https://www.helpteachers.net/profile/create</loc>
         <lastmod>2025-12-06</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.2</priority>
     </url>
     <url>
-        <loc>https://www.helpteachers.net/pages/create_post.html</loc>
+        <loc>https://www.helpteachers.net/forum/new</loc>
         <lastmod>2025-12-06</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.4</priority>
     </url>
     <url>
-        <loc>https://www.helpteachers.net/pages/edit_teacher.html</loc>
+        <loc>https://www.helpteachers.net/profile/edit</loc>
         <lastmod>2025-12-06</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.4</priority>
     </url>
     <url>
-        <loc>https://www.helpteachers.net/pages/forum.html</loc>
+        <loc>https://www.helpteachers.net/forum</loc>
         <lastmod>2025-12-06</lastmod>
         <changefreq>daily</changefreq>
         <priority>0.8</priority>
     </url>
     
     <url>
-        <loc>https://www.helpteachers.net/pages/admin.html</loc>
+        <loc>https://www.helpteachers.net/admin</loc>
         <lastmod>2025-12-06</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0</priority>
     </url>
     <url>
-        <loc>https://www.helpteachers.net/pages/403.html</loc>
+        <loc>https://www.helpteachers.net/403</loc>
         <lastmod>2025-12-06</lastmod>
         <changefreq>never</changefreq>
         <priority>0.1</priority>
     </url>
     <url>
-        <loc>https://www.helpteachers.net/pages/404.html</loc>
+        <loc>https://www.helpteachers.net/404</loc>
         <lastmod>2025-12-06</lastmod>
         <changefreq>never</changefreq>
         <priority>0.1</priority>

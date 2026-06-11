@@ -24,6 +24,7 @@ CLEAN_ROUTE_CASES = [
     ("/admin", "admin.html", ("Get Teacher Contact Info", "Delete User Account")),
     ("/profile/create", "create.html", ("Create Teacher Profile", "Wishlist")),
     ("/profile/edit", "edit_teacher.html", ("Edit Teacher Profile", "Update URL ID")),
+    ("/teacher", "teacher.html", ("Teacher Profile", "Share Page")),
     ("/403", "403.html", ("403", "Forbidden")),
     ("/404", "404.html", ("404", "Page Does Not Exist")),
 ]
@@ -49,6 +50,7 @@ LEGACY_DIRECT_CASES = [
     ("/pages/forum.html", "forum.html", "The Teachers' Lounge"),
     ("/pages/create_post.html", "create_post.html", "Start a New Discussion"),
     ("/pages/post.html", "post.html", "Discussion Detail"),
+    ("/pages/teacher.html", "teacher.html", "Teacher Profile"),
     ("/pages/create.html", "create.html", "Create Teacher Profile"),
     ("/pages/edit_teacher.html", "edit_teacher.html", "Edit Teacher Profile"),
     ("/pages/validation.html", "validation.html", "How Validation Works"),

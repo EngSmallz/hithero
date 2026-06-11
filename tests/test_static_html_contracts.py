@@ -1,6 +1,7 @@
 import pytest
+from xml.etree import ElementTree
 
-from tests.conftest import parse_page, read_page
+from tests.conftest import ROOT_DIR, parse_page, read_page
 
 PUBLIC_ALIAS_EXPECTATIONS = {
     "homepage.html": ("/", "/teachers", "/register", "/about", "/contact", "/partners", "/login"),
@@ -45,7 +46,7 @@ CLEANED_PUBLIC_LEGACY_TARGETS = (
 )
 
 DEFERRED_PRIVATE_OR_SESSION_LINKS = {
-    "homepage.html": ("/forum", "/validation", "/pages/teacher.html"),
+    "homepage.html": ("/forum", "/validation", "/teacher"),
     "index.html": ("/forum", "/validation"),
     "about.html": ("/forum", "/validation"),
     "contact.html": ("/forum", "/validation"),
@@ -63,7 +64,32 @@ CLEANED_PRIVATE_LEGACY_TARGETS = (
     "/pages/create.html",
     "/pages/edit_teacher.html",
     "/pages/post.html",
+    "/pages/teacher.html",
 )
+
+EXPECTED_SITEMAP_LOCS = {
+    "https://www.helpteachers.net/",
+    "https://www.helpteachers.net/teachers",
+    "https://www.helpteachers.net/about",
+    "https://www.helpteachers.net/contact",
+    "https://www.helpteachers.net/forgot",
+    "https://www.helpteachers.net/login",
+    "https://www.helpteachers.net/register",
+    "https://www.helpteachers.net/terms",
+    "https://www.helpteachers.net/wishlist-setup",
+    "https://www.helpteachers.net/partners",
+    "https://www.helpteachers.net/forum/post",
+    "https://www.helpteachers.net/teacher",
+    "https://www.helpteachers.net/update-password",
+    "https://www.helpteachers.net/validation",
+    "https://www.helpteachers.net/profile/create",
+    "https://www.helpteachers.net/forum/new",
+    "https://www.helpteachers.net/profile/edit",
+    "https://www.helpteachers.net/forum",
+    "https://www.helpteachers.net/admin",
+    "https://www.helpteachers.net/403",
+    "https://www.helpteachers.net/404",
+}
 
 REMOVED_LEGACY_PUBLIC_LINKS = {
     "homepage.html": (
@@ -484,3 +510,25 @@ def test_pages_no_longer_use_migrated_private_legacy_urls(page_name):
 
     for target in CLEANED_PRIVATE_LEGACY_TARGETS:
         assert target not in source, f"Did not expect migrated private target {target!r} in {page_name}"
+
+
+def test_static_javascript_no_longer_uses_migrated_legacy_page_urls():
+    migrated_targets = CLEANED_PUBLIC_LEGACY_TARGETS + CLEANED_PRIVATE_LEGACY_TARGETS
+
+    for script_path in (ROOT_DIR / "static").rglob("*.js"):
+        source = script_path.read_text(encoding="utf-8")
+
+        for target in migrated_targets:
+            assert target not in source, f"Did not expect migrated target {target!r} in {script_path}"
+
+
+def test_sitemap_uses_clean_canonical_urls():
+    sitemap_path = ROOT_DIR / "static" / "sitemap.xml"
+    root = ElementTree.parse(sitemap_path).getroot()
+    namespace = {"sm": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+
+    locs = {element.text for element in root.findall(".//sm:loc", namespace)}
+
+    assert locs == EXPECTED_SITEMAP_LOCS
+    assert all("/pages/" not in loc for loc in locs)
+    assert all(not loc.endswith(".html") for loc in locs)

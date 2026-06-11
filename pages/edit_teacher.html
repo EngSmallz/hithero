@@ -280,7 +280,7 @@
                     },
                 });
                 if (response.ok) {
-                    window.location.href = '/pages/teacher.html';
+                    window.location.href = '/teacher';
                 } else {
                     console.error('Error fetching my page info:', response.status);
                     window.location.href = '/';
@@ -411,7 +411,7 @@
                     const responseData = await response.json();
                     if (response.ok) {
                         alert(responseData.message);
-                        window.location.href = '/pages/teacher.html';
+                        window.location.href = '/teacher';
                     } else {
                         alert(responseData.detail || 'Failed to update name. Please try again.');
                         window.location.reload();
@@ -435,7 +435,7 @@
                     const responseData = await response.json();
                     if (response.ok) {
                         alert(responseData.message);
-                        window.location.href = '/pages/teacher.html';
+                        window.location.href = '/teacher';
                     } else {
                         alert(responseData.detail || 'Failed to update school information. Please try again.');
                         window.location.reload();
@@ -461,7 +461,7 @@
 
                     if (response.ok) {
                         alert(data.message);
-                        window.location.href = '/pages/teacher.html';
+                        window.location.href = '/teacher';
                     } else {
                         alert(data.detail || 'Failed to update info. Please try again.');
                         window.location.reload();
@@ -487,7 +487,7 @@
 
                     if (response.ok) {
                         alert(data.message);
-                        window.location.href = '/pages/teacher.html';
+                        window.location.href = '/teacher';
                     } else {
                         alert(data.detail || 'Failed to update wishlist. Please try again.');
                         window.location.reload();
@@ -513,7 +513,7 @@
 
                     if (response.ok) {
                         alert(data.message);
-                        window.location.href = '/pages/teacher.html';
+                        window.location.href = '/teacher';
                     } else {
                         alert(data.detail || 'Failed to update URL ID. Please try again.');
                         window.location.reload();

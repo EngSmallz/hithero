@@ -458,7 +458,7 @@
             try {
                 const response = await fetch('/profile/myinfo/', { method: 'GET' });
                 if (response.ok) {
-                    window.location.href = '/pages/teacher.html';
+                    window.location.href = '/teacher';
                 } else {
                     console.error('Error:', response.status);
                     window.location.href = '/'; 

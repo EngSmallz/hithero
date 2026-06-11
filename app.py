@@ -119,6 +119,7 @@ PRIVATE_PAGE_ALIASES = {
     "/forum": "forum.html",
     "/forum/new": "create_post.html",
     "/forum/post": "post.html",
+    "/teacher": "teacher.html",
     "/validation": "validation.html",
     "/admin": "admin.html",
     "/profile/create": "create.html",
@@ -1745,7 +1746,7 @@ async def get_teacher_info(url_id: str, request: Request):
         request.session['school'] = teacher_info[0].school
         request.session['teacher'] = teacher_info[0].name
 
-        return RedirectResponse(url="/pages/teacher.html")
+        return RedirectResponse(url="/teacher")
     except Exception as e:
         return RedirectResponse(url="/404")
 

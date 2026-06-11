@@ -227,7 +227,7 @@ def test_teacher_page_renders_mocked_profile_data_and_role_controls(
         },
     )
 
-    page.goto(f"{base_url}/pages/teacher.html", wait_until="domcontentloaded")
+    page.goto(f"{base_url}/teacher", wait_until="domcontentloaded")
 
     assert_lacks_class(page, "#main-container", "hidden")
     expect(page.locator("#teacher-name")).to_contain_text("Test Teacher")
