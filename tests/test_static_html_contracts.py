@@ -62,6 +62,7 @@ CLEANED_PRIVATE_LEGACY_TARGETS = (
     "/pages/admin.html",
     "/pages/create.html",
     "/pages/edit_teacher.html",
+    "/pages/post.html",
 )
 
 REMOVED_LEGACY_PUBLIC_LINKS = {

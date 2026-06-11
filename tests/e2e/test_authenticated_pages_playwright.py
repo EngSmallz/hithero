@@ -313,9 +313,9 @@ def test_forum_list_and_post_detail_render_from_mocked_api_responses(page, base_
     expect(page.locator("#posts-container")).to_contain_text("Browser covered post")
     expect(page.locator("#posts-container")).to_contain_text("mocked forum API")
 
-    page.locator("a[href='/pages/post.html?id=101']").click()
+    page.locator("a[href='/forum/post?id=101']").click()
 
-    page.wait_for_url(f"{base_url}/pages/post.html?id=101")
+    page.wait_for_url(f"{base_url}/forum/post?id=101")
     expect(page.locator("#post-detail-card")).to_contain_text("Browser covered post")
     expect(page.locator("#post-detail-card")).to_contain_text("mocked forum API")
     expect(page.locator("#comment-count-display")).to_contain_text("0")

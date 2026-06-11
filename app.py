@@ -118,6 +118,7 @@ PUBLIC_PAGE_ALIASES = {
 PRIVATE_PAGE_ALIASES = {
     "/forum": "forum.html",
     "/forum/new": "create_post.html",
+    "/forum/post": "post.html",
     "/validation": "validation.html",
     "/admin": "admin.html",
     "/profile/create": "create.html",
