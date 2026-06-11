@@ -156,7 +156,7 @@
                             class="auth-submit">
                         Submit
                     </button>
-                    <button id="loginButton" type="button" onclick="redirectTo('/login')"
+                    <button id="registerLoginButton" type="button" onclick="redirectTo('/login')"
                             class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md">
                         Login
                     </button>
@@ -252,7 +252,7 @@
                     if (response.ok) {
                         // Success: Prioritize 'detail' for more descriptive message
                         alert(data.detail || data.message || 'Registration successful! Check your email.');
-                        window.location.href = '/pages/homepage.html'; // Or a confirmation page
+                        window.location.href = '/'; // Or a confirmation page
                     } else {
                         // Error: Prioritize 'detail' for specific error messages
                         // Fallback to 'message' then generic error if 'detail' isn't there

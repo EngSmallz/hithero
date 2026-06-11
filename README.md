@@ -29,6 +29,8 @@ Run the browser smoke tests with:
 make test-e2e
 ```
 
+The e2e tests start a local Uvicorn server on `127.0.0.1` by default. If your environment requires a different bind or browser URL host, override them with `E2E_BIND_HOST`, `E2E_CLIENT_HOST`, and optionally `E2E_PORT`.
+
 Run the full regression baseline with:
 
 ```bash

@@ -107,6 +107,7 @@ PUBLIC_PAGE_ALIASES = {
     "/login": "login.html",
     "/forgot": "forgot.html",
     "/update-password": "update_password.html",
+    "/reset-password": "reset_password.html",
     "/wishlist-setup": "wishlist_setup.html",
     "/terms": "terms_conditions.html",
     "/teachers": "index.html",
@@ -804,7 +805,7 @@ def send_profile_reminder_email(recipient_email: str):
             "You're almost there! Your registration with us has been "
             "successfully validated, but you haven't created your profile yet. "
             "Please log in and complete your profile to start receiving support from our community.\n"
-            "www.HelpTeachers.net/pages/login.html"
+            "www.HelpTeachers.net/login"
         )
     }
 
@@ -1189,10 +1190,6 @@ for legacy_path, clean_path in LEGACY_PUBLIC_PAGE_REDIRECTS.items():
 
 app.mount("/pages", StaticFiles(directory="pages"), name="pages")
 
-
-@app.get("/teachers/{teacher_id_or_slug}", include_in_schema=False)
-async def read_teacher_page_alias(teacher_id_or_slug: str):
-    return serve_page("teacher.html")
 
 # Custom 404 error handler
 @app.exception_handler(404)
@@ -1595,7 +1592,7 @@ async def forgot_password(request: Request, email: str = Form(...)):
             db.add(reset_token)
             db.commit()
             # Send email with link instead of temp password
-            reset_link = f"https://www.helpteachers.net/pages/reset_password.html?token={token}"
+            reset_link = f"https://www.helpteachers.net/reset-password?token={token}"
             template_data = {
                 'recipient_name': email,
                 'message_body': (
@@ -1724,7 +1721,7 @@ async def get_teacher_info(url_id: str, request: Request):
         result = db.execute(query)
         teacher_info = result.fetchone()
         if not teacher_info:
-            return RedirectResponse(url="/pages/404.html")
+            return RedirectResponse(url="/404")
         request.session['state'] = teacher_info[0].state
         request.session['county'] = teacher_info[0].county
         request.session['district'] = teacher_info[0].district
@@ -1733,7 +1730,7 @@ async def get_teacher_info(url_id: str, request: Request):
 
         return RedirectResponse(url="/pages/teacher.html")
     except Exception as e:
-        return RedirectResponse(url="/pages/404.html")
+        return RedirectResponse(url="/404")
 
 # Endpoint to  users
 @app.post("/validation/delete_user/{user_email}")
@@ -1985,7 +1982,7 @@ async def get_promotional_page_with_hero(request: Request, token: str):
     request.session["promo_title"] = f"Working together to serve our communities!" # Example title
 
     # Redirect to the homepage
-    return RedirectResponse(url="/pages/homepage.html")
+    return RedirectResponse(url="/")
 
 # --- API to get promo info (called by JavaScript) ---
 @app.get("/promo/get_promo_info/")

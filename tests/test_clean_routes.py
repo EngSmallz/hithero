@@ -13,10 +13,10 @@ CLEAN_ROUTE_CASES = [
     ("/login", "login.html", ("Log In to Your Account", "Forgot Password")),
     ("/forgot", "forgot.html", ("Forgot Your Password", "reset your password")),
     ("/update-password", "update_password.html", ("Update Your Password", "New Password")),
+    ("/reset-password", "reset_password.html", ("Reset Your Password", "Invalid Reset Link")),
     ("/wishlist-setup", "wishlist_setup.html", ("Steps to Setup Wishlist", "Amazon.com")),
     ("/terms", "terms_conditions.html", ("Terms and Conditions", "Charitable Mission")),
     ("/teachers", "index.html", ("Find a Teacher", "Find Teachers")),
-    ("/teachers/example-teacher", "teacher.html", ("Teacher Profile", "Share Page")),
     ("/403", "403.html", ("403", "Forbidden")),
     ("/404", "404.html", ("404", "Page Does Not Exist")),
 ]
@@ -37,9 +37,11 @@ LEGACY_REDIRECT_CASES = [
 
 LEGACY_DIRECT_CASES = [
     ("/pages/update_password.html", "update_password.html", "Update Your Password"),
+    ("/pages/reset_password.html", "reset_password.html", "Reset Your Password"),
     ("/pages/wishlist_setup.html", "wishlist_setup.html", "Steps to Setup Wishlist"),
     ("/pages/create.html", "create.html", "Create Teacher Profile"),
     ("/pages/validation.html", "validation.html", "How Validation Works"),
+    ("/pages/admin.html", "admin.html", "Delete User Account (Admin)"),
 ]
 
 

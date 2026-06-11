@@ -15,14 +15,43 @@ PUBLIC_ALIAS_EXPECTATIONS = {
     "404.html": ("/",),
 }
 
+ROLE_OR_SESSION_PAGES_WITH_PUBLIC_NAV = (
+    "admin.html",
+    "create.html",
+    "create_post.html",
+    "edit_teacher.html",
+    "forum.html",
+    "post.html",
+    "reset_password.html",
+    "teacher.html",
+    "update_password.html",
+    "validation.html",
+)
+
+CLEANED_PUBLIC_LEGACY_TARGETS = (
+    "/pages/homepage.html",
+    "/pages/index.html",
+    "/pages/register.html",
+    "/pages/about.html",
+    "/pages/contact.html",
+    "/pages/partners.html",
+    "/pages/login.html",
+    "/pages/forgot.html",
+    "/pages/terms_conditions.html",
+    "/pages/update_password.html",
+    "/pages/wishlist_setup.html",
+    "/pages/403.html",
+    "/pages/404.html",
+)
+
 DEFERRED_LEGACY_LINKS = {
     "homepage.html": ("/pages/forum.html", "/pages/validation.html", "/pages/teacher.html"),
     "index.html": ("/pages/forum.html", "/pages/validation.html"),
     "about.html": ("/pages/forum.html", "/pages/validation.html"),
     "contact.html": ("/pages/forum.html", "/pages/validation.html"),
     "partners.html": ("/pages/forum.html", "/pages/validation.html"),
-    "register.html": ("/pages/forum.html", "/pages/validation.html", "/pages/homepage.html"),
-    "login.html": ("/pages/forum.html", "/pages/validation.html", "/pages/create.html", "/pages/homepage.html"),
+    "register.html": ("/pages/forum.html", "/pages/validation.html"),
+    "login.html": ("/pages/forum.html", "/pages/validation.html", "/pages/create.html"),
     "forgot.html": ("/pages/forum.html", "/pages/validation.html"),
 }
 
@@ -222,7 +251,7 @@ def test_forgot_password_form_contract():
     assert email["type"] == "email"
     assert "required" in email
     assert_element(document, "submitButton")
-    assert_element(document, "loginButton")
+    assert_element(document, "backToLoginButton")
     assert 'class="auth-card"' in source
     assert 'class="auth-label"' in source
     assert 'class="auth-input"' in source
@@ -406,4 +435,12 @@ def test_migrated_public_links_no_longer_use_legacy_page_urls(page_name, legacy_
     source = read_page(page_name)
 
     for target in legacy_targets:
+        assert target not in source, f"Did not expect legacy public target {target!r} in {page_name}"
+
+
+@pytest.mark.parametrize("page_name", ROLE_OR_SESSION_PAGES_WITH_PUBLIC_NAV)
+def test_role_and_session_pages_no_longer_use_legacy_public_urls(page_name):
+    source = read_page(page_name)
+
+    for target in CLEANED_PUBLIC_LEGACY_TARGETS:
         assert target not in source, f"Did not expect legacy public target {target!r} in {page_name}"

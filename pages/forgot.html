@@ -75,7 +75,7 @@
                 </button>
             </form>
             <p class="mt-6 text-center">
-                <button id="loginButton"
+                <button id="backToLoginButton"
                         class="auth-link">
                     Back to Login
                 </button>
@@ -101,7 +101,7 @@
 
             const forgotForm = document.getElementById("forgot-form");
             const submitButton = document.getElementById("submitButton");
-            const loginButton = document.getElementById("loginButton"); // Get the login button
+            const backToLoginButton = document.getElementById("backToLoginButton");
 
             submitButton.addEventListener("click", async function (event) {
                 event.preventDefault(); // Prevent default form submission
@@ -124,7 +124,7 @@
             });
 
             // Add event listener for the login button
-            loginButton.addEventListener("click", function() {
+            backToLoginButton.addEventListener("click", function() {
                 redirectTo('/login');
             });
         });
