@@ -44,16 +44,25 @@ CLEANED_PUBLIC_LEGACY_TARGETS = (
     "/pages/404.html",
 )
 
-DEFERRED_LEGACY_LINKS = {
-    "homepage.html": ("/pages/forum.html", "/pages/validation.html", "/pages/teacher.html"),
-    "index.html": ("/pages/forum.html", "/pages/validation.html"),
-    "about.html": ("/pages/forum.html", "/pages/validation.html"),
-    "contact.html": ("/pages/forum.html", "/pages/validation.html"),
-    "partners.html": ("/pages/forum.html", "/pages/validation.html"),
-    "register.html": ("/pages/forum.html", "/pages/validation.html"),
-    "login.html": ("/pages/forum.html", "/pages/validation.html", "/pages/create.html"),
-    "forgot.html": ("/pages/forum.html", "/pages/validation.html"),
+DEFERRED_PRIVATE_OR_SESSION_LINKS = {
+    "homepage.html": ("/forum", "/validation", "/pages/teacher.html"),
+    "index.html": ("/forum", "/validation"),
+    "about.html": ("/forum", "/validation"),
+    "contact.html": ("/forum", "/validation"),
+    "partners.html": ("/forum", "/validation"),
+    "register.html": ("/forum", "/validation"),
+    "login.html": ("/forum", "/validation", "/profile/create"),
+    "forgot.html": ("/forum", "/validation"),
 }
+
+CLEANED_PRIVATE_LEGACY_TARGETS = (
+    "/pages/forum.html",
+    "/pages/create_post.html",
+    "/pages/validation.html",
+    "/pages/admin.html",
+    "/pages/create.html",
+    "/pages/edit_teacher.html",
+)
 
 REMOVED_LEGACY_PUBLIC_LINKS = {
     "homepage.html": (
@@ -422,7 +431,7 @@ def test_public_navigation_and_cta_links_use_clean_aliases(page_name, expected_t
         assert target in source, f"Expected {target!r} in {page_name}"
 
 
-@pytest.mark.parametrize(("page_name", "deferred_targets"), DEFERRED_LEGACY_LINKS.items())
+@pytest.mark.parametrize(("page_name", "deferred_targets"), DEFERRED_PRIVATE_OR_SESSION_LINKS.items())
 def test_deferred_private_or_session_dependent_links_may_remain_legacy(page_name, deferred_targets):
     source = read_page(page_name)
 
@@ -444,3 +453,33 @@ def test_role_and_session_pages_no_longer_use_legacy_public_urls(page_name):
 
     for target in CLEANED_PUBLIC_LEGACY_TARGETS:
         assert target not in source, f"Did not expect legacy public target {target!r} in {page_name}"
+
+
+@pytest.mark.parametrize(
+    "page_name",
+    (
+        "homepage.html",
+        "index.html",
+        "about.html",
+        "contact.html",
+        "partners.html",
+        "register.html",
+        "login.html",
+        "forgot.html",
+        "admin.html",
+        "create.html",
+        "create_post.html",
+        "edit_teacher.html",
+        "forum.html",
+        "post.html",
+        "reset_password.html",
+        "teacher.html",
+        "update_password.html",
+        "validation.html",
+    ),
+)
+def test_pages_no_longer_use_migrated_private_legacy_urls(page_name):
+    source = read_page(page_name)
+
+    for target in CLEANED_PRIVATE_LEGACY_TARGETS:
+        assert target not in source, f"Did not expect migrated private target {target!r} in {page_name}"

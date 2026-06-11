@@ -17,6 +17,12 @@ CLEAN_ROUTE_CASES = [
     ("/wishlist-setup", "wishlist_setup.html", ("Steps to Setup Wishlist", "Amazon.com")),
     ("/terms", "terms_conditions.html", ("Terms and Conditions", "Charitable Mission")),
     ("/teachers", "index.html", ("Find a Teacher", "Find Teachers")),
+    ("/forum", "forum.html", ("The Teachers' Lounge", "Sort By")),
+    ("/forum/new", "create_post.html", ("Start a New Discussion", "Submit New Post")),
+    ("/validation", "validation.html", ("How Validation Works", "Validation List")),
+    ("/admin", "admin.html", ("Get Teacher Contact Info", "Delete User Account")),
+    ("/profile/create", "create.html", ("Create Teacher Profile", "Wishlist")),
+    ("/profile/edit", "edit_teacher.html", ("Edit Teacher Profile", "Update URL ID")),
     ("/403", "403.html", ("403", "Forbidden")),
     ("/404", "404.html", ("404", "Page Does Not Exist")),
 ]
@@ -39,7 +45,10 @@ LEGACY_DIRECT_CASES = [
     ("/pages/update_password.html", "update_password.html", "Update Your Password"),
     ("/pages/reset_password.html", "reset_password.html", "Reset Your Password"),
     ("/pages/wishlist_setup.html", "wishlist_setup.html", "Steps to Setup Wishlist"),
+    ("/pages/forum.html", "forum.html", "The Teachers' Lounge"),
+    ("/pages/create_post.html", "create_post.html", "Start a New Discussion"),
     ("/pages/create.html", "create.html", "Create Teacher Profile"),
+    ("/pages/edit_teacher.html", "edit_teacher.html", "Edit Teacher Profile"),
     ("/pages/validation.html", "validation.html", "How Validation Works"),
     ("/pages/admin.html", "admin.html", "Delete User Account (Admin)"),
 ]

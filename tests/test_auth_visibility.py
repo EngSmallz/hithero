@@ -21,20 +21,20 @@ PUBLIC_PAGES = [
 ]
 
 PRIVATE_TARGETS = {
-    "/pages/admin.html",
-    "/pages/validation.html",
-    "/pages/create.html",
+    "/admin",
+    "/validation",
+    "/profile/create",
 }
 
 EXPECTED_PRIVATE_REFERENCES = {
-    "homepage.html": {"/pages/validation.html"},
-    "index.html": {"/pages/validation.html"},
-    "about.html": {"/pages/validation.html"},
-    "contact.html": {"/pages/validation.html"},
-    "register.html": {"/pages/validation.html"},
-    "login.html": {"/pages/validation.html", "/pages/create.html"},
-    "partners.html": {"/pages/validation.html"},
-    "forgot.html": {"/pages/validation.html"},
+    "homepage.html": {"/validation"},
+    "index.html": {"/validation"},
+    "about.html": {"/validation"},
+    "contact.html": {"/validation"},
+    "register.html": {"/validation"},
+    "login.html": {"/validation", "/profile/create"},
+    "partners.html": {"/validation"},
+    "forgot.html": {"/validation"},
 }
 
 
@@ -43,7 +43,7 @@ def private_refs_in_source(source):
 
 
 def target_from_onclick(onclick):
-    match = re.search(r"['\"](/pages/(?:admin|validation|create)\.html)['\"]", onclick or "")
+    match = re.search(r"['\"](/(?:admin|validation|profile/create))['\"]", onclick or "")
     return match.group(1) if match else None
 
 

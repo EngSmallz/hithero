@@ -115,6 +115,15 @@ PUBLIC_PAGE_ALIASES = {
     "/404": "404.html",
 }
 
+PRIVATE_PAGE_ALIASES = {
+    "/forum": "forum.html",
+    "/forum/new": "create_post.html",
+    "/validation": "validation.html",
+    "/admin": "admin.html",
+    "/profile/create": "create.html",
+    "/profile/edit": "edit_teacher.html",
+}
+
 LEGACY_PUBLIC_PAGE_REDIRECTS = {
     "/pages/homepage.html": "/",
     "/pages/index.html": "/teachers",
@@ -1179,6 +1188,13 @@ for route_path, page_name in PUBLIC_PAGE_ALIASES.items():
         return serve_page(page_name)
 
     app.add_api_route(route_path, public_page_alias, methods=["GET"], include_in_schema=False)
+
+
+for route_path, page_name in PRIVATE_PAGE_ALIASES.items():
+    async def private_page_alias(_request: Request, page_name: str = page_name):
+        return serve_page(page_name)
+
+    app.add_api_route(route_path, private_page_alias, methods=["GET"], include_in_schema=False)
 
 
 for legacy_path, clean_path in LEGACY_PUBLIC_PAGE_REDIRECTS.items():

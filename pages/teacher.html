@@ -53,8 +53,8 @@
                     <button id="loginButton" class="listButton hidden" onclick="redirectTo('/login')">Login</button>
                     <button id="logoutButton" class="listButton hidden" onclick="logout()">Logout</button>
                     <button id="mypageButton" class="listButton hidden" onclick="mypage()">My Page</button>
-                    <button id="forumButton" class="listButton hidden" onclick="redirectTo('/pages/forum.html')">Forum</button>
-                    <button id="validationButton" class="listButton hidden" onclick="redirectTo('/pages/validation.html')">Validation</button>
+                    <button id="forumButton" class="listButton hidden" onclick="redirectTo('/forum')">Forum</button>
+                    <button id="validationButton" class="listButton hidden" onclick="redirectTo('/validation')">Validation</button>
                 </div>
             </div>
         </div>
@@ -93,7 +93,7 @@
         </section>
 
         <div class="flex flex-col space-y-4 max-w-md mx-auto">
-            <button id="editButton" class="hidden w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md" onclick="redirectTo('/pages/edit_teacher.html')">Edit Info</button>
+            <button id="editButton" class="hidden w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md" onclick="redirectTo('/profile/edit')">Edit Info</button>
             <button id="updateButton" class="hidden w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md" onclick="redirectTo('/update-password')">Update Password</button>
             <button id="shareButton" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md" onclick="getTeacherURL()">Share Page</button>
         </div>

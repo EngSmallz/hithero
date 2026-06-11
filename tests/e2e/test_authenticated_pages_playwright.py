@@ -245,10 +245,10 @@ def test_teacher_page_renders_mocked_profile_data_and_role_controls(
 @pytest.mark.parametrize(
     "path",
     [
-        "/pages/create.html",
-        "/pages/create_post.html",
-        "/pages/validation.html",
-        "/pages/admin.html",
+        "/profile/create",
+        "/forum/new",
+        "/validation",
+        "/admin",
     ],
 )
 def test_private_pages_redirect_unauthenticated_visitors_to_forbidden(page, base_url, path):
@@ -286,7 +286,7 @@ def test_validation_page_renders_mocked_teacher_signup_list_for_admin(page, base
         },
     )
 
-    page.goto(f"{base_url}/pages/validation.html", wait_until="domcontentloaded")
+    page.goto(f"{base_url}/validation", wait_until="domcontentloaded")
 
     expect(page.locator("#validationList")).to_contain_text("New Teacher")
     expect(page.locator("#validationList")).to_contain_text("new.teacher@example.com")
@@ -308,7 +308,7 @@ def test_forum_list_and_post_detail_render_from_mocked_api_responses(page, base_
         },
     )
 
-    page.goto(f"{base_url}/pages/forum.html", wait_until="domcontentloaded")
+    page.goto(f"{base_url}/forum", wait_until="domcontentloaded")
 
     expect(page.locator("#posts-container")).to_contain_text("Browser covered post")
     expect(page.locator("#posts-container")).to_contain_text("mocked forum API")
