@@ -75,6 +75,17 @@ def test_clean_route_aliases_serve_expected_pages(app_module):
             assert expected in response.text, route_path
 
 
+def test_clean_route_aliases_handle_head_requests(app_module):
+    client = TestClient(app_module.app)
+
+    for route_path, _page_name, _expected_strings in CLEAN_ROUTE_CASES:
+        response = client.head(route_path)
+
+        assert response.status_code == 200, route_path
+        assert "text/html" in response.headers["content-type"]
+        assert response.content == b""
+
+
 def test_redirect_ready_legacy_public_pages_redirect_to_clean_aliases(app_module):
     client = TestClient(app_module.app)
 
@@ -83,6 +94,17 @@ def test_redirect_ready_legacy_public_pages_redirect_to_clean_aliases(app_module
 
         assert response.status_code == 307, route_path
         assert response.headers["location"] == expected_location
+
+
+def test_redirect_ready_legacy_public_pages_redirect_head_to_clean_aliases(app_module):
+    client = TestClient(app_module.app)
+
+    for route_path, expected_location in LEGACY_REDIRECT_CASES:
+        response = client.head(route_path, follow_redirects=False)
+
+        assert response.status_code == 307, route_path
+        assert response.headers["location"] == expected_location
+        assert response.content == b""
 
 
 def test_deferred_legacy_and_private_pages_still_serve_directly(app_module):

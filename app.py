@@ -140,6 +140,8 @@ LEGACY_PUBLIC_PAGE_REDIRECTS = {
     "/pages/404.html": "/404",
 }
 
+PAGE_ROUTE_METHODS = ["GET", "HEAD"]
+
 ADS_TXT_PATH = f"{BASE_STATIC_DIR}/ads.txt"
 SITEMAP_XML_PATH = f"{BASE_STATIC_DIR}/sitemap.xml"
 
@@ -1189,21 +1191,21 @@ for route_path, page_name in PUBLIC_PAGE_ALIASES.items():
     async def public_page_alias(_request: Request, page_name: str = page_name):
         return serve_page(page_name)
 
-    app.add_api_route(route_path, public_page_alias, methods=["GET"], include_in_schema=False)
+    app.add_api_route(route_path, public_page_alias, methods=PAGE_ROUTE_METHODS, include_in_schema=False)
 
 
 for route_path, page_name in PRIVATE_PAGE_ALIASES.items():
     async def private_page_alias(_request: Request, page_name: str = page_name):
         return serve_page(page_name)
 
-    app.add_api_route(route_path, private_page_alias, methods=["GET"], include_in_schema=False)
+    app.add_api_route(route_path, private_page_alias, methods=PAGE_ROUTE_METHODS, include_in_schema=False)
 
 
 for legacy_path, clean_path in LEGACY_PUBLIC_PAGE_REDIRECTS.items():
     async def legacy_public_page_redirect(_request: Request, clean_path: str = clean_path):
         return RedirectResponse(url=clean_path, status_code=307)
 
-    app.add_api_route(legacy_path, legacy_public_page_redirect, methods=["GET"], include_in_schema=False)
+    app.add_api_route(legacy_path, legacy_public_page_redirect, methods=PAGE_ROUTE_METHODS, include_in_schema=False)
 
 
 app.mount("/pages", StaticFiles(directory="pages"), name="pages")
