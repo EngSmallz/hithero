@@ -10,8 +10,10 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import FileResponse
 from passlib.hash import sha256_crypt
 from sqlalchemy import create_engine, Column, Integer, String, func, LargeBinary, DateTime, ForeignKey, UniqueConstraint, select, desc, cast
+from sqlalchemy.engine import make_url
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session, relationship
+from sqlalchemy.pool import StaticPool
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import select, cast, delete, insert, update
 from typing import Optional, List
@@ -69,15 +71,49 @@ except ImportError:
 app = FastAPI()
 load_dotenv()
 logger = logging.getLogger(__name__)
-app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY"), https_only=True)
+APP_ENV = os.getenv("APP_ENV", "").lower()
+LOCAL_APP_ENVS = {"dev", "development", "local"}
+
+
+PRODUCTION_CORS_ORIGINS = ["https://www.helpteachers.net", "https://helpteachers.net"]
+LOCAL_CORS_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
+]
+
+
+def get_cors_allow_origins(app_env: str):
+    configured_origins = os.getenv("CORS_ALLOW_ORIGINS")
+    if configured_origins:
+        return [origin.strip() for origin in configured_origins.split(",") if origin.strip()]
+
+    origins = list(PRODUCTION_CORS_ORIGINS)
+    if app_env == "test" or app_env in LOCAL_APP_ENVS:
+        origins.extend(LOCAL_CORS_ORIGINS)
+
+    return origins
+
+
+def session_cookie_https_only(app_env: str):
+    return app_env != "test" and app_env not in LOCAL_APP_ENVS
+
+
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=os.getenv("SECRET_KEY"),
+    https_only=session_cookie_https_only(APP_ENV),
+)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://www.helpteachers.net", "https://helpteachers.net"],
+    allow_origins=get_cors_allow_origins(APP_ENV),
     allow_credentials=True,
     allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=["*"],
 )
 RECAPTCHA_SECRET_KEY=os.getenv("SERVER_KEY_CAPTCHA")
+TEST_RECAPTCHA_TOKEN = os.getenv("TEST_RECAPTCHA_TOKEN", "hithero-test-recaptcha")
 
 ##limiter
 limiter = Limiter(key_func=get_remote_address)
@@ -179,8 +215,6 @@ CRONJOB_ALLOWED_IPS = {
 }
 
 
-APP_ENV = os.getenv("APP_ENV", "").lower()
-
 # Load environment variables
 DATABASE_SERVER = os.getenv("DATABASE_SERVER")
 DATABASE_NAME = os.getenv("DATABASE_NAME")
@@ -188,18 +222,149 @@ DATABASE_UID = os.getenv("DATABASE_UID")
 DATABASE_PASSWORD = os.getenv("DATABASE_PASSWORD")
 DATABASE_PORT = os.getenv("DATABASE_PORT")
 
-# Construct SQLAlchemy database URL. Test imports must not depend on the
+def build_sql_server_url():
+    return f"mssql+pyodbc://{DATABASE_UID}:{DATABASE_PASSWORD}@{DATABASE_SERVER}:{DATABASE_PORT}/{DATABASE_NAME}?driver=ODBC+Driver+18+for+SQL+Server"
+
+
+def build_database_url(app_env: str):
+    explicit_database_url = os.getenv("DATABASE_URL")
+    if explicit_database_url:
+        return explicit_database_url
+
+    if app_env == "test":
+        return os.getenv("TEST_DATABASE_URL", "sqlite:///:memory:")
+
+    if app_env in LOCAL_APP_ENVS:
+        return os.getenv("LOCAL_DATABASE_URL", "sqlite:///./.local/hithero-dev.sqlite")
+
+    return build_sql_server_url()
+
+
+def ensure_sqlite_database_directory(database_url: str):
+    url = make_url(database_url)
+    if not url.drivername.startswith("sqlite") or not url.database or url.database == ":memory:":
+        return
+
+    database_directory = os.path.dirname(os.path.abspath(url.database))
+    if database_directory:
+        os.makedirs(database_directory, exist_ok=True)
+
+
+def build_engine_kwargs(database_url: str):
+    url = make_url(database_url)
+    engine_options = {}
+
+    if url.drivername.startswith("sqlite"):
+        engine_options["connect_args"] = {"check_same_thread": False}
+        if url.database == ":memory:":
+            engine_options["poolclass"] = StaticPool
+
+    return engine_options
+
+
+def sqlite_random_ordering():
+    return func.random()
+
+
+def database_random_ordering():
+    if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
+        return sqlite_random_ordering()
+
+    return func.newid()
+
+
+def clean_optional_filter(value: Optional[str]):
+    if value is None:
+        return None
+
+    stripped = value.strip()
+    return stripped or None
+
+
+def sorted_distinct_values(db: Session, column, *conditions):
+    query = select(cast(column, String)).distinct()
+    for condition in conditions:
+        if condition is not None:
+            query = query.where(condition)
+
+    values = db.execute(query).scalars().all()
+    return sorted({value for value in values if value})
+
+
+def serialize_teacher_summary(teacher):
+    return {
+        "name": teacher.name,
+        "url_id": teacher.url_id,
+        "state": teacher.state,
+        "county": teacher.county,
+        "district": teacher.district,
+        "school": teacher.school,
+    }
+
+
+def build_teacher_directory_response(
+    db: Session,
+    state: Optional[str] = None,
+    county: Optional[str] = None,
+    district: Optional[str] = None,
+    school: Optional[str] = None,
+    limit: int = 100,
+):
+    state = clean_optional_filter(state)
+    county = clean_optional_filter(county)
+    district = clean_optional_filter(district)
+    school = clean_optional_filter(school)
+    limit = max(1, min(limit, 500))
+
+    conditions = []
+    if state:
+        conditions.append(cast(TeacherList.state, String) == state)
+    if county:
+        conditions.append(cast(TeacherList.county, String) == county)
+    if district:
+        conditions.append(cast(TeacherList.district, String) == district)
+    if school:
+        conditions.append(cast(TeacherList.school, String) == school)
+
+    teacher_query = select(TeacherList)
+    for condition in conditions:
+        teacher_query = teacher_query.where(condition)
+    teacher_query = teacher_query.order_by(cast(TeacherList.name, String)).limit(limit)
+
+    teachers = db.execute(teacher_query).scalars().all()
+
+    county_conditions = [cast(TeacherList.state, String) == state] if state else []
+    district_conditions = county_conditions + (
+        [cast(TeacherList.county, String) == county] if county else []
+    )
+    school_conditions = district_conditions + (
+        [cast(TeacherList.district, String) == district] if district else []
+    )
+
+    return {
+        "teachers": [serialize_teacher_summary(teacher) for teacher in teachers],
+        "filters": {
+            "states": sorted_distinct_values(db, TeacherList.state),
+            "counties": sorted_distinct_values(db, TeacherList.county, *county_conditions),
+            "districts": sorted_distinct_values(db, TeacherList.district, *district_conditions),
+            "schools": sorted_distinct_values(db, TeacherList.school, *school_conditions),
+        },
+        "total": len(teachers),
+        "applied_filters": {
+            "state": state,
+            "county": county,
+            "district": district,
+            "school": school,
+        },
+    }
+
+
+# Construct SQLAlchemy database URL. Test/local imports must not depend on the
 # production SQL Server configuration or create production-like tables.
-if APP_ENV == "test":
-    SQLALCHEMY_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "sqlite:///:memory:")
-else:
-    SQLALCHEMY_DATABASE_URL = f"mssql+pyodbc://{DATABASE_UID}:{DATABASE_PASSWORD}@{DATABASE_SERVER}:{DATABASE_PORT}/{DATABASE_NAME}?driver=ODBC+Driver+18+for+SQL+Server"
+SQLALCHEMY_DATABASE_URL = build_database_url(APP_ENV)
+ensure_sqlite_database_directory(SQLALCHEMY_DATABASE_URL)
 
-engine_kwargs = {}
-if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
-    engine_kwargs["connect_args"] = {"check_same_thread": False}
-
-engine = create_engine(SQLALCHEMY_DATABASE_URL, **engine_kwargs)
+engine = create_engine(SQLALCHEMY_DATABASE_URL, **build_engine_kwargs(SQLALCHEMY_DATABASE_URL))
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -338,6 +503,26 @@ class VoteInput(BaseModel):
     """Defines the expected input structure for posting a vote."""
     vote_type: int = Field(..., description="1 for Upvote, -1 for Downvote")
 
+class TeacherDirectorySummary(BaseModel):
+    name: str
+    url_id: str
+    state: Optional[str] = None
+    county: Optional[str] = None
+    district: Optional[str] = None
+    school: Optional[str] = None
+
+class TeacherDirectoryFilters(BaseModel):
+    states: List[str]
+    counties: List[str]
+    districts: List[str]
+    schools: List[str]
+
+class TeacherDirectoryResponse(BaseModel):
+    teachers: List[TeacherDirectorySummary]
+    filters: TeacherDirectoryFilters
+    total: int
+    applied_filters: dict[str, Optional[str]]
+
 class PostUpdate(BaseModel):
     """Schema for the data received when updating a post."""
     title: str
@@ -411,6 +596,10 @@ def send_email(recipient_email: str, subject: str, html_message: str, plain_mess
     """
     Sends an email using Azure Communication Services Email.
     """
+    if APP_ENV == "test":
+        print(f"APP_ENV=test; skipping email send to {recipient_email}.")
+        return True
+
     if EmailClient is None:
         print("Azure email client is not installed. Skipping email send.")
         return False
@@ -524,7 +713,7 @@ def fetch_random_teacher():
     try:
         # The scalar_one_or_none() method directly returns the TeacherList object,
         # or None if no teacher is found.
-        query = select(TeacherList).order_by(func.newid()).limit(1)
+        query = select(TeacherList).order_by(database_random_ordering()).limit(1)
         random_teacher_record = db.execute(query).scalar_one_or_none()
         return random_teacher_record
     except Exception as e:
@@ -778,11 +967,14 @@ async def run_daily_job(request: Request, _: None = Depends(verify_cronjob_reque
 
 def verify_recaptcha(recaptcha_response: str):
     """Verifies the reCAPTCHA response with Google's servers."""
+    if APP_ENV == "test":
+        return recaptcha_response == TEST_RECAPTCHA_TOKEN
+
     url = "https://www.google.com/recaptcha/api/siteverify"
     params = {"secret": RECAPTCHA_SECRET_KEY, "response": recaptcha_response}
     response = requests.post(url, params=params)
     data = response.json()
-    return data["success"]
+    return data.get("success", False)
 
 def send_profile_creation_reminders():
     """
@@ -1868,6 +2060,27 @@ async def index_schools(state: str, county: str, district: str):
             return school_names
         else:
             return {"message": f"No schools found for state: {state}, county: {county}, and district: {district}"}
+    finally:
+        db.close()
+
+@app.get("/api/teachers/", response_model=TeacherDirectoryResponse)
+async def list_teachers(
+    state: Optional[str] = None,
+    county: Optional[str] = None,
+    district: Optional[str] = None,
+    school: Optional[str] = None,
+    limit: int = 100,
+):
+    db: Session = SessionLocal()
+    try:
+        return build_teacher_directory_response(
+            db,
+            state=state,
+            county=county,
+            district=district,
+            school=school,
+            limit=limit,
+        )
     finally:
         db.close()
 
