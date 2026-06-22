@@ -116,3 +116,59 @@ def test_teacher_directory_api_returns_empty_list_for_no_matches(app_module):
     assert body["total"] == 0
     assert body["teachers"] == []
     assert body["applied_filters"]["state"] == "AK"
+
+
+def test_teacher_directory_api_skips_profiles_without_shareable_urls(app_module):
+    seed_teacher_directory(app_module)
+    db = app_module.SessionLocal()
+    try:
+        db.add(
+            app_module.TeacherList(
+                name="Legacy Teacher",
+                state="WA",
+                county="King",
+                district="Seattle Public Schools",
+                school="Legacy School",
+                regUserID=4,
+                url_id=None,
+            )
+        )
+        db.commit()
+    finally:
+        db.close()
+
+    response = TestClient(app_module.app).get("/api/teachers/")
+
+    assert response.status_code == 200
+    assert response.json()["total"] == 3
+    assert all(teacher["url_id"] for teacher in response.json()["teachers"])
+
+
+def test_public_teacher_profile_api_returns_profile_by_url_id(app_module):
+    seed_teacher_directory(app_module)
+    client = TestClient(app_module.app)
+
+    response = client.get("/api/teacher/alice-adams/")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "name": "Alice Adams",
+        "url_id": "alice-adams",
+        "state": "WA",
+        "county": "King",
+        "district": "Seattle Public Schools",
+        "school": "Lincoln High School",
+        "wishlist_url": "https://example.test/alice",
+        "about_me": "Science supplies",
+        "image_data": None,
+    }
+
+
+def test_public_teacher_profile_api_returns_404_for_unknown_url_id(app_module):
+    seed_teacher_directory(app_module)
+    client = TestClient(app_module.app)
+
+    response = client.get("/api/teacher/not-a-teacher/")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Teacher not found"

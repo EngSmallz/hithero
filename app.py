@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import select, cast, delete, insert, update
 from typing import Optional, List
 from tweepy import Client
+from backend.services.teachers import serialize_teacher_profile, serialize_teacher_summary
 try:
     from azure.communication.email import EmailClient
 except ImportError:
@@ -291,17 +292,6 @@ def sorted_distinct_values(db: Session, column, *conditions):
     return sorted({value for value in values if value})
 
 
-def serialize_teacher_summary(teacher):
-    return {
-        "name": teacher.name,
-        "url_id": teacher.url_id,
-        "state": teacher.state,
-        "county": teacher.county,
-        "district": teacher.district,
-        "school": teacher.school,
-    }
-
-
 def build_teacher_directory_response(
     db: Session,
     state: Optional[str] = None,
@@ -326,7 +316,11 @@ def build_teacher_directory_response(
     if school:
         conditions.append(cast(TeacherList.school, String) == school)
 
-    teacher_query = select(TeacherList)
+    teacher_query = select(TeacherList).where(
+        TeacherList.name.is_not(None),
+        TeacherList.url_id.is_not(None),
+        cast(TeacherList.url_id, String) != "",
+    )
     for condition in conditions:
         teacher_query = teacher_query.where(condition)
     teacher_query = teacher_query.order_by(cast(TeacherList.name, String)).limit(limit)
@@ -522,6 +516,17 @@ class TeacherDirectoryResponse(BaseModel):
     filters: TeacherDirectoryFilters
     total: int
     applied_filters: dict[str, Optional[str]]
+
+class TeacherProfileResponse(BaseModel):
+    name: str
+    url_id: str
+    state: Optional[str] = None
+    county: Optional[str] = None
+    district: Optional[str] = None
+    school: Optional[str] = None
+    wishlist_url: Optional[str] = None
+    about_me: Optional[str] = None
+    image_data: Optional[str] = None
 
 class PostUpdate(BaseModel):
     """Schema for the data received when updating a post."""
@@ -2081,6 +2086,21 @@ async def list_teachers(
             school=school,
             limit=limit,
         )
+    finally:
+        db.close()
+
+@app.get("/api/teacher/{url_id}/", response_model=TeacherProfileResponse)
+async def get_public_teacher_profile(url_id: str):
+    db: Session = SessionLocal()
+    try:
+        teacher = db.execute(
+            select(TeacherList).where(cast(TeacherList.url_id, String) == url_id)
+        ).scalar_one_or_none()
+
+        if not teacher:
+            return JSONResponse(status_code=404, content={"detail": "Teacher not found"})
+
+        return serialize_teacher_profile(teacher)
     finally:
         db.close()
 

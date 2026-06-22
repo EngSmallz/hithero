@@ -17,7 +17,16 @@ export const routes = {
 	wishlistSetup: '/wishlist-setup',
 	login: '/login',
 	forgot: '/forgot',
-	profileCreate: '/profile/create'
+	resetPassword: '/reset-password',
+	forum: '/forum',
+	forumNew: '/forum/new',
+	forumPost: '/forum/post',
+	teacher: '/teacher',
+	updatePassword: '/update-password',
+	profileCreate: '/profile/create',
+	profileEdit: '/profile/edit',
+	validation: '/validation',
+	admin: '/admin'
 } as const;
 
 export type RouteHref = (typeof routes)[keyof typeof routes];

@@ -29,6 +29,12 @@ export type TeacherSummary = {
 	school?: string | null;
 };
 
+export type TeacherProfile = TeacherSummary & {
+	wishlist_url?: string | null;
+	about_me?: string | null;
+	image_data?: string | null;
+};
+
 export type TeacherDirectoryFilters = {
 	states: string[];
 	counties: string[];
