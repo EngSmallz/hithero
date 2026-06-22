@@ -37,6 +37,27 @@ const publicPages = [
 		description: /Log in to your Homeroom Heroes account/
 	},
 	{
+		path: '/forgot',
+		title: 'Homeroom Heroes - Forgot Password',
+		canonical: 'https://www.helpteachers.net/forgot',
+		heading: 'Forgot Your Password?',
+		description: /Request password reset instructions/
+	},
+	{
+		path: '/reset-password',
+		title: 'Reset Password - Homeroom Heroes',
+		canonical: 'https://www.helpteachers.net/reset-password',
+		heading: 'Reset Your Password',
+		description: /Reset your Homeroom Heroes account password/
+	},
+	{
+		path: '/forum',
+		title: 'Homeroom Heroes - Forum Discussions',
+		canonical: 'https://www.helpteachers.net/forum',
+		heading: "The Teachers' Lounge",
+		description: /teacher forum discussions/
+	},
+	{
 		path: '/partners',
 		title: 'Homeroom Heroes - Sponsors and Thank You',
 		canonical: 'https://www.helpteachers.net/partners',

@@ -2492,25 +2492,22 @@ def delete_post(post_id: int, role: str = Depends(get_current_role)):
     Deletes a post. Only allowed for role = 'admin'.
     """
     db: Session = SessionLocal()
-    # 1. Authorization Check (Admin Only)
-    if role != 'admin':
-        print(f"User attempted unauthorized post deletion.")
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, 
-            detail="Access denied: Only administrators can delete posts."
-        )
+    try:
+        if role != 'admin':
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: Only administrators can delete posts."
+            )
 
-    # 2. Find the post
-    post = db.query(ForumPost).filter(ForumPost.id == post_id).first()
-    if not post:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
+        post = db.query(ForumPost).filter(ForumPost.id == post_id).first()
+        if not post:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
 
-    # 3. Delete the post
-    db.delete(post)
-    db.commit()
-    
-    # Due to CASCADE ON DELETE in the schema, votes and comments are automatically deleted.
-    return
+        db.delete(post)
+        db.commit()
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    finally:
+        db.close()
 
 @app.delete("/forum/comment/{comment_id}/delete")
 def delete_comment(comment_id: int, current_user_id: int = Depends(get_current_id),role: str = Depends(get_current_role)):
@@ -2518,42 +2515,32 @@ def delete_comment(comment_id: int, current_user_id: int = Depends(get_current_i
     Deletes a comment. Only allowed for admin OR the comment's author (not yet but can be if you uncomment below)
     """
     db: Session = SessionLocal()
-    # 1. Find the comment
-    comment = db.query(ForumComment).filter(ForumComment.id == comment_id).first()
-    
-    if not comment:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
-            detail="Comment not found"
-        )
-    
-    # 2. Authorization Check (Admin OR Author)
-    is_admin = (role == 'admin')
-    #is_author = (comment.user_id == current_user_id)
-    
-    if not (is_admin): # or is_author):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, 
-            detail="Access denied: You can only delete your own comments or be an administrator."
-        )
+    try:
+        comment = db.query(ForumComment).filter(ForumComment.id == comment_id).first()
 
-    # 3. Denormalization: Decrement the parent post's comment count
-    post = db.query(ForumPost).filter(ForumPost.id == comment.post_id).first()
-    
-    if post and post.comment_count > 0:
-        post.comment_count -= 1
-        # No need for db.add(post) if using SQLAlchemy and it's tracked by the session, 
-        # but calling db.commit() below will save the change.
-    
-    # 4. Delete the comment
-    db.delete(comment)
-    db.commit()
-    
-    # Note on nested comments: If you need to handle deletion of child comments 
-    # (i.e., comments that had replies) this would be handled automatically if 
-    # you set up CASCADE DELETE on the parent_comment_id foreign key in your DDL.
-    
-    return {"detail": f"Comment ID {comment_id} successfully deleted."}
+        if not comment:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Comment not found"
+            )
+
+        is_admin = role == 'admin'
+        is_author = comment.user_id == current_user_id
+        if not (is_admin or is_author):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: You can only delete your own comments or be an administrator."
+            )
+
+        post = db.query(ForumPost).filter(ForumPost.id == comment.post_id).first()
+        if post and post.comment_count > 0:
+            post.comment_count -= 1
+
+        db.delete(comment)
+        db.commit()
+        return {"detail": f"Comment ID {comment_id} successfully deleted."}
+    finally:
+        db.close()
 
 @app.patch("/forum/post/{post_id}/update")
 async def update_post(post_id: int, post_data: PostUpdate, id: int = Depends(get_current_id)):
@@ -2593,6 +2580,9 @@ async def update_post(post_id: int, post_data: PostUpdate, id: int = Depends(get
         # but in a real app, you might use your full Post schema if it includes more fields.
         return existing_post
         
+    except HTTPException:
+        db.rollback()
+        raise
     except Exception as e:
         db.rollback() # Rollback the transaction on any error
         # In a production environment, log the error 'e' here
@@ -2633,6 +2623,9 @@ async def update_comment(comment_id: int, content: str = Form(...), user: int = 
         # Return the updated object (FastAPI handles JSON conversion)
         return existing_comment
         
+    except HTTPException:
+        db.rollback()
+        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail="Internal server error during comment update.")
