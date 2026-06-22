@@ -4,9 +4,11 @@
 	import Header from '$lib/components/Header.svelte';
 	import '$lib/styles/app.css';
 	import type { Snippet } from 'svelte';
+	import type { LayoutData } from './$types';
 
-	let { children } = $props<{
+	let { children, data } = $props<{
 		children: Snippet;
+		data: LayoutData;
 	}>();
 </script>
 
@@ -21,7 +23,7 @@
 	>
 		Skip to content
 	</a>
-	<Header currentPath={page.url.pathname} />
+	<Header currentPath={page.url.pathname} initialProfile={data.profile} />
 	<main id="main-content" class="flex-1">
 		{@render children()}
 	</main>

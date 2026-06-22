@@ -20,6 +20,12 @@ export type AuthSession = {
 	userId?: number;
 };
 
+export type BackendProfile = {
+	user_role: UserRole;
+	user_id: number | string;
+	user_email: string;
+};
+
 export type TeacherSummary = {
 	name: string;
 	url_id: string;

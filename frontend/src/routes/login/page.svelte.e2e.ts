@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { installAuthenticatedSession } from '$lib/test/session';
 
 test.describe('/login', () => {
 	test('renders the login form and account links', async ({ page }) => {
@@ -47,6 +48,7 @@ test.describe('/login', () => {
 	});
 
 	test('routes teachers without a profile to profile creation', async ({ page }) => {
+		await installAuthenticatedSession(page.context());
 		await page.route('**/profile/login/', async (route) => {
 			await route.fulfill({
 				contentType: 'application/json',
@@ -58,10 +60,14 @@ test.describe('/login', () => {
 			});
 		});
 
-		await page.route('**/profile/create', async (route) => {
+		await page.route('**/api/profile/', async (route) => {
 			await route.fulfill({
-				contentType: 'text/html',
-				body: '<h1>Create Profile</h1>'
+				contentType: 'application/json',
+				body: JSON.stringify({
+					user_role: 'teacher',
+					user_id: 12,
+					user_email: 'teacher@example.test'
+				})
 			});
 		});
 

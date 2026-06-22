@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
 	import Alert from '$lib/components/Alert.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import FormField from '$lib/components/FormField.svelte';
@@ -24,6 +25,24 @@
 
 	let isSubmitting = $state(false);
 	let status = $state<{ variant: StatusVariant; message: string } | null>(null);
+	let redirectPath = $derived(
+		getSafeRedirect(page.url.searchParams.get('redirect'), page.url.origin)
+	);
+
+	function getSafeRedirect(value: string | null, origin: string): string | null {
+		if (!value?.startsWith('/')) {
+			return null;
+		}
+
+		try {
+			const destination = new URL(value, origin);
+			return destination.origin === origin
+				? `${destination.pathname}${destination.search}${destination.hash}`
+				: null;
+		} catch {
+			return null;
+		}
+	}
 
 	async function submitLoginForm(event: SubmitEvent) {
 		event.preventDefault();
@@ -63,11 +82,11 @@
 			};
 
 			if (body.role === 'teacher' && body.createCount === 0) {
-				await goto(resolve(routes.profileCreate as '/'));
+				await goto(resolve(routes.profileCreate as '/'), { invalidateAll: true });
 				return;
 			}
 
-			await goto(resolve(routes.home));
+			await goto(resolve((redirectPath || routes.home) as '/'), { invalidateAll: true });
 		} catch (error) {
 			status = {
 				variant: 'error',

@@ -1,12 +1,21 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import { getBackendOrigin } from '$lib/api/client';
+	import type { BackendProfile } from '$lib/api/types';
 	import { publicNavItems, routes } from '$lib/routes';
 
-	let { currentPath = routes.home } = $props<{
+	let { currentPath = routes.home, initialProfile = null } = $props<{
 		currentPath?: string;
+		initialProfile?: BackendProfile | null;
 	}>();
 
+	const backendOrigin = getBackendOrigin();
 	let isMenuOpen = $state(false);
+	let profile = $derived<BackendProfile | null>(initialProfile);
+	let isLoggingOut = $state(false);
+	let isAuthenticated = $derived(profile !== null);
+	let canValidate = $derived(profile?.user_role === 'teacher' || profile?.user_role === 'admin');
+	let isAdmin = $derived(profile?.user_role === 'admin');
 
 	function closeMenu() {
 		isMenuOpen = false;
@@ -30,6 +39,25 @@
 			: 'text-green-950 hover:bg-green-50';
 
 		return `block rounded-md px-3 py-2 text-base font-semibold transition ${activeClass}`;
+	}
+
+	async function logout() {
+		isLoggingOut = true;
+		try {
+			const response = await fetch(`${backendOrigin}/profile/logout/`, {
+				method: 'POST',
+				credentials: 'include'
+			});
+			if (!response.ok) {
+				throw new Error('Logout request failed');
+			}
+			profile = null;
+			window.location.href = routes.home;
+		} catch {
+			window.alert('We could not log you out. Please try again.');
+		} finally {
+			isLoggingOut = false;
+		}
 	}
 </script>
 
@@ -60,13 +88,33 @@
 			{/each}
 		</nav>
 
-		<div class="hidden md:block">
-			<a
-				href={resolve(routes.login as '/')}
-				class="inline-flex min-h-10 items-center justify-center rounded-md border border-white/60 px-4 text-sm font-semibold text-white transition hover:bg-white hover:text-green-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-			>
-				Login
-			</a>
+		<div class="hidden items-center gap-1 md:flex">
+			{#if isAuthenticated}
+				<a href={resolve(routes.teacher)} class={navLinkClass(routes.teacher)}>My Page</a>
+				<a href={resolve(routes.forum)} class={navLinkClass(routes.forum)}>Forum</a>
+				{#if canValidate}
+					<a href={resolve(routes.validation)} class={navLinkClass(routes.validation)}>Validation</a
+					>
+				{/if}
+				{#if isAdmin}
+					<a href={resolve(routes.admin)} class={navLinkClass(routes.admin)}>Admin</a>
+				{/if}
+				<button
+					type="button"
+					disabled={isLoggingOut}
+					class="inline-flex min-h-10 items-center justify-center rounded-md border border-white/60 px-4 text-sm font-semibold text-white transition hover:bg-white hover:text-green-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:opacity-60"
+					onclick={() => void logout()}
+				>
+					{isLoggingOut ? 'Logging Out...' : 'Logout'}
+				</button>
+			{:else}
+				<a
+					href={resolve(routes.login as '/')}
+					class="inline-flex min-h-10 items-center justify-center rounded-md border border-white/60 px-4 text-sm font-semibold text-white transition hover:bg-white hover:text-green-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+				>
+					Login
+				</a>
+			{/if}
 		</div>
 
 		<button
@@ -116,13 +164,46 @@
 						{item.label}
 					</a>
 				{/each}
-				<a
-					href={resolve(routes.login as '/')}
-					class="block rounded-md px-3 py-2 text-base font-semibold text-green-950 transition hover:bg-green-50"
-					onclick={closeMenu}
-				>
-					Login
-				</a>
+				{#if isAuthenticated}
+					<a
+						href={resolve(routes.teacher)}
+						class={mobileLinkClass(routes.teacher)}
+						onclick={closeMenu}>My Page</a
+					>
+					<a href={resolve(routes.forum)} class={mobileLinkClass(routes.forum)} onclick={closeMenu}
+						>Forum</a
+					>
+					{#if canValidate}
+						<a
+							href={resolve(routes.validation)}
+							class={mobileLinkClass(routes.validation)}
+							onclick={closeMenu}>Validation</a
+						>
+					{/if}
+					{#if isAdmin}
+						<a
+							href={resolve(routes.admin)}
+							class={mobileLinkClass(routes.admin)}
+							onclick={closeMenu}>Admin</a
+						>
+					{/if}
+					<button
+						type="button"
+						disabled={isLoggingOut}
+						class="block w-full rounded-md px-3 py-2 text-left text-base font-semibold text-green-950 transition hover:bg-green-50 disabled:opacity-60"
+						onclick={() => void logout()}
+					>
+						{isLoggingOut ? 'Logging Out...' : 'Logout'}
+					</button>
+				{:else}
+					<a
+						href={resolve(routes.login as '/')}
+						class="block rounded-md px-3 py-2 text-base font-semibold text-green-950 transition hover:bg-green-50"
+						onclick={closeMenu}
+					>
+						Login
+					</a>
+				{/if}
 			</nav>
 		</div>
 	{/if}
