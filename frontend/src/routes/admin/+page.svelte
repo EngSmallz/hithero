@@ -5,6 +5,7 @@
 	import PageShell from '$lib/components/PageShell.svelte';
 	import Seo from '$lib/components/Seo.svelte';
 	import { getBackendOrigin } from '$lib/api/client';
+	import { normalizeStringOptions } from '$lib/api/options';
 	import { routes } from '$lib/routes';
 	import type { PageData } from './$types';
 
@@ -52,7 +53,7 @@
 			throw new Error(message || 'Unable to load school choices.');
 		}
 
-		return body;
+		return normalizeStringOptions(body);
 	}
 
 	async function populateCounties() {

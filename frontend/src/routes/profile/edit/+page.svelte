@@ -6,6 +6,7 @@
 	import PageShell from '$lib/components/PageShell.svelte';
 	import Seo from '$lib/components/Seo.svelte';
 	import { getBackendOrigin } from '$lib/api/client';
+	import { normalizeStringOptions } from '$lib/api/options';
 	import { routes } from '$lib/routes';
 
 	type StatusVariant = 'info' | 'success' | 'warning' | 'error';
@@ -271,15 +272,7 @@
 			throw new Error('School options could not be loaded.');
 		}
 
-		return normalizeOptions(body);
-	}
-
-	function normalizeOptions(value: unknown): string[] {
-		if (!Array.isArray(value)) {
-			return [];
-		}
-
-		return value.filter((item): item is string => typeof item === 'string' && item.length > 0);
+		return normalizeStringOptions(body);
 	}
 
 	function mergeOptions(primary: string[], fallback: string[]): string[] {

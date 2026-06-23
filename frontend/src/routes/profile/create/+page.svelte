@@ -5,6 +5,7 @@
 	import PageShell from '$lib/components/PageShell.svelte';
 	import Seo from '$lib/components/Seo.svelte';
 	import { getBackendOrigin } from '$lib/api/client';
+	import { normalizeStringOptions } from '$lib/api/options';
 	import { routes } from '$lib/routes';
 	import type { UserRole } from '$lib/api/types';
 	import type { PageData } from './$types';
@@ -73,14 +74,6 @@
 		schools = [];
 	}
 
-	function normalizeOptions(value: unknown): string[] {
-		if (!Array.isArray(value)) {
-			return [];
-		}
-
-		return value.filter((item): item is string => typeof item === 'string' && item.length > 0);
-	}
-
 	async function fetchSchoolOptions(path: string): Promise<string[]> {
 		const response = await fetch(`${backendOrigin}${path}`);
 		const body = (await response.json().catch(() => [])) as unknown;
@@ -89,7 +82,7 @@
 			throw new Error('School options could not be loaded.');
 		}
 
-		return normalizeOptions(body);
+		return normalizeStringOptions(body);
 	}
 
 	async function handleStateChange() {
