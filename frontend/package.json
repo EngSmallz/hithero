@@ -13,7 +13,7 @@
 		"lint": "prettier --check . && eslint .",
 		"format": "prettier --write .",
 		"test:e2e": "playwright install && playwright test",
-		"test:integration": "playwright test -c playwright.integration.config.ts",
+		"test:integration": "TEST_DATABASE_URL=sqlite:///./.tmp/hithero-integration.sqlite python tests/integration/db_helper.py reset && TEST_DATABASE_URL=sqlite:///./.tmp/hithero-integration.sqlite playwright test -c playwright.integration.config.ts",
 		"test": "npm run test:e2e"
 	},
 	"devDependencies": {

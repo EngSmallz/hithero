@@ -1,6 +1,8 @@
 PUBLIC_BACKEND_ORIGIN ?= http://localhost:8000
 DEV_DATABASE_URL ?= sqlite:///./.local/hithero-dev.sqlite
 TEST_DATABASE_URL ?= sqlite:///./.tmp/hithero-test.sqlite
+PYTEST_WORKERS ?= auto
+PYTEST_E2E_WORKERS ?= 2
 
 .PHONY: install-dev dev-backend dev-frontend init-test-db test-static test-static-db test-e2e test
 
@@ -18,12 +20,12 @@ init-test-db:
 	APP_ENV=test SECRET_KEY=test-secret TEST_DATABASE_URL=$(TEST_DATABASE_URL) python -c "import app; app.init_db(); print(f'Initialized {app.SQLALCHEMY_DATABASE_URL}')"
 
 test-static:
-	APP_ENV=test SECRET_KEY=test-secret PYTHONPATH=tests/stubs PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest tests --ignore=tests/e2e
+	APP_ENV=test SECRET_KEY=test-secret PYTHONPATH=tests/stubs PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p xdist -n $(PYTEST_WORKERS) tests --ignore=tests/e2e
 
 test-static-db:
-	APP_ENV=test SECRET_KEY=test-secret TEST_DATABASE_URL=$(TEST_DATABASE_URL) PYTHONPATH=tests/stubs PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest tests --ignore=tests/e2e
+	APP_ENV=test SECRET_KEY=test-secret TEST_DATABASE_URL=$(TEST_DATABASE_URL) PYTHONPATH=tests/stubs PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p xdist -n $(PYTEST_WORKERS) tests --ignore=tests/e2e
 
 test-e2e:
-	APP_ENV=test SECRET_KEY=test-secret PYTHONPATH=tests/stubs PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest tests/e2e
+	APP_ENV=test SECRET_KEY=test-secret PYTHONPATH=tests/stubs PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p xdist -n $(PYTEST_E2E_WORKERS) tests/e2e
 
 test: test-static test-e2e

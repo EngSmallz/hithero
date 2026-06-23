@@ -256,8 +256,7 @@ def test_private_pages_redirect_unauthenticated_visitors_to_forbidden(page, base
 
     page.goto(f"{base_url}{path}", wait_until="domcontentloaded")
 
-    page.wait_for_timeout(500)
-    assert page.url == f"{base_url}/403"
+    expect(page).to_have_url(f"{base_url}/403", timeout=5000)
     expect(page.locator("body")).to_contain_text("Forbidden")
 
 

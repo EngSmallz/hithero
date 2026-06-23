@@ -1,4 +1,9 @@
-import { expect, test, type Page, type Response as PlaywrightResponse } from '@playwright/test';
+import {
+	expect,
+	test as base,
+	type Page,
+	type Response as PlaywrightResponse
+} from '@playwright/test';
 import { execFile } from 'node:child_process';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -18,7 +23,7 @@ const dbHelperPath = resolve(integrationDir, 'db_helper.py');
 type TestStack = {
 	backendOrigin: string;
 	frontendOrigin: string;
-	dbDir: string;
+	dbDir: string | null;
 	env: NodeJS.ProcessEnv;
 	backend: ManagedProcess;
 	frontend: ManagedProcess;
@@ -121,26 +126,97 @@ class ManagedProcess {
 
 let stack: TestStack;
 
-test.describe.configure({ mode: 'serial' });
+const test = base.extend<Record<never, never>, { workerStack: TestStack }>({
+	workerStack: [
+		async ({ browserName }, use, workerInfo) => {
+			void browserName;
+			const workerStack = await startStack(workerInfo.workerIndex);
+			stack = workerStack;
 
-test.beforeAll(async () => {
-	stack = await startStack();
+			try {
+				await use(workerStack);
+			} finally {
+				await Promise.all([workerStack.frontend.stop(), workerStack.backend.stop()]);
+				if (workerStack.dbDir) {
+					await rm(workerStack.dbDir, { recursive: true, force: true });
+				}
+			}
+		},
+		{ scope: 'worker', auto: true }
+	]
 });
 
-test.afterAll(async () => {
-	if (!stack) {
-		return;
+async function startStack(workerIndex: number): Promise<TestStack> {
+	const backendPort = await getFreePort();
+	const frontendPort = await getFreePort();
+	const backendOrigin = `http://127.0.0.1:${backendPort}`;
+	const frontendOrigin = `http://127.0.0.1:${frontendPort}`;
+	const sharedDatabaseUrl = process.env.TEST_DATABASE_URL;
+	const dbDir = sharedDatabaseUrl
+		? null
+		: await mkdtemp(resolve(tmpdir(), `hithero-integration-${workerIndex}-`));
+	const testDatabaseUrl =
+		sharedDatabaseUrl ?? `sqlite:///${resolve(dbDir as string, 'hithero.sqlite')}`;
+	const env = {
+		...process.env,
+		APP_ENV: 'test',
+		SECRET_KEY: 'integration-test-secret',
+		TEST_DATABASE_URL: testDatabaseUrl,
+		TEST_RECAPTCHA_TOKEN,
+		CORS_ALLOW_ORIGINS: frontendOrigin
+	};
+
+	if (dbDir) {
+		await runDbHelper(['reset'], env);
 	}
 
-	await Promise.all([stack.frontend.stop(), stack.backend.stop()]);
-	await rm(stack.dbDir, { recursive: true, force: true });
-});
+	let backend: ManagedProcess | undefined;
+	let frontend: ManagedProcess | undefined;
+
+	try {
+		backend = new ManagedProcess(
+			`FastAPI worker ${workerIndex}`,
+			'python',
+			['-m', 'uvicorn', 'app:app', '--host', '127.0.0.1', '--port', String(backendPort)],
+			{ cwd: rootDir, env }
+		);
+		await waitForHttp(`${backendOrigin}/api/get_states/`, backend);
+
+		frontend = new ManagedProcess(
+			`SvelteKit worker ${workerIndex}`,
+			'npm',
+			['run', 'dev', '--', '--host', '127.0.0.1', '--port', String(frontendPort), '--strictPort'],
+			{
+				cwd: frontendDir,
+				env: {
+					...env,
+					PUBLIC_BACKEND_ORIGIN: backendOrigin
+				}
+			}
+		);
+		await waitForHttp(`${frontendOrigin}/login`, frontend);
+
+		return {
+			backendOrigin,
+			frontendOrigin,
+			dbDir,
+			env,
+			backend,
+			frontend
+		};
+	} catch (error) {
+		await Promise.all([frontend?.stop(), backend?.stop()]);
+		if (dbDir) {
+			await rm(dbDir, { recursive: true, force: true });
+		}
+		throw error;
+	}
+}
 
 test('teacher login posts to FastAPI and redirects teachers without a profile', async ({
 	page,
 	context
 }) => {
-	await resetDatabase();
 	await seedLoginUser({
 		email: 'teacher.integration@example.test',
 		password: 'correct horse battery staple',
@@ -169,15 +245,15 @@ test('teacher login posts to FastAPI and redirects teachers without a profile', 
 test('wrong password posts to FastAPI and stays on login with invalid credential message', async ({
 	page
 }) => {
-	await resetDatabase();
+	const email = 'wrong.password.integration@example.test';
 	await seedLoginUser({
-		email: 'teacher.integration@example.test',
+		email,
 		password: 'correct horse battery staple',
 		createCount: 0
 	});
 
 	await gotoFrontend(page, '/login');
-	await page.getByLabel(/^Email/).fill('teacher.integration@example.test');
+	await page.getByLabel(/^Email/).fill(email);
 	await page.getByLabel(/^Password/).fill('wrong-password');
 
 	const loginResponse = await submitAndWaitForBackendPost(
@@ -194,7 +270,6 @@ test('wrong password posts to FastAPI and stays on login with invalid credential
 test('forgot password posts to FastAPI and creates a reset token for a registered user', async ({
 	page
 }) => {
-	await resetDatabase();
 	const email = 'forgot.integration@example.test';
 	await seedLoginUser({
 		email,
@@ -228,7 +303,6 @@ test('forgot password posts to FastAPI and creates a reset token for a registere
 test('reset password posts to FastAPI and updates the registered user password', async ({
 	page
 }) => {
-	await resetDatabase();
 	const email = 'reset.integration@example.test';
 	const resetToken = 'integration-reset-token';
 	const newPassword = 'new correct horse battery staple';
@@ -274,7 +348,6 @@ test('reset password posts to FastAPI and updates the registered user password',
 test('update password posts to FastAPI and changes the logged-in user password', async ({
 	page
 }) => {
-	await resetDatabase();
 	const email = 'update.password.integration@example.test';
 	const oldPassword = 'old correct horse battery staple';
 	const newPassword = 'new correct horse battery staple';
@@ -319,7 +392,6 @@ test('update password posts to FastAPI and changes the logged-in user password',
 });
 
 test('profile creation posts to FastAPI and creates a TeacherList row', async ({ page }) => {
-	await resetDatabase();
 	await seedSchool({
 		state: 'Integration State',
 		county: 'Integration County',
@@ -386,7 +458,6 @@ test('profile creation posts to FastAPI and creates a TeacherList row', async ({
 test('teacher page loads real FastAPI data through SvelteKit for logged-in teachers', async ({
 	page
 }) => {
-	await resetDatabase();
 	const email = 'teacher.page.integration@example.test';
 	const password = 'correct horse battery staple';
 	await seedLoginUser({
@@ -434,7 +505,6 @@ test('teacher page loads real FastAPI data through SvelteKit for logged-in teach
 });
 
 test('public teacher URL renders server HTML and metadata from FastAPI data', async ({ page }) => {
-	await resetDatabase();
 	const email = 'public.teacher.integration@example.test';
 	await seedLoginUser({
 		email,
@@ -480,8 +550,6 @@ test('public teacher URL renders server HTML and metadata from FastAPI data', as
 });
 
 test('public teacher URL returns a real 404 for missing teachers', async ({ page }) => {
-	await resetDatabase();
-
 	const response = await page.goto(`${stack.frontendOrigin}/teacher/missing-teacher`, {
 		waitUntil: 'domcontentloaded'
 	});
@@ -491,7 +559,6 @@ test('public teacher URL returns a real 404 for missing teachers', async ({ page
 });
 
 test('profile edit posts an about-me update to FastAPI and persists it', async ({ page }) => {
-	await resetDatabase();
 	await seedSchool({
 		state: 'Integration State',
 		county: 'Integration County',
@@ -547,7 +614,6 @@ test('profile edit posts an about-me update to FastAPI and persists it', async (
 });
 
 test('forum list loads real FastAPI posts through SvelteKit', async ({ page }) => {
-	await resetDatabase();
 	const email = 'forum.integration@example.test';
 	await seedLoginUser({
 		email,
@@ -575,7 +641,6 @@ test('forum list loads real FastAPI posts through SvelteKit', async ({ page }) =
 test('forum post detail loads real FastAPI post and comments through SvelteKit', async ({
 	page
 }) => {
-	await resetDatabase();
 	const email = 'forum.detail.integration@example.test';
 	const title = 'Integration forum detail discussion';
 	await seedLoginUser({
@@ -616,7 +681,6 @@ test('forum post detail loads real FastAPI post and comments through SvelteKit',
 });
 
 test('logged-in forum users can vote and comment through SvelteKit', async ({ page }) => {
-	await resetDatabase();
 	const email = 'forum.actions.integration@example.test';
 	const password = 'correct horse battery staple';
 	const title = 'Interactive integration discussion';
@@ -665,7 +729,6 @@ test('logged-in forum users can vote and comment through SvelteKit', async ({ pa
 });
 
 test('registration posts to FastAPI and queues a NewUsers validation row', async ({ page }) => {
-	await resetDatabase();
 	await seedSchool({
 		state: 'Integration State',
 		county: 'Integration County',
@@ -718,69 +781,6 @@ test('registration posts to FastAPI and queues a NewUsers validation row', async
 		password_is_hashed: true
 	});
 });
-
-async function startStack(): Promise<TestStack> {
-	const backendPort = await getFreePort();
-	const frontendPort = await getFreePort();
-	const backendOrigin = `http://127.0.0.1:${backendPort}`;
-	const frontendOrigin = `http://127.0.0.1:${frontendPort}`;
-	const dbDir = await mkdtemp(resolve(tmpdir(), 'hithero-integration-'));
-	const dbPath = resolve(dbDir, 'hithero.sqlite');
-	const env = {
-		...process.env,
-		APP_ENV: 'test',
-		SECRET_KEY: 'integration-test-secret',
-		TEST_DATABASE_URL: `sqlite:///${dbPath}`,
-		TEST_RECAPTCHA_TOKEN,
-		CORS_ALLOW_ORIGINS: frontendOrigin
-	};
-
-	await runDbHelper(['reset'], env);
-
-	let backend: ManagedProcess | undefined;
-	let frontend: ManagedProcess | undefined;
-
-	try {
-		backend = new ManagedProcess(
-			'FastAPI',
-			'python',
-			['-m', 'uvicorn', 'app:app', '--host', '127.0.0.1', '--port', String(backendPort)],
-			{ cwd: rootDir, env }
-		);
-		await waitForHttp(`${backendOrigin}/api/get_states/`, backend);
-
-		frontend = new ManagedProcess(
-			'SvelteKit',
-			'npm',
-			['run', 'dev', '--', '--host', '127.0.0.1', '--port', String(frontendPort), '--strictPort'],
-			{
-				cwd: frontendDir,
-				env: {
-					...env,
-					PUBLIC_BACKEND_ORIGIN: backendOrigin
-				}
-			}
-		);
-		await waitForHttp(`${frontendOrigin}/login`, frontend);
-
-		return {
-			backendOrigin,
-			frontendOrigin,
-			dbDir,
-			env,
-			backend,
-			frontend
-		};
-	} catch (error) {
-		await Promise.all([frontend?.stop(), backend?.stop()]);
-		await rm(dbDir, { recursive: true, force: true });
-		throw error;
-	}
-}
-
-async function resetDatabase(): Promise<void> {
-	await runDbHelper(['reset'], stack.env);
-}
 
 async function seedLoginUser(args: {
 	email: string;
