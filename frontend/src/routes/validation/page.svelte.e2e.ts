@@ -16,8 +16,7 @@ test.describe('/validation', () => {
 		await expect(
 			page.getByRole('heading', { level: 1, name: 'How Validation Works' })
 		).toBeVisible();
-		await expect(page.getByRole('heading', { level: 2, name: 'Validation List' })).toBeVisible();
-		await expect(page.locator('#validationList')).toBeVisible();
+		await expect(page.getByRole('region', { name: 'Validation List' })).toBeVisible();
 		await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
 			'content',
 			'noindex, nofollow'
@@ -32,7 +31,6 @@ test.describe('/validation', () => {
 		await expect(
 			page.getByRole('heading', { level: 1, name: 'How Validation Works' })
 		).toBeVisible();
-		await expect(page.getByRole('heading', { level: 2, name: 'Validation List' })).toBeVisible();
-		await expect(page.locator('#validationList')).toBeVisible();
+		await expect(page.getByRole('region', { name: 'Validation List' })).toBeVisible();
 	});
 });

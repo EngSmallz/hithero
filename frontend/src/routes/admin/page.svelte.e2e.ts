@@ -6,7 +6,7 @@ async function installAdminSession(page: Page) {
 }
 
 async function addSelectOption(page: Page, label: RegExp, value: string) {
-	await page.getByLabel(label).evaluate((select, optionValue) => {
+	await page.getByRole('combobox', { name: label }).evaluate((select, optionValue) => {
 		if (!(select instanceof HTMLSelectElement)) {
 			return;
 		}
@@ -19,13 +19,15 @@ async function addSelectOption(page: Page, label: RegExp, value: string) {
 
 async function addReportSelections(page: Page) {
 	await addSelectOption(page, /^State/, 'Washington');
-	await page.getByLabel(/^State/).selectOption('Washington');
+	await page.getByRole('combobox', { name: /^State/ }).selectOption('Washington');
 	await addSelectOption(page, /^County/, 'King');
-	await page.getByLabel(/^County/).selectOption('King');
+	await page.getByRole('combobox', { name: /^County/ }).selectOption('King');
 	await addSelectOption(page, /^School District/, 'Seattle Public Schools');
-	await page.getByLabel(/^School District/).selectOption('Seattle Public Schools');
+	await page
+		.getByRole('combobox', { name: /^School District/ })
+		.selectOption('Seattle Public Schools');
 	await addSelectOption(page, /^School$/, 'Evergreen Elementary');
-	await page.getByLabel(/^School$/).selectOption('Evergreen Elementary');
+	await page.getByRole('combobox', { name: /^School$/ }).selectOption('Evergreen Elementary');
 }
 
 test.describe('/admin', () => {
@@ -44,10 +46,10 @@ test.describe('/admin', () => {
 		await expect(
 			page.getByRole('heading', { level: 2, name: 'Get Teacher Contact Info' })
 		).toBeVisible();
-		await expect(page.getByLabel(/^State/)).toBeVisible();
-		await expect(page.getByLabel(/^County/)).toBeVisible();
-		await expect(page.getByLabel(/^School District/)).toBeVisible();
-		await expect(page.getByLabel(/^School$/)).toBeVisible();
+		await expect(page.getByRole('combobox', { name: /^State/ })).toBeVisible();
+		await expect(page.getByRole('combobox', { name: /^County/ })).toBeVisible();
+		await expect(page.getByRole('combobox', { name: /^School District/ })).toBeVisible();
+		await expect(page.getByRole('combobox', { name: /^School$/ })).toBeVisible();
 		await expect(
 			page.getByRole('heading', { level: 2, name: 'Delete User Account' })
 		).toBeVisible();
@@ -86,12 +88,18 @@ test.describe('/admin', () => {
 		await page.goto('/admin', { waitUntil: 'domcontentloaded' });
 		await addSelectOption(page, /^State/, 'Washington');
 
-		await page.getByLabel(/^State/).selectOption('Washington');
-		await expect(page.getByLabel(/^County/)).toContainText('King');
-		await page.getByLabel(/^County/).selectOption('King');
-		await expect(page.getByLabel(/^School District/)).toContainText('Seattle Public Schools');
-		await page.getByLabel(/^School District/).selectOption('Seattle Public Schools');
-		await expect(page.getByLabel(/^School$/)).toContainText('Evergreen Elementary');
+		await page.getByRole('combobox', { name: /^State/ }).selectOption('Washington');
+		await expect(page.getByRole('combobox', { name: /^County/ })).toContainText('King');
+		await page.getByRole('combobox', { name: /^County/ }).selectOption('King');
+		await expect(page.getByRole('combobox', { name: /^School District/ })).toContainText(
+			'Seattle Public Schools'
+		);
+		await page
+			.getByRole('combobox', { name: /^School District/ })
+			.selectOption('Seattle Public Schools');
+		await expect(page.getByRole('combobox', { name: /^School$/ })).toContainText(
+			'Evergreen Elementary'
+		);
 	});
 
 	test('submits teacher report generation and shows backend message', async ({ page }) => {
