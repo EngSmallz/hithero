@@ -632,10 +632,11 @@ test('forum list loads real FastAPI posts through SvelteKit', async ({ page }) =
 	await gotoFrontend(page, '/forum');
 
 	await expect(page.getByRole('heading', { level: 1, name: "The Teachers' Lounge" })).toBeVisible();
-	await expect(page.getByRole('link', { name: /Integration forum discussion/ })).toBeVisible();
-	await expect(page.getByText('isolated FastAPI database')).toBeVisible();
-	await expect(page.getByText('5 upvotes')).toBeVisible();
-	await expect(page.getByText('2 comments')).toBeVisible();
+	const discussionPost = page.getByRole('link', { name: /Integration forum discussion/ });
+	await expect(discussionPost).toBeVisible();
+	await expect(discussionPost.getByText('isolated FastAPI database')).toBeVisible();
+	await expect(discussionPost.getByText('5 upvotes')).toBeVisible();
+	await expect(discussionPost.getByText('2 comments')).toBeVisible();
 });
 
 test('forum post detail loads real FastAPI post and comments through SvelteKit', async ({
