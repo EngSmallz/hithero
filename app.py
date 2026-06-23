@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import select, cast, delete, insert, update
 from typing import Optional, List
 from tweepy import Client
-from backend.services.teachers import serialize_teacher_profile, serialize_teacher_summary
+from backend.routers.teachers import create_teacher_router
 try:
     from azure.communication.email import EmailClient
 except ImportError:
@@ -272,85 +272,6 @@ def database_random_ordering():
         return sqlite_random_ordering()
 
     return func.newid()
-
-
-def clean_optional_filter(value: Optional[str]):
-    if value is None:
-        return None
-
-    stripped = value.strip()
-    return stripped or None
-
-
-def sorted_distinct_values(db: Session, column, *conditions):
-    query = select(cast(column, String)).distinct()
-    for condition in conditions:
-        if condition is not None:
-            query = query.where(condition)
-
-    values = db.execute(query).scalars().all()
-    return sorted({value for value in values if value})
-
-
-def build_teacher_directory_response(
-    db: Session,
-    state: Optional[str] = None,
-    county: Optional[str] = None,
-    district: Optional[str] = None,
-    school: Optional[str] = None,
-    limit: int = 100,
-):
-    state = clean_optional_filter(state)
-    county = clean_optional_filter(county)
-    district = clean_optional_filter(district)
-    school = clean_optional_filter(school)
-    limit = max(1, min(limit, 500))
-
-    conditions = []
-    if state:
-        conditions.append(cast(TeacherList.state, String) == state)
-    if county:
-        conditions.append(cast(TeacherList.county, String) == county)
-    if district:
-        conditions.append(cast(TeacherList.district, String) == district)
-    if school:
-        conditions.append(cast(TeacherList.school, String) == school)
-
-    teacher_query = select(TeacherList).where(
-        TeacherList.name.is_not(None),
-        TeacherList.url_id.is_not(None),
-        cast(TeacherList.url_id, String) != "",
-    )
-    for condition in conditions:
-        teacher_query = teacher_query.where(condition)
-    teacher_query = teacher_query.order_by(cast(TeacherList.name, String)).limit(limit)
-
-    teachers = db.execute(teacher_query).scalars().all()
-
-    county_conditions = [cast(TeacherList.state, String) == state] if state else []
-    district_conditions = county_conditions + (
-        [cast(TeacherList.county, String) == county] if county else []
-    )
-    school_conditions = district_conditions + (
-        [cast(TeacherList.district, String) == district] if district else []
-    )
-
-    return {
-        "teachers": [serialize_teacher_summary(teacher) for teacher in teachers],
-        "filters": {
-            "states": sorted_distinct_values(db, TeacherList.state),
-            "counties": sorted_distinct_values(db, TeacherList.county, *county_conditions),
-            "districts": sorted_distinct_values(db, TeacherList.district, *district_conditions),
-            "schools": sorted_distinct_values(db, TeacherList.school, *school_conditions),
-        },
-        "total": len(teachers),
-        "applied_filters": {
-            "state": state,
-            "county": county,
-            "district": district,
-            "school": school,
-        },
-    }
 
 
 # Construct SQLAlchemy database URL. Test/local imports must not depend on the
@@ -1738,64 +1659,6 @@ async def validation_page(request: Request, role: str = Depends(get_current_role
         db.close()
 
 
-#api gets a list of states from statecoutny table
-@app.get("/api/get_states/")
-async def get_states():
-    db = SessionLocal()
-    try:
-        states = db.query(School.state).distinct().all()
-        return sorted([state[0] for state in states])
-    finally:
-        db.close()
-
-#api gets the names of the counties in the desired state
-@app.get("/api/get_counties/{state}")
-async def get_counties(state: str):
-    db = SessionLocal()
-    try:
-        query = select(School.county).distinct().where(School.state == state)
-        result = db.execute(query)
-        counties = result.fetchall()
-        if counties:
-            county_names = sorted([county[0] for county in counties])
-            return county_names
-        else:
-            return {"message": f"No counties found for state: {state}"}
-    finally:
-        db.close()
-
-#api gets the names of the school districts in the desired county and state
-@app.get("/api/get_districts/{state}/{county}")
-async def get_districts(state: str, county: str):
-    db = SessionLocal()
-    try:
-        query = select(School.district).distinct().where((School.state == state) & (School.county == county))
-        result = db.execute(query)
-        districts = result.fetchall()
-        if districts:
-            district_names = sorted([district[0] for district in districts])
-            return district_names
-        else:
-            return {"message": f"No districts found for state: {state} and county: {county}"}
-    finally:
-        db.close()
-
-#api gets the names of the school in the desired district, coutny, and state
-@app.get("/api/get_schools/{state}/{county}/{district}")
-async def get_schools(state: str, county: str, district: str):
-    db = SessionLocal()
-    try:
-        query = select(School.school_name).distinct().where((School.state == state) & (School.county == county) & (School.district == district))
-        result = db.execute(query)
-        schools = result.fetchall()
-        if schools:
-            school_names = sorted([school[0] for school in schools])
-            return school_names
-        else:
-            return {"message": f"No schools found for state: {state}, county: {county}, and district: {district}"}
-    finally:
-        db.close()
-
 @app.post("/profile/forgot_password/")
 @limiter.limit("5/minute")
 async def forgot_password(request: Request, email: str = Form(...)):
@@ -2010,128 +1873,15 @@ async def emailed_user(user_email: str, role: str = Depends(get_current_role)):
         db.close()
 
 
-#api gets a list of states from statecoutny table
-@app.get("/api/index_states/")
-async def index_states():
-    db = SessionLocal()
-    try:
-        states = db.query(cast(TeacherList.state, String)).distinct().all()
-        return sorted([state[0] for state in states])
-    finally:
-        db.close()
-
-#api gets the names of the counties in the desired state
-@app.get("/api/index_counties/{state}")
-async def index_counties(state: str):
-    db = SessionLocal()
-    try:
-        query = select(cast(TeacherList.county, String)).distinct().where(cast(TeacherList.state, String) == state)
-        result = db.execute(query)
-        counties = result.fetchall()
-        if counties:
-            county_names = sorted([county[0] for county in counties])
-            return county_names
-        else:
-            return {"message": f"No counties found for state: {state}"}
-    finally:
-        db.close()
-
-#api gets the names of the school districts in the desired county and state
-@app.get("/api/index_districts/{state}/{county}")
-async def index_districts(state: str, county: str):
-    db = SessionLocal()
-    try:
-        query = select(cast(TeacherList.district, String)).distinct().where((cast(TeacherList.state, String) == state) & (cast(TeacherList.county, String) == county))
-        result = db.execute(query)
-        districts = result.fetchall()
-        if districts:
-            district_names = sorted([district[0] for district in districts])
-            return district_names
-        else:
-            return {"message": f"No districts found for state: {state} and county: {county}"}
-    finally:
-        db.close()
-
-#api gets the names of the school in the desired district, coutny, and state
-@app.get("/api/index_schools/{state}/{county}/{district}")
-async def index_schools(state: str, county: str, district: str):
-    db = SessionLocal()
-    try:
-        query = select(cast(TeacherList.school, String)).distinct().where((cast(TeacherList.state, String) == state) & (cast(TeacherList.county, String) == county) & (cast(TeacherList.district, String) == district))       
-        result = db.execute(query)
-        schools = result.fetchall()
-        if schools:
-            school_names = sorted([school[0] for school in schools])
-            return school_names
-        else:
-            return {"message": f"No schools found for state: {state}, county: {county}, and district: {district}"}
-    finally:
-        db.close()
-
-@app.get("/api/teachers/", response_model=TeacherDirectoryResponse)
-async def list_teachers(
-    state: Optional[str] = None,
-    county: Optional[str] = None,
-    district: Optional[str] = None,
-    school: Optional[str] = None,
-    limit: int = 100,
-):
-    db: Session = SessionLocal()
-    try:
-        return build_teacher_directory_response(
-            db,
-            state=state,
-            county=county,
-            district=district,
-            school=school,
-            limit=limit,
-        )
-    finally:
-        db.close()
-
-@app.get("/api/teacher/{url_id}/", response_model=TeacherProfileResponse)
-async def get_public_teacher_profile(url_id: str):
-    db: Session = SessionLocal()
-    try:
-        teacher = db.execute(
-            select(TeacherList).where(cast(TeacherList.url_id, String) == url_id)
-        ).scalar_one_or_none()
-
-        if not teacher:
-            return JSONResponse(status_code=404, content={"detail": "Teacher not found"})
-
-        return serialize_teacher_profile(teacher)
-    finally:
-        db.close()
-
-###api gets the teachers and their url_id for the index
-@app.post("/api/index_teachers/")
-async def index_teachers(state: str = Form(...),county: str = Form(None),district: str = Form(None),school: str = Form(None)):
-    db: Session = SessionLocal()
-    try:
-        query = select(TeacherList.name, TeacherList.url_id).where(
-            (cast(TeacherList.state, String) == state)
-        )
-
-        if county:
-            query = query.where(cast(TeacherList.county, String) == county)
-        if district:
-            query = query.where(cast(TeacherList.district, String) == district)
-        if school:
-            query = query.where(cast(TeacherList.school, String) == school)
-
-        result = db.execute(query)
-        teachers = result.fetchall()
-
-        if teachers:
-            return [{"name": teacher.name, "url_id": teacher.url_id} for teacher in teachers]
-        else:
-            raise HTTPException(
-                status_code=404,
-                detail="No teachers found with the given criteria."
-            )
-    finally:
-        db.close()
+app.include_router(
+    create_teacher_router(
+        session_factory=SessionLocal,
+        school_model=School,
+        teacher_model=TeacherList,
+        directory_response_model=TeacherDirectoryResponse,
+        profile_response_model=TeacherProfileResponse,
+    )
+)
 
 @app.post("/admin/generate_teacher_report/")
 async def generate_teacher_report(state: str = Form(...), county: str = Form(None), district: str = Form(None), school: str = Form(None), role: str = Depends(get_current_role)):
