@@ -563,6 +563,22 @@ def get_current_email(request: Request):
 def get_index_cookie(index: str, request: Request):
     return request.session.get(index, None)
 
+def set_teacher_session(request: Request, teacher):
+    request.session["state"] = teacher.state
+    request.session["county"] = teacher.county
+    request.session["district"] = teacher.district
+    request.session["school"] = teacher.school
+    request.session["teacher"] = teacher.name
+
+def teacher_session_response(teacher):
+    return {
+        "state": teacher.state,
+        "county": teacher.county,
+        "district": teacher.district,
+        "school": teacher.school,
+        "teacher": teacher.name,
+    }
+
 def store_my_cookies(request: Request, id: int = Depends(get_current_id)):
     db = SessionLocal()
     try:
@@ -570,12 +586,7 @@ def store_my_cookies(request: Request, id: int = Depends(get_current_id)):
         result = db.execute(query)
         teacher_data = result.fetchone()
         if teacher_data:
-            name, state, county, district, school = teacher_data[0].name, teacher_data[0].state, teacher_data[0].county, teacher_data[0].district, teacher_data[0].school
-            request.session["state"] = state
-            request.session["county"] = county
-            request.session["district"] = district
-            request.session["school"] = school
-            request.session["teacher"] = name
+            set_teacher_session(request, teacher_data[0])
         else:
             raise HTTPException(status_code=404, detail="Your account does not have a database listing")
     except Exception as e:
@@ -1320,11 +1331,7 @@ async def get_random_teacher(request: Request):
             "image_data": image_data
         }
         if hasattr(request, "session"):
-            request.session["state"] = data["state"]
-            request.session["county"] = data["county"]
-            request.session["district"] = data["district"]
-            request.session["school"] = data["school"]
-            request.session["teacher"] = data["name"]
+            set_teacher_session(request, teacher)
         return data
     except Exception as e:
         logger.error(f"Internal Server Error: {str(e)}") 
@@ -1626,17 +1633,8 @@ async def get_myinfo(request: Request, id: int = Depends(get_current_id)):
         result = db.execute(query)
         teacher_data = result.fetchone()
         if teacher_data:
-            state = teacher_data[0].state
-            county = teacher_data[0].county
-            district = teacher_data[0].district
-            school = teacher_data[0].school
-            name = teacher_data[0].name
-            request.session["state"] = state
-            request.session["county"] = county
-            request.session["district"] = district
-            request.session["school"] = school
-            request.session["teacher"] = name
-            return {"state": state, "county": county, "district": district, "school": school, "teacher": name}
+            set_teacher_session(request, teacher_data[0])
+            return teacher_session_response(teacher_data[0])
         else:
             return {"message": "Your account does not have a database listing"}
     except Exception as e:
@@ -1719,11 +1717,7 @@ async def validation_page(request: Request, role: str = Depends(get_current_role
             if not teacher_data:
                 return {"new_users": [], "role": role}
 
-            request.session["state"] = teacher_data[0].state
-            request.session["county"] = teacher_data[0].county
-            request.session["district"] = teacher_data[0].district
-            request.session["school"] = teacher_data[0].school
-            request.session["teacher"] = teacher_data[0].name
+            set_teacher_session(request, teacher_data[0])
             state = get_index_cookie('state', request)
             county = get_index_cookie('county', request)
             district = get_index_cookie('district', request)
@@ -1949,11 +1943,7 @@ async def get_teacher_info(url_id: str, request: Request):
         teacher_info = result.fetchone()
         if not teacher_info:
             return RedirectResponse(url="/404")
-        request.session['state'] = teacher_info[0].state
-        request.session['county'] = teacher_info[0].county
-        request.session['district'] = teacher_info[0].district
-        request.session['school'] = teacher_info[0].school
-        request.session['teacher'] = teacher_info[0].name
+        set_teacher_session(request, teacher_info[0])
 
         return RedirectResponse(url="/teacher")
     except Exception as e:
