@@ -38,6 +38,40 @@ type NewUserRecord = {
 	password_is_hashed: boolean;
 };
 
+type PasswordResetTokenRecord = {
+	email: string;
+	token_present: boolean;
+	used: number;
+};
+
+type RegisteredUserRecord = {
+	email: string;
+	create_count: number;
+	password_is_hashed: boolean;
+	password_matches: boolean;
+};
+
+type TeacherProfileRecord = {
+	name: string;
+	state: string;
+	county: string;
+	district: string;
+	school: string;
+	reg_user_id: number;
+	wishlist_url: string;
+	about_me: string;
+	url_id_present: boolean;
+};
+
+type ForumPostRecord = {
+	id: number;
+	title: string;
+	content: string;
+	user_id: number;
+	upvote_count: number;
+	comment_count: number;
+};
+
 class ManagedProcess {
 	readonly child: ChildProcessByStdio<null, Readable, Readable>;
 	private output = '';
@@ -125,7 +159,7 @@ test('teacher login posts to FastAPI and redirects teachers without a profile', 
 
 	expect(loginResponse.status()).toBe(200);
 	await expect.poll(() => new URL(page.url()).pathname).toBe('/profile/create');
-	expect(new URL(page.url()).origin).toBe(stack.backendOrigin);
+	expect(new URL(page.url()).origin).toBe(stack.frontendOrigin);
 
 	const cookies = await context.cookies(stack.backendOrigin);
 	const sessionCookie = cookies.find((cookie) => cookie.name === 'session');
@@ -155,6 +189,479 @@ test('wrong password posts to FastAPI and stays on login with invalid credential
 	expect(loginResponse.status()).toBe(200);
 	await expect(page).toHaveURL(`${stack.frontendOrigin}/login`);
 	await expect(page.getByRole('status')).toContainText('Invalid login credentials.');
+});
+
+test('forgot password posts to FastAPI and creates a reset token for a registered user', async ({
+	page
+}) => {
+	await resetDatabase();
+	const email = 'forgot.integration@example.test';
+	await seedLoginUser({
+		email,
+		password: 'correct horse battery staple',
+		createCount: 1
+	});
+
+	await gotoFrontend(page, '/forgot');
+	await page.getByLabel(/^Email/).fill(email);
+
+	const forgotResponse = await submitAndWaitForBackendPost(
+		page,
+		() => page.getByRole('button', { name: 'Submit' }).click(),
+		'/profile/forgot_password/'
+	);
+
+	expect(forgotResponse.status()).toBe(200);
+	await expect(page).toHaveURL(`${stack.frontendOrigin}/forgot`);
+	await expect(page.getByRole('status')).toContainText(
+		'If an account exists, a reset link will be sent to your email.'
+	);
+
+	const resetToken = await getPasswordResetToken(email);
+	expect(resetToken).toMatchObject({
+		email,
+		token_present: true,
+		used: 0
+	});
+});
+
+test('reset password posts to FastAPI and updates the registered user password', async ({
+	page
+}) => {
+	await resetDatabase();
+	const email = 'reset.integration@example.test';
+	const resetToken = 'integration-reset-token';
+	const newPassword = 'new correct horse battery staple';
+	await seedLoginUser({
+		email,
+		password: 'old correct horse battery staple',
+		createCount: 1
+	});
+	await seedPasswordResetToken({ email, token: resetToken });
+
+	await gotoFrontend(page, `/reset-password?token=${resetToken}`);
+	await page.getByLabel(/^New Password/).fill(newPassword);
+	await page.getByLabel(/^Confirm New Password/).fill(newPassword);
+
+	const resetResponse = await submitAndWaitForBackendPost(
+		page,
+		() => page.getByRole('button', { name: 'Reset Password' }).click(),
+		'/profile/reset_password/'
+	);
+
+	expect(resetResponse.status()).toBe(200);
+	await expect(page).toHaveURL(`${stack.frontendOrigin}/reset-password?token=${resetToken}`);
+	await expect(page.getByRole('status')).toContainText(
+		'Password reset successfully. You can now log in.'
+	);
+
+	const usedToken = await getPasswordResetToken(email);
+	expect(usedToken).toMatchObject({
+		email,
+		token_present: true,
+		used: 1
+	});
+
+	const registeredUser = await getRegisteredUser(email, newPassword);
+	expect(registeredUser).toMatchObject({
+		email,
+		create_count: 1,
+		password_is_hashed: true,
+		password_matches: true
+	});
+});
+
+test('update password posts to FastAPI and changes the logged-in user password', async ({
+	page
+}) => {
+	await resetDatabase();
+	const email = 'update.password.integration@example.test';
+	const oldPassword = 'old correct horse battery staple';
+	const newPassword = 'new correct horse battery staple';
+	await seedLoginUser({
+		email,
+		password: oldPassword,
+		createCount: 1
+	});
+
+	await gotoFrontend(page, '/login');
+	await page.getByLabel(/^Email/).fill(email);
+	await page.getByLabel(/^Password/).fill(oldPassword);
+
+	const loginResponse = await submitAndWaitForBackendPost(
+		page,
+		() => page.getByRole('button', { name: 'Submit' }).click(),
+		'/profile/login/'
+	);
+	expect(loginResponse.status()).toBe(200);
+
+	await gotoFrontend(page, '/update-password');
+	await page.getByLabel(/^Old Password/).fill(oldPassword);
+	await page.getByLabel(/^New Password/).fill(newPassword);
+	await page.getByLabel(/^Confirm New Password/).fill(newPassword);
+
+	const updateResponse = await submitAndWaitForBackendPost(
+		page,
+		() => page.getByRole('button', { name: 'Submit' }).click(),
+		'/profile/update_password/'
+	);
+
+	expect(updateResponse.status()).toBe(200);
+	await expect.poll(() => new URL(page.url()).pathname).toBe('/teacher');
+
+	const registeredUser = await getRegisteredUser(email, newPassword);
+	expect(registeredUser).toMatchObject({
+		email,
+		create_count: 1,
+		password_is_hashed: true,
+		password_matches: true
+	});
+});
+
+test('profile creation posts to FastAPI and creates a TeacherList row', async ({ page }) => {
+	await resetDatabase();
+	await seedSchool({
+		state: 'Integration State',
+		county: 'Integration County',
+		district: 'Integration District',
+		school: 'Integration Elementary'
+	});
+	const email = 'profile.integration@example.test';
+	const password = 'correct horse battery staple';
+	await seedLoginUser({
+		email,
+		password,
+		createCount: 0
+	});
+
+	await gotoFrontend(page, '/login');
+	await page.getByLabel(/^Email/).fill(email);
+	await page.getByLabel(/^Password/).fill(password);
+
+	const loginResponse = await submitAndWaitForBackendPost(
+		page,
+		() => page.getByRole('button', { name: 'Submit' }).click(),
+		'/profile/login/'
+	);
+	expect(loginResponse.status()).toBe(200);
+	await expect(page).toHaveURL(`${stack.frontendOrigin}/profile/create`);
+	await expect(page.getByLabel(/^State/)).toContainText('Integration State');
+
+	await page.getByLabel(/^Full Name/).fill('Integration Profile Teacher');
+	await page.getByLabel(/^State/).selectOption('Integration State');
+	await expect(page.getByLabel(/^County/)).toContainText('Integration County');
+	await page.getByLabel(/^County/).selectOption('Integration County');
+	await expect(page.getByLabel(/^School District/)).toContainText('Integration District');
+	await page.getByLabel(/^School District/).selectOption('Integration District');
+	await expect(page.getByLabel(/^School required$/)).toContainText('Integration Elementary');
+	await page.getByLabel(/^School required$/).selectOption('Integration Elementary');
+	await page.getByLabel(/^About Me/).fill('I help students build durable skills.');
+	await page.getByLabel(/^Amazon Wishlist URL/).fill('https://example.com/wishlist');
+
+	const createResponse = await submitAndWaitForBackendPost(
+		page,
+		() => page.getByRole('button', { name: 'Submit' }).click(),
+		'/profile/create_teacher_profile/'
+	);
+
+	expect(createResponse.status()).toBe(200);
+	await expect(page.getByRole('status')).toContainText('Teacher created successfully');
+
+	const teacherProfile = await getTeacherProfile(email);
+	expect(teacherProfile).toMatchObject({
+		name: 'Integration Profile Teacher',
+		state: 'Integration State',
+		county: 'Integration County',
+		district: 'Integration District',
+		school: 'Integration Elementary',
+		wishlist_url: 'https://example.com/wishlist&tag=h0mer00mher0-20',
+		about_me: 'I help students build durable skills.',
+		url_id_present: true
+	});
+
+	const registeredUser = await getRegisteredUser(email, password);
+	expect(registeredUser.create_count).toBe(1);
+});
+
+test('teacher page loads real FastAPI data through SvelteKit for logged-in teachers', async ({
+	page
+}) => {
+	await resetDatabase();
+	const email = 'teacher.page.integration@example.test';
+	const password = 'correct horse battery staple';
+	await seedLoginUser({
+		email,
+		password,
+		createCount: 1
+	});
+	await seedTeacherProfile({
+		email,
+		name: 'Integration Page Teacher',
+		state: 'Integration State',
+		county: 'Integration County',
+		district: 'Integration District',
+		school: 'Integration Elementary',
+		wishlistUrl: 'https://example.com/integration-wishlist',
+		aboutMe: 'Integration students need fresh classroom supplies.',
+		urlId: 'integration-page-teacher'
+	});
+
+	await gotoFrontend(page, '/login');
+	await page.getByLabel(/^Email/).fill(email);
+	await page.getByLabel(/^Password/).fill(password);
+
+	const loginResponse = await submitAndWaitForBackendPost(
+		page,
+		() => page.getByRole('button', { name: 'Submit' }).click(),
+		'/profile/login/'
+	);
+	expect(loginResponse.status()).toBe(200);
+
+	await gotoFrontend(page, '/teacher');
+
+	await expect(
+		page.getByRole('heading', { level: 1, name: 'Integration Page Teacher' })
+	).toBeVisible();
+	await expect(page.getByText('School: Integration Elementary')).toBeVisible();
+	await expect(page.getByText('Location: Integration County, Integration State')).toBeVisible();
+	await expect(page.getByText('Integration students need fresh classroom supplies.')).toBeVisible();
+	await expect(page.getByRole('link', { name: 'View Wishlist' })).toHaveAttribute(
+		'href',
+		'https://example.com/integration-wishlist'
+	);
+	await expect(page.getByRole('link', { name: 'Edit Info' })).toBeVisible();
+	await expect(page.getByRole('link', { name: 'Update Password' })).toBeVisible();
+});
+
+test('public teacher URL renders server HTML and metadata from FastAPI data', async ({ page }) => {
+	await resetDatabase();
+	const email = 'public.teacher.integration@example.test';
+	await seedLoginUser({
+		email,
+		password: 'correct horse battery staple',
+		createCount: 1
+	});
+	await seedTeacherProfile({
+		email,
+		name: 'Public Integration Teacher',
+		state: 'Integration State',
+		county: 'Integration County',
+		district: 'Integration District',
+		school: 'Integration Elementary',
+		wishlistUrl: 'https://example.com/public-wishlist',
+		aboutMe: 'This public teacher page was rendered on the server.',
+		urlId: 'public-integration-teacher'
+	});
+
+	const response = await page.goto(`${stack.frontendOrigin}/teacher/public-integration-teacher`, {
+		waitUntil: 'domcontentloaded'
+	});
+	expect(response?.status()).toBe(200);
+	await expect(page).toHaveTitle('Public Integration Teacher - Homeroom Heroes Teacher Profile');
+	await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+		'href',
+		'https://www.helpteachers.net/teacher/public-integration-teacher'
+	);
+
+	const initialHtml = await response?.text();
+	expect(initialHtml).toContain('Public Integration Teacher');
+	expect(initialHtml).toContain('This public teacher page was rendered on the server.');
+
+	await expect(
+		page.getByRole('heading', { level: 1, name: 'Public Integration Teacher' })
+	).toBeVisible();
+	await expect(page.getByText('School: Integration Elementary')).toBeVisible();
+	await expect(page.getByText('Location: Integration County, Integration State')).toBeVisible();
+	await expect(page.getByRole('link', { name: 'View Wishlist' })).toHaveAttribute(
+		'href',
+		'https://example.com/public-wishlist'
+	);
+	await expect(page.getByRole('link', { name: 'Edit Info' })).toHaveCount(0);
+});
+
+test('public teacher URL returns a real 404 for missing teachers', async ({ page }) => {
+	await resetDatabase();
+
+	const response = await page.goto(`${stack.frontendOrigin}/teacher/missing-teacher`, {
+		waitUntil: 'domcontentloaded'
+	});
+
+	expect(response?.status()).toBe(404);
+	await expect(page.getByText('Teacher not found')).toBeVisible();
+});
+
+test('profile edit posts an about-me update to FastAPI and persists it', async ({ page }) => {
+	await resetDatabase();
+	await seedSchool({
+		state: 'Integration State',
+		county: 'Integration County',
+		district: 'Integration District',
+		school: 'Integration Elementary'
+	});
+	const email = 'profile.edit.integration@example.test';
+	const password = 'correct horse battery staple';
+	await seedLoginUser({
+		email,
+		password,
+		createCount: 1
+	});
+	await seedTeacherProfile({
+		email,
+		name: 'Editable Integration Teacher',
+		state: 'Integration State',
+		county: 'Integration County',
+		district: 'Integration District',
+		school: 'Integration Elementary',
+		wishlistUrl: 'https://example.com/edit-wishlist',
+		aboutMe: 'Original classroom story.',
+		urlId: 'editable-integration-teacher'
+	});
+
+	await gotoFrontend(page, '/login');
+	await page.getByLabel(/^Email/).fill(email);
+	await page.getByLabel(/^Password/).fill(password);
+
+	const loginResponse = await submitAndWaitForBackendPost(
+		page,
+		() => page.getByRole('button', { name: 'Submit' }).click(),
+		'/profile/login/'
+	);
+	expect(loginResponse.status()).toBe(200);
+
+	await gotoFrontend(page, '/profile/edit');
+	await expect(page.getByLabel(/^Name/)).toHaveValue('Editable Integration Teacher');
+	await expect(page.getByLabel(/^About Me/)).toHaveValue('Original classroom story.');
+
+	await page.getByLabel(/^About Me/).fill('Updated classroom story from SvelteKit.');
+	const updateResponse = await submitAndWaitForBackendPost(
+		page,
+		() => page.getByRole('button', { name: 'Update About Me' }).click(),
+		'/profile/update_info/'
+	);
+
+	expect(updateResponse.status()).toBe(200);
+	await expect.poll(() => new URL(page.url()).pathname).toBe('/teacher');
+
+	const teacherProfile = await getTeacherProfile(email);
+	expect(teacherProfile.about_me).toBe('Updated classroom story from SvelteKit.');
+});
+
+test('forum list loads real FastAPI posts through SvelteKit', async ({ page }) => {
+	await resetDatabase();
+	const email = 'forum.integration@example.test';
+	await seedLoginUser({
+		email,
+		password: 'correct horse battery staple',
+		createCount: 1
+	});
+	await seedForumPost({
+		email,
+		title: 'Integration forum discussion',
+		content: 'This forum post came from the isolated FastAPI database.',
+		createdAt: '2026-06-10T12:00:00',
+		upvoteCount: 5,
+		commentCount: 2
+	});
+
+	await gotoFrontend(page, '/forum');
+
+	await expect(page.getByRole('heading', { level: 1, name: "The Teachers' Lounge" })).toBeVisible();
+	await expect(page.getByRole('link', { name: /Integration forum discussion/ })).toBeVisible();
+	await expect(page.getByText('isolated FastAPI database')).toBeVisible();
+	await expect(page.getByText('5 upvotes')).toBeVisible();
+	await expect(page.getByText('2 comments')).toBeVisible();
+});
+
+test('forum post detail loads real FastAPI post and comments through SvelteKit', async ({
+	page
+}) => {
+	await resetDatabase();
+	const email = 'forum.detail.integration@example.test';
+	const title = 'Integration forum detail discussion';
+	await seedLoginUser({
+		email,
+		password: 'correct horse battery staple',
+		createCount: 1
+	});
+	await seedForumPost({
+		email,
+		title,
+		content: 'This detailed forum post came from the isolated FastAPI database.',
+		createdAt: '2026-06-10T12:00:00',
+		upvoteCount: 7,
+		commentCount: 1
+	});
+	await seedForumComment({
+		email,
+		postTitle: title,
+		content: 'This detail comment came from the isolated FastAPI database.',
+		createdAt: '2026-06-11T12:00:00'
+	});
+	const post = await getForumPost(title);
+
+	await gotoFrontend(page, `/forum/post?id=${post.id}`);
+
+	await expect(page.getByRole('heading', { level: 1, name: 'Discussion Detail' })).toBeVisible();
+	await expect(
+		page.getByRole('heading', { level: 2, name: 'Integration forum detail discussion' })
+	).toBeVisible();
+	await expect(
+		page.getByText('detailed forum post came from the isolated FastAPI database')
+	).toBeVisible();
+	await expect(page.getByText('7 upvotes')).toBeVisible();
+	await expect(page.getByText('1 comments', { exact: true })).toBeVisible();
+	await expect(
+		page.getByText('detail comment came from the isolated FastAPI database')
+	).toBeVisible();
+});
+
+test('logged-in forum users can vote and comment through SvelteKit', async ({ page }) => {
+	await resetDatabase();
+	const email = 'forum.actions.integration@example.test';
+	const password = 'correct horse battery staple';
+	const title = 'Interactive integration discussion';
+	await seedLoginUser({ email, password, createCount: 1 });
+	await seedForumPost({
+		email,
+		title,
+		content: 'This discussion exercises real forum mutations.',
+		createdAt: '2026-06-10T12:00:00',
+		upvoteCount: 0,
+		commentCount: 0
+	});
+	const seededPost = await getForumPost(title);
+
+	await gotoFrontend(page, '/login');
+	await page.getByLabel(/^Email/).fill(email);
+	await page.getByLabel(/^Password/).fill(password);
+	await submitAndWaitForBackendPost(
+		page,
+		() => page.getByRole('button', { name: 'Submit' }).click(),
+		'/profile/login/'
+	);
+
+	await gotoFrontend(page, `/forum/post?id=${seededPost.id}`);
+	const voteResponsePromise = page.waitForResponse(
+		(response) =>
+			response.request().method() === 'POST' &&
+			new URL(response.url()).pathname === `/forum/posts/${seededPost.id}/vote`
+	);
+	await page.getByRole('button', { name: 'Upvote' }).click();
+	expect((await voteResponsePromise).status()).toBe(200);
+	await expect(page.getByText('1 upvotes')).toBeVisible();
+
+	await page.getByLabel('Add a comment').fill('A real integration comment.');
+	const commentResponse = await submitAndWaitForBackendPost(
+		page,
+		() => page.getByRole('button', { name: 'Post Comment' }).click(),
+		`/forum/posts/${seededPost.id}/comment`
+	);
+	expect(commentResponse.status()).toBe(200);
+	await expect(page.getByText('A real integration comment.')).toBeVisible();
+
+	const persistedPost = await getForumPost(title);
+	expect(persistedPost.upvote_count).toBe(1);
+	expect(persistedPost.comment_count).toBe(1);
 });
 
 test('registration posts to FastAPI and queues a NewUsers validation row', async ({ page }) => {
@@ -318,6 +825,100 @@ async function seedSchool(args: {
 	);
 }
 
+async function seedPasswordResetToken(args: { email: string; token: string }): Promise<void> {
+	await runDbHelper(
+		['seed-password-reset-token', '--email', args.email, '--token', args.token],
+		stack.env
+	);
+}
+
+async function seedTeacherProfile(args: {
+	email: string;
+	name: string;
+	state: string;
+	county: string;
+	district: string;
+	school: string;
+	wishlistUrl: string;
+	aboutMe: string;
+	urlId: string;
+}): Promise<void> {
+	await runDbHelper(
+		[
+			'seed-teacher-profile',
+			'--email',
+			args.email,
+			'--name',
+			args.name,
+			'--state',
+			args.state,
+			'--county',
+			args.county,
+			'--district',
+			args.district,
+			'--school',
+			args.school,
+			'--wishlist-url',
+			args.wishlistUrl,
+			'--about-me',
+			args.aboutMe,
+			'--url-id',
+			args.urlId
+		],
+		stack.env
+	);
+}
+
+async function seedForumPost(args: {
+	email: string;
+	title: string;
+	content: string;
+	createdAt: string;
+	upvoteCount: number;
+	commentCount: number;
+}): Promise<void> {
+	await runDbHelper(
+		[
+			'seed-forum-post',
+			'--email',
+			args.email,
+			'--title',
+			args.title,
+			'--content',
+			args.content,
+			'--created-at',
+			args.createdAt,
+			'--upvote-count',
+			String(args.upvoteCount),
+			'--comment-count',
+			String(args.commentCount)
+		],
+		stack.env
+	);
+}
+
+async function seedForumComment(args: {
+	email: string;
+	postTitle: string;
+	content: string;
+	createdAt: string;
+}): Promise<void> {
+	await runDbHelper(
+		[
+			'seed-forum-comment',
+			'--email',
+			args.email,
+			'--post-title',
+			args.postTitle,
+			'--content',
+			args.content,
+			'--created-at',
+			args.createdAt
+		],
+		stack.env
+	);
+}
+
 async function getNewUser(email: string, plainPassword: string): Promise<NewUserRecord> {
 	const output = await runDbHelper(
 		['get-new-user', '--email', email, '--plain-password', plainPassword],
@@ -329,10 +930,48 @@ async function getNewUser(email: string, plainPassword: string): Promise<NewUser
 	return record as NewUserRecord;
 }
 
+async function getRegisteredUser(
+	email: string,
+	plainPassword: string
+): Promise<RegisteredUserRecord> {
+	const output = await runDbHelper(
+		['get-registered-user', '--email', email, '--plain-password', plainPassword],
+		stack.env
+	);
+	const record = JSON.parse(output) as RegisteredUserRecord | null;
+
+	expect(record).not.toBeNull();
+	return record as RegisteredUserRecord;
+}
+
+async function getTeacherProfile(email: string): Promise<TeacherProfileRecord> {
+	const output = await runDbHelper(['get-teacher-profile', '--email', email], stack.env);
+	const record = JSON.parse(output) as TeacherProfileRecord | null;
+
+	expect(record).not.toBeNull();
+	return record as TeacherProfileRecord;
+}
+
+async function getPasswordResetToken(email: string): Promise<PasswordResetTokenRecord> {
+	const output = await runDbHelper(['get-password-reset-token', '--email', email], stack.env);
+	const record = JSON.parse(output) as PasswordResetTokenRecord | null;
+
+	expect(record).not.toBeNull();
+	return record as PasswordResetTokenRecord;
+}
+
+async function getForumPost(title: string): Promise<ForumPostRecord> {
+	const output = await runDbHelper(['get-forum-post', '--title', title], stack.env);
+	const record = JSON.parse(output) as ForumPostRecord | null;
+
+	expect(record).not.toBeNull();
+	return record as ForumPostRecord;
+}
+
 async function submitAndWaitForBackendPost(
 	page: Page,
 	action: () => Promise<void>,
-	path: '/profile/login/' | '/profile/register/'
+	path: string
 ): Promise<PlaywrightResponse> {
 	const responsePromise = page.waitForResponse(
 		(response) =>
@@ -342,7 +981,7 @@ async function submitAndWaitForBackendPost(
 	return responsePromise;
 }
 
-async function gotoFrontend(page: Page, path: '/login' | '/register'): Promise<void> {
+async function gotoFrontend(page: Page, path: string): Promise<void> {
 	await page.goto(`${stack.frontendOrigin}${path}`, { waitUntil: 'load' });
 	await page.waitForLoadState('networkidle');
 }
