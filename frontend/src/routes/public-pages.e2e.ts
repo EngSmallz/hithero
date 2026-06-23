@@ -6,77 +6,88 @@ const publicPages = [
 		title: 'Homeroom Heroes - Support Teachers',
 		canonical: 'https://www.helpteachers.net/',
 		heading: 'Support Teachers, Empower Futures!',
-		description: /Connect with teachers/
+		description: /Connect with teachers/,
+		robots: null
 	},
 	{
 		path: '/teachers',
 		title: 'Homeroom Heroes - Find Teachers',
 		canonical: 'https://www.helpteachers.net/teachers',
 		heading: 'Find a Teacher',
-		description: /Search for teachers/
+		description: /Search for teachers/,
+		robots: null
 	},
 	{
 		path: '/contact',
 		title: 'Homeroom Heroes - Contact Us',
 		canonical: 'https://www.helpteachers.net/contact',
 		heading: 'Contact Us',
-		description: /Contact Homeroom Heroes/
+		description: /Contact Homeroom Heroes/,
+		robots: null
 	},
 	{
 		path: '/register',
 		title: 'Homeroom Heroes - Register',
 		canonical: 'https://www.helpteachers.net/register',
 		heading: 'User Registration',
-		description: /Register as an educator/
+		description: /Register as an educator/,
+		robots: null
 	},
 	{
 		path: '/login',
 		title: 'Homeroom Heroes - Login',
 		canonical: 'https://www.helpteachers.net/login',
 		heading: 'Log In to Your Account',
-		description: /Log in to your Homeroom Heroes account/
+		description: /Log in to your Homeroom Heroes account/,
+		robots: null
 	},
 	{
 		path: '/forgot',
 		title: 'Homeroom Heroes - Forgot Password',
 		canonical: 'https://www.helpteachers.net/forgot',
 		heading: 'Forgot Your Password?',
-		description: /Request password reset instructions/
+		description: /Request password reset instructions/,
+		robots: null
 	},
 	{
 		path: '/reset-password',
 		title: 'Reset Password - Homeroom Heroes',
 		canonical: 'https://www.helpteachers.net/reset-password',
 		heading: 'Reset Your Password',
-		description: /Reset your Homeroom Heroes account password/
+		description: /Reset your Homeroom Heroes account password/,
+		robots: 'noindex, nofollow'
 	},
 	{
 		path: '/forum',
 		title: 'Homeroom Heroes - Forum Discussions',
 		canonical: 'https://www.helpteachers.net/forum',
 		heading: "The Teachers' Lounge",
-		description: /teacher forum discussions/
+		description: /teacher forum discussions/,
+		robots: 'noindex, nofollow'
 	},
 	{
 		path: '/partners',
 		title: 'Homeroom Heroes - Sponsors and Thank You',
 		canonical: 'https://www.helpteachers.net/partners',
 		heading: 'Thank You to Our Partners',
-		description: /radio, event, and financial partners/
+		description: /radio, event, and financial partners/,
+		robots: null
 	},
 	{
 		path: '/terms',
 		title: 'Terms and Conditions - Homeroom Heroes',
 		canonical: 'https://www.helpteachers.net/terms',
 		heading: 'Terms and Conditions',
-		description: /charitable contributions/
+		description: /charitable contributions/,
+		robots: null
 	},
 	{
 		path: '/wishlist-setup',
 		title: 'Steps to Setup Wishlist - Homeroom Heroes',
 		canonical: 'https://www.helpteachers.net/wishlist-setup',
 		heading: 'Steps to Setup Wishlist',
-		description: /Amazon classroom wishlist/
+		description: /Amazon classroom wishlist/,
+		robots: null
 	}
 ];
 
@@ -95,6 +106,14 @@ test.describe('static public pages', () => {
 				'href',
 				pageSpec.canonical
 			);
+			if (pageSpec.robots) {
+				await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+					'content',
+					pageSpec.robots
+				);
+			} else {
+				await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
+			}
 			await expect(page.locator('body')).not.toContainText('/pages/');
 		});
 	}

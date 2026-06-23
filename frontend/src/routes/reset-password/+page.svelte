@@ -74,6 +74,7 @@
 	title="Reset Password - Homeroom Heroes"
 	description="Reset your Homeroom Heroes account password using your secure reset link."
 	path={routes.resetPassword}
+	noindex
 />
 
 <PageShell
