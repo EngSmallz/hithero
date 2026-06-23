@@ -108,7 +108,7 @@ Each migrated page should preserve the canonical URL, pass browser tests, and re
 
 ### Phase 4: Authenticated App Pages
 
-- Migrate profile create/edit, update password, validation, admin, and forum flows.
+- Migrated profile create/edit, update password, validation, admin, and forum flows.
 - Use progressive enhancement for forms where practical.
 - Keep private pages out of sitemap.
 - Ensure unauthenticated access returns or redirects to the correct status/page.

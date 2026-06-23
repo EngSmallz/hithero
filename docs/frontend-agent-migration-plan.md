@@ -203,7 +203,7 @@ Teacher directory requirements:
 
 ### Step 8: Migrate Authenticated App Pages
 
-Migrate only after public pages and shared auth handling are stable.
+Status: complete for the planned authenticated route set. Keep future work focused on tightening tests, API ergonomics, and backend legacy cleanup rather than adding new frontend bridge routes.
 
 Routes:
 
@@ -351,7 +351,7 @@ Use small commits.
 7. Port login/forgot/register.
 8. Port teacher directory.
 9. Port teacher profile SSR.
-10. Port authenticated pages.
+10. Port authenticated pages. Done.
 11. Clean legacy route serving.
 
 Each commit should leave the app runnable.
