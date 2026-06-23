@@ -1713,7 +1713,17 @@ async def validation_page(request: Request, role: str = Depends(get_current_role
             new_users = result.fetchall()
             return {"new_users": [{"name": user[0].name, "email": user[0].email, "state": user[0].state, "district": user[0].district, "school": user[0].school, "phone_number": user[0].phone_number, "report": user[0].report, "emailed": user[0].emailed} for user in new_users], "role": role}
         if role == 'teacher':
-            store_my_cookies(request, id)
+            teacher_query = select(TeacherList).where(TeacherList.regUserID == id)
+            teacher_result = db.execute(teacher_query)
+            teacher_data = teacher_result.fetchone()
+            if not teacher_data:
+                return {"new_users": [], "role": role}
+
+            request.session["state"] = teacher_data[0].state
+            request.session["county"] = teacher_data[0].county
+            request.session["district"] = teacher_data[0].district
+            request.session["school"] = teacher_data[0].school
+            request.session["teacher"] = teacher_data[0].name
             state = get_index_cookie('state', request)
             county = get_index_cookie('county', request)
             district = get_index_cookie('district', request)
