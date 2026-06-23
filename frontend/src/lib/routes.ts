@@ -26,7 +26,9 @@ export const routes = {
 	profileCreate: '/profile/create',
 	profileEdit: '/profile/edit',
 	validation: '/validation',
-	admin: '/admin'
+	admin: '/admin',
+	forbidden: '/403',
+	notFound: '/404'
 } as const;
 
 export type RouteHref = (typeof routes)[keyof typeof routes];
