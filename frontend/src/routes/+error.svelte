@@ -18,13 +18,24 @@
 		}
 	};
 
-	let copy = $derived(
+	let fallbackCopy = $derived(
 		errorCopy[page.status] ?? {
 			title: `${page.status} - Homeroom Heroes`,
 			heading: page.error?.message || 'Something went wrong',
 			message: 'Please try again or return to the homepage.'
 		}
 	);
+	let copy = $derived({
+		title:
+			page.status === 404 && page.error?.message && page.error.message !== fallbackCopy.heading
+				? `404 - ${page.error.message} - Homeroom Heroes`
+				: fallbackCopy.title,
+		heading:
+			page.status === 404 && page.error?.message && page.error.message !== fallbackCopy.heading
+				? page.error.message
+				: fallbackCopy.heading,
+		message: fallbackCopy.message
+	});
 </script>
 
 <Seo title={copy.title} description={copy.message} path={page.url.pathname} noindex />
