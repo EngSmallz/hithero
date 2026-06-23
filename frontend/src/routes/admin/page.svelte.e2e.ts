@@ -1,0 +1,133 @@
+import { expect, test, type Page } from '@playwright/test';
+import { installAuthenticatedSession } from '$lib/test/session';
+
+async function installAdminSession(page: Page) {
+	await installAuthenticatedSession(page.context(), 'admin');
+}
+
+async function addSelectOption(page: Page, label: RegExp, value: string) {
+	await page.getByLabel(label).evaluate((select, optionValue) => {
+		if (!(select instanceof HTMLSelectElement)) {
+			return;
+		}
+
+		if (![...select.options].some((option) => option.value === optionValue)) {
+			select.add(new Option(optionValue, optionValue));
+		}
+	}, value);
+}
+
+async function addReportSelections(page: Page) {
+	await addSelectOption(page, /^State/, 'Washington');
+	await page.getByLabel(/^State/).selectOption('Washington');
+	await addSelectOption(page, /^County/, 'King');
+	await page.getByLabel(/^County/).selectOption('King');
+	await addSelectOption(page, /^School District/, 'Seattle Public Schools');
+	await page.getByLabel(/^School District/).selectOption('Seattle Public Schools');
+	await addSelectOption(page, /^School$/, 'Evergreen Elementary');
+	await page.getByLabel(/^School$/).selectOption('Evergreen Elementary');
+}
+
+test.describe('/admin', () => {
+	test('redirects unauthenticated visitors to login before rendering', async ({ page }) => {
+		await page.goto('/admin', { waitUntil: 'domcontentloaded' });
+
+		await expect(page).toHaveURL('/login?redirect=%2Fadmin');
+	});
+
+	test('renders administrator tools for admins', async ({ page }) => {
+		await installAdminSession(page);
+
+		await page.goto('/admin', { waitUntil: 'domcontentloaded' });
+
+		await expect(page.getByRole('heading', { level: 1, name: 'Admin Panel' })).toBeVisible();
+		await expect(
+			page.getByRole('heading', { level: 2, name: 'Get Teacher Contact Info' })
+		).toBeVisible();
+		await expect(page.getByLabel(/^State/)).toBeVisible();
+		await expect(page.getByLabel(/^County/)).toBeVisible();
+		await expect(page.getByLabel(/^School District/)).toBeVisible();
+		await expect(page.getByLabel(/^School$/)).toBeVisible();
+		await expect(
+			page.getByRole('heading', { level: 2, name: 'Delete User Account' })
+		).toBeVisible();
+		await expect(page.getByLabel(/^Target User Email/)).toBeVisible();
+		await expect(page.getByLabel(/^Admin Secret Key/)).toBeVisible();
+		await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+			'content',
+			'noindex, nofollow'
+		);
+	});
+
+	test('loads dependent school choices from FastAPI as filters change', async ({ page }) => {
+		await installAdminSession(page);
+		await page.route('**/api/index_counties/Washington', async (route) => {
+			await route.fulfill({
+				contentType: 'application/json',
+				body: JSON.stringify(['King'])
+			});
+		});
+		await page.route('**/api/index_districts/Washington/King', async (route) => {
+			await route.fulfill({
+				contentType: 'application/json',
+				body: JSON.stringify(['Seattle Public Schools'])
+			});
+		});
+		await page.route(
+			'**/api/index_schools/Washington/King/Seattle%20Public%20Schools',
+			async (route) => {
+				await route.fulfill({
+					contentType: 'application/json',
+					body: JSON.stringify(['Evergreen Elementary'])
+				});
+			}
+		);
+
+		await page.goto('/admin', { waitUntil: 'domcontentloaded' });
+		await addSelectOption(page, /^State/, 'Washington');
+
+		await page.getByLabel(/^State/).selectOption('Washington');
+		await expect(page.getByLabel(/^County/)).toContainText('King');
+		await page.getByLabel(/^County/).selectOption('King');
+		await expect(page.getByLabel(/^School District/)).toContainText('Seattle Public Schools');
+		await page.getByLabel(/^School District/).selectOption('Seattle Public Schools');
+		await expect(page.getByLabel(/^School$/)).toContainText('Evergreen Elementary');
+	});
+
+	test('submits teacher report generation and shows backend message', async ({ page }) => {
+		await installAdminSession(page);
+		await page.route('**/admin/generate_teacher_report/', async (route) => {
+			await route.fulfill({
+				contentType: 'application/json',
+				body: JSON.stringify({ message: 'Teacher report sent.' })
+			});
+		});
+
+		await page.goto('/admin', { waitUntil: 'domcontentloaded' });
+		await addReportSelections(page);
+		await page.getByRole('button', { name: 'Get Info' }).click();
+
+		await expect(page.getByRole('status')).toContainText('Teacher report sent.');
+	});
+
+	test('confirms and submits user deletion to FastAPI', async ({ page }) => {
+		await installAdminSession(page);
+		await page.route('**/profile/delete/', async (route) => {
+			await route.fulfill({
+				contentType: 'application/json',
+				body: JSON.stringify({ message: 'User deleted.' })
+			});
+		});
+		page.on('dialog', async (dialog) => {
+			expect(dialog.message()).toContain('delete user: old-user@example.test');
+			await dialog.accept();
+		});
+
+		await page.goto('/admin', { waitUntil: 'domcontentloaded' });
+		await page.getByLabel(/^Target User Email/).fill('old-user@example.test');
+		await page.getByLabel(/^Admin Secret Key/).fill('admin-secret');
+		await page.getByRole('button', { name: 'Permanently Delete Account' }).click();
+
+		await expect(page.getByRole('status')).toContainText('User deleted.');
+	});
+});
