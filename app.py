@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Request, Form, Depends, Body, File, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, FileResponse
 from pydantic import BaseModel, Field
-import os, logging, smtplib, secrets, string, time, ssl, datetime, base64, requests, threading
+import os, logging, smtplib, secrets, string, time, ssl, datetime, base64, mimetypes, requests, threading
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import select, cast, delete, insert, update
 from typing import Optional, List
 from tweepy import Client
+from backend.routers.admin import create_admin_router
 from backend.routers.forum import create_forum_router
 from backend.routers.teachers import create_teacher_router
 try:
@@ -568,6 +569,44 @@ def send_email(recipient_email: str, subject: str, html_message: str, plain_mess
 
     except Exception as ex:
         print("Azure email error:", ex)
+        return False
+
+def send_attachment(recipient_email: str, subject: str, message: str, attachment_path: str):
+    if APP_ENV == "test":
+        print(f"APP_ENV=test; skipping attachment email to {recipient_email}.")
+        return True
+
+    if EmailClient is None:
+        print("Azure email client is not installed. Skipping attachment email.")
+        return False
+
+    try:
+        with open(attachment_path, "rb") as attachment:
+            encoded_content = base64.b64encode(attachment.read()).decode("utf-8")
+
+        content_type = mimetypes.guess_type(attachment_path)[0] or "application/octet-stream"
+        client = EmailClient.from_connection_string(
+            os.getenv("AZURE_EMAIL_CONNECTION_STRING")
+        )
+        email_message = {
+            "senderAddress": os.getenv("AZURE_EMAIL_SENDER"),
+            "recipients": {"to": [{"address": recipient_email}]},
+            "content": {
+                "subject": subject,
+                "plainText": message,
+                "html": f"<p>{message}</p>",
+            },
+            "attachments": [
+                {
+                    "name": os.path.basename(attachment_path),
+                    "contentType": content_type,
+                    "contentInBase64": encoded_content,
+                }
+            ],
+        }
+        return client.begin_send(email_message).result()
+    except Exception as ex:
+        print("Azure attachment email error:", ex)
         return False
 
 def send_registration_email(recipient_email: str):
@@ -1147,46 +1186,6 @@ async def logout_user(request: Request):
         del request.session["user_email"]
     return RedirectResponse(url="/", status_code=303)
 
-# Endpoint to move a user from new_users to registered_users and delete item in new_users
-@app.post("/validation/validate_user/{user_email}")
-async def move_user(user_email: str, role: str = Depends(get_current_role), request: Request = None):
-    if role not in ('admin', 'teacher'):
-        raise HTTPException(status_code=403, detail="Access denied.")
-    db = SessionLocal()
-    try:
-        query = select(NewUsers).where(cast(NewUsers.email, String) == cast(user_email, String))
-        result = db.execute(query)
-        user = result.fetchone()
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found in new_users")
-
-        # Teachers can only validate users within their own district
-        if role == 'teacher':
-            id = get_current_id(request)
-            teacher_record = db.execute(select(TeacherList).where(TeacherList.regUserID == id)).fetchone()
-            if not teacher_record or (
-                user[0].state != teacher_record[0].state or
-                user[0].county != teacher_record[0].county or
-                user[0].district != teacher_record[0].district
-            ):
-                raise HTTPException(status_code=403, detail="You can only validate teachers in your own district.")
-        
-        query = insert(RegisteredUsers).values(email=user[0].email, password=user[0].password, role=user[0].role, phone_number = user[0].phone_number)
-        db.execute(query)
-        delete_query = delete(NewUsers).where(cast(NewUsers.email, String) == cast(user_email, String))
-        db.execute(delete_query)
-        db.commit()
-        send_validation_email(user[0].email)        
-        return {"message": "User validated."}
-    except HTTPException:
-        raise
-    except Exception as e:
-        db.rollback()
-        logger.error(f"Internal Server Error: {str(e)}") 
-        raise HTTPException(status_code=500, detail="Internal Server Error")
-    finally:
-        db.close()
-
 ##this api allows a logged in user to create an item in the table teacher_list in the hithero database if they have not created a user already
 @app.post("/profile/create_teacher_profile/")
 async def create_teacher_profile(request: Request, name: str = Form(...), state: str = Form(...), county: str = Form(...), district: str = Form(...), school: str = Form(...), aboutMe: str = Form(...), wishlist: str = Form(...), id: int = Depends(get_current_id), role: str = Depends(get_current_role)):
@@ -1622,44 +1621,6 @@ async def check_access_teacher(request: Request, id: int = Depends(get_current_i
         db.close()
 
 
-#gets a list of unverified users to validate based on the role of the user
-@app.get("/api/validation_list/")
-async def validation_page(request: Request, role: str = Depends(get_current_role), id: int = Depends(get_current_id)):
-    db = SessionLocal()
-    try:
-        if role == "admin":
-            query = select(NewUsers)
-            result = db.execute(query)
-            new_users = result.fetchall()
-            return {"new_users": [{"name": user[0].name, "email": user[0].email, "state": user[0].state, "district": user[0].district, "school": user[0].school, "phone_number": user[0].phone_number, "report": user[0].report, "emailed": user[0].emailed} for user in new_users], "role": role}
-        if role == 'teacher':
-            teacher_query = select(TeacherList).where(TeacherList.regUserID == id)
-            teacher_result = db.execute(teacher_query)
-            teacher_data = teacher_result.fetchone()
-            if not teacher_data:
-                return {"new_users": [], "role": role}
-
-            set_teacher_session(request, teacher_data[0])
-            state = get_index_cookie('state', request)
-            county = get_index_cookie('county', request)
-            district = get_index_cookie('district', request)
-            query = select(NewUsers).where(
-                (cast(NewUsers.state, String) == state) &
-                (cast(NewUsers.county, String) == county) &
-                (cast(NewUsers.district, String) == district)
-            )
-            result = db.execute(query)
-            new_users = result.fetchall()
-            return {"new_users": [{"name": user[0].name, "email": user[0].email, "state": user[0].state, "district": user[0].district, "school": user[0].school, "phone_number": user[0].phone_number, "report": user[0].report, "emailed": user[0].emailed} for user in new_users], "role": role}
-        else:
-            raise HTTPException(status_code=403, detail="You don't have permission to access this page.")
-    except Exception as e:
-        logger.error(f"Internal Server Error: {str(e)}") 
-        raise HTTPException(status_code=500, detail="Internal Server Error")          
-    finally:
-        db.close()
-
-
 @app.post("/profile/forgot_password/")
 @limiter.limit("5/minute")
 async def forgot_password(request: Request, email: str = Form(...)):
@@ -1813,67 +1774,6 @@ async def get_teacher_info(url_id: str, request: Request):
     except Exception as e:
         return RedirectResponse(url="/404")
 
-# Endpoint to  users
-@app.post("/validation/delete_user/{user_email}")
-async def delete_user(user_email: str, role: str = Depends(get_current_role)):
-    if role == 'admin':
-        db = SessionLocal()
-        try:
-            query = select(NewUsers).where(cast(NewUsers.email, String) == cast(user_email, String))
-            result = db.execute(query)
-            user = result.fetchone()
-            if not user:
-                raise HTTPException(status_code=404, detail="User not found in new_users")
-            delete_query = delete(NewUsers).where(cast(NewUsers.email, String) == cast(user_email, String))
-            db.execute(delete_query)
-            db.commit()
-            return {"message": "User deleted successfully."}
-        except Exception as e:
-            db.rollback()
-            logger.error(f"Internal Server Error: {str(e)}") 
-            raise HTTPException(status_code=500, detail="Internal Server Error")
-        finally:
-            db.close()
-    else:
-        raise HTTPException(status_code=403, detail=f"No permission to to action.")
-
-# Function to report a user in validation
-@app.post("/validation/report_user/{user_email}")
-async def report_user(user_email: str, role: str = Depends(get_current_role)):
-    if role not in ('admin', 'teacher'):
-        raise HTTPException(status_code=403, detail="Access denied.")
-    db = SessionLocal()
-    try:
-        update_query = update(NewUsers).where(cast(NewUsers.email, String) == cast(user_email, String)).values(report=1)
-        db.execute(update_query)
-        db.commit()
-        return {"message": "User reported."}
-    except Exception as e:
-        db.rollback()
-        logger.error(f"Internal Server Error: {str(e)}") 
-        raise HTTPException(status_code=500, detail="Internal Server Error")
-    finally:
-        db.close()
-
-# Endpoint to mark that a new users has been emailed
-@app.post("/validation/emailed_user/{user_email}")
-async def emailed_user(user_email: str, role: str = Depends(get_current_role)):
-    if role not in ('admin', 'teacher'):
-        raise HTTPException(status_code=403, detail="Access denied.")
-    db = SessionLocal()
-    try:
-        update_query = update(NewUsers).where(cast(NewUsers.email, String) == cast(user_email, String)).values(emailed=1)
-        db.execute(update_query)
-        db.commit()
-        return {"message": "User emailed."}
-    except Exception as e:
-        db.rollback()
-        logger.error(f"Internal Server Error: {str(e)}") 
-        raise HTTPException(status_code=500, detail="Internal Server Error")
-    finally:
-        db.close()
-
-
 app.include_router(
     create_teacher_router(
         session_factory=SessionLocal,
@@ -1883,76 +1783,6 @@ app.include_router(
         profile_response_model=TeacherProfileResponse,
     )
 )
-
-@app.post("/admin/generate_teacher_report/")
-async def generate_teacher_report(state: str = Form(...), county: str = Form(None), district: str = Form(None), school: str = Form(None), role: str = Depends(get_current_role)):
-    if role != 'admin':
-        raise HTTPException(status_code=403, detail="Access denied: Only administrators can generate reports.")
-    db: Session = SessionLocal()
-    try:
-        # Step 1: Dynamically filter TeacherList based on provided fields (excluding regUserID)
-        query = select(
-            TeacherList.name, TeacherList.school, TeacherList.regUserID
-        ).where(cast(TeacherList.state, String) == state)
-
-        if county:
-            query = query.where(cast(TeacherList.county, String) == county)
-        if district:
-            query = query.where(cast(TeacherList.district, String) == district)
-        if school:
-            query = query.where(cast(TeacherList.school, String) == school)
-
-        teachers = db.execute(query).fetchall()
-
-        if not teachers:
-            raise HTTPException(status_code=404, detail="No teachers found with the specified criteria.")
-
-        # Step 2: Fetch email and phone from RegisteredUsers using regUserID
-        reg_user_ids = [teacher.regUserID for teacher in teachers]
-        user_query = select(
-            RegisteredUsers.id,
-            RegisteredUsers.email,
-            RegisteredUsers.phone_number).where(RegisteredUsers.id.in_(reg_user_ids))
-        users = db.execute(user_query).fetchall()
-
-        # Step 3: Prepare data for the document
-        data = ["Name\tSchool\tEmail\tPhone"]  # Tab-separated headers
-
-        # Step 4: Map teachers to their corresponding user data (email and phone)
-        user_dict = {user.id: {"email": user.email, "phone": user.phone_number} for user in users}
-        for teacher in teachers:
-            teacher_info = f"{teacher.name}\t{teacher.school}\t{user_dict.get(teacher.regUserID, {}).get('email', 'N/A')}\t{user_dict.get(teacher.regUserID, {}).get('phone', 'N/A')}"
-            data.append(teacher_info)
-
-        # Step 5: Prepare the file content as a string (convert list to newline-separated string)
-        file_content = "\n".join(data)  # Now file_content includes both headers and teacher data
-
-        file_name = 'teacher_report.txt'
-        file_path = os.path.join('./', file_name)  # Specify the full path where the file will be saved
-
-        with open(file_path, 'w') as temp_file:
-            temp_file.write(file_content)  # Save your report data to the file
-
-        # Step 6: Send the attachment and delete remnant on disk
-        send_attachment(
-            recipient_email="homeroom.heroes.main@gmail.com",
-            subject="Teacher Report",
-            message="Please find the attached teacher report.",
-            attachment_path=file_path  # Use the specific file path
-        )
-        try:
-            os.remove(file_path)
-        except OSError:
-            logger.error("Failed to delete temporary report file.")
-        # Step 7: Return response
-        return {"message": f"Teacher report saved and sent via email."}
-
-    except Exception as e:
-        logger.error(f"Report generation error: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
-
-    finally:
-        db.close()
 
 # --- Modified API Endpoint for Promotional Items ---
 @app.get("/{token}", response_class=HTMLResponse)
@@ -2016,65 +1846,22 @@ app.include_router(
     )
 )
 
-
-@app.post("/profile/delete/")
-async def admin_delete_user_account(target_email: str = Form(...), admin_secret_input: str = Form(...),current_role: str = Depends(get_current_role)):
-    """
-    Allows an authenticated 'admin' user to delete *any* user account 
-    by providing the target user's email and a secret key via form submission.
-    Deletes the associated teacher entry and the registered user account.
-    """
-    db: Session = SessionLocal()
-    
-    # 1. ROLE CHECK: Ensure the current user is an admin
-    if not current_role or current_role != 'admin':
-        raise HTTPException(status_code=403, detail="Forbidden. Only administrators can delete user accounts.")
-
-    # 2. SECRET CHECK: Ensure the provided secret matches the server configuration
-    # The user-provided prompt suggests checking os.getenv("DATABASE_SERVER")
-    ADMIN_SECRET = os.getenv("admin_secret")
-    
-    if not ADMIN_SECRET or admin_secret_input != ADMIN_SECRET:
-        raise HTTPException(status_code=403, detail="Invalid administrator secret provided.")
-
-    try:
-        # 3. FIND THE TARGET USER ID
-        # Select the ID of the user to be deleted based on the target email.
-        user_id_query = select(RegisteredUsers.id).where(
-            cast(RegisteredUsers.email, String) == cast(target_email, String)
-        )
-        user_id_result = db.execute(user_id_query).fetchone()
-
-        if not user_id_result:
-            raise HTTPException(status_code=404, detail=f"User account linked to '{target_email}' not found.")
-
-        target_user_id = user_id_result[0]
-
-        # 4. DELETE FROM teacher_list
-        # Delete the entry in the teacher_list linked to this user ID (regUserID).
-        delete_teacher_query = delete(TeacherList).where(
-            TeacherList.regUserID == target_user_id
-        )
-        teacher_result = db.execute(delete_teacher_query)
-
-        # 5. DELETE FROM registered_users
-        # Delete the user account itself using the email.
-        delete_user_query = delete(RegisteredUsers).where(
-            cast(RegisteredUsers.email, String) == cast(target_email, String)
-        )
-        user_result = db.execute(delete_user_query)
-        db.commit()
-        return {"message": f"Successfully deleted account and associated data for target user: {target_email}."}
-
-    except HTTPException as h:
-        raise h
-    except Exception as e:
-        db.rollback()
-        print(f"Error during administrative account deletion for {target_email}: {str(e)}")
-        logger.error(f"Internal Server Error: {str(e)}") 
-        raise HTTPException(status_code=500, detail=f"Internal Server Error")
-    finally:
-        db.close()
+app.include_router(
+    create_admin_router(
+        session_factory=SessionLocal,
+        pending_user_model=NewUsers,
+        registered_user_model=RegisteredUsers,
+        teacher_model=TeacherList,
+        get_current_id=get_current_id,
+        get_current_role=get_current_role,
+        set_teacher_session=set_teacher_session,
+        get_index_cookie=get_index_cookie,
+        send_validation_email=send_validation_email,
+        send_attachment=send_attachment,
+        logger=logger,
+        get_admin_secret=os.getenv,
+    )
+)
 
 
 if __name__ == "__main__":
