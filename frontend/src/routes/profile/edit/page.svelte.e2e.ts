@@ -87,10 +87,14 @@ test.describe('/profile/edit', () => {
 			page.getByRole('heading', { level: 1, name: 'Edit Teacher Profile' })
 		).toBeVisible();
 		await expect(page.getByLabel(/^Name/)).toHaveValue('Avery Adams');
-		await expect(page.getByLabel(/^State/)).toHaveValue('Washington');
-		await expect(page.getByLabel(/^County/)).toHaveValue('King');
-		await expect(page.getByLabel(/^School District/)).toHaveValue('Seattle Public Schools');
-		await expect(page.getByLabel(/^School required$/)).toHaveValue('Evergreen Elementary');
+		await expect(page.getByRole('combobox', { name: /^State/ })).toHaveValue('Washington');
+		await expect(page.getByRole('combobox', { name: /^County/ })).toHaveValue('King');
+		await expect(page.getByRole('combobox', { name: /^School District/ })).toHaveValue(
+			'Seattle Public Schools'
+		);
+		await expect(page.getByRole('combobox', { name: /^School required$/ })).toHaveValue(
+			'Evergreen Elementary'
+		);
 		await expect(page.getByLabel(/^About Me/)).toHaveValue('I help students build durable skills.');
 		await expect(page.getByLabel(/^Amazon Wishlist URL/)).toHaveValue(
 			'https://example.com/wishlist'

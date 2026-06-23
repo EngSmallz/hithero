@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { installAuthenticatedSession } from '$lib/test/session';
 
 async function addSelectOption(page: Page, label: RegExp, value: string) {
-	await page.getByLabel(label).evaluate((select, optionValue) => {
+	await page.getByRole('combobox', { name: label }).evaluate((select, optionValue) => {
 		if (!(select instanceof HTMLSelectElement)) {
 			return;
 		}
@@ -29,13 +29,17 @@ async function installTeacherProfileStub(page: Page) {
 
 async function addSchoolSelections(page: Page) {
 	await addSelectOption(page, /^State/, 'WA');
-	await page.getByLabel(/^State/).selectOption('WA');
+	await page.getByRole('combobox', { name: /^State/ }).selectOption('WA');
 	await addSelectOption(page, /^County/, 'King');
-	await page.getByLabel(/^County/).selectOption('King');
+	await page.getByRole('combobox', { name: /^County/ }).selectOption('King');
 	await addSelectOption(page, /^School District/, 'Seattle Public Schools');
-	await page.getByLabel(/^School District/).selectOption('Seattle Public Schools');
+	await page
+		.getByRole('combobox', { name: /^School District/ })
+		.selectOption('Seattle Public Schools');
 	await addSelectOption(page, /^School required$/, 'Evergreen Elementary');
-	await page.getByLabel(/^School required$/).selectOption('Evergreen Elementary');
+	await page
+		.getByRole('combobox', { name: /^School required$/ })
+		.selectOption('Evergreen Elementary');
 }
 
 test.describe('/profile/create', () => {
@@ -48,10 +52,10 @@ test.describe('/profile/create', () => {
 			page.getByRole('heading', { level: 1, name: 'Create Teacher Profile' })
 		).toBeVisible();
 		await expect(page.getByLabel(/^Full Name/)).toBeVisible();
-		await expect(page.getByLabel(/^State/)).toBeVisible();
-		await expect(page.getByLabel(/^County/)).toBeVisible();
-		await expect(page.getByLabel(/^School District/)).toBeVisible();
-		await expect(page.getByLabel(/^School required$/)).toBeVisible();
+		await expect(page.getByRole('combobox', { name: /^State/ })).toBeVisible();
+		await expect(page.getByRole('combobox', { name: /^County/ })).toBeVisible();
+		await expect(page.getByRole('combobox', { name: /^School District/ })).toBeVisible();
+		await expect(page.getByRole('combobox', { name: /^School required$/ })).toBeVisible();
 		await expect(page.getByLabel(/^About Me/)).toBeVisible();
 		await expect(page.getByText('500 characters remaining')).toBeVisible();
 		await expect(page.getByLabel(/^Amazon Wishlist URL/)).toBeVisible();
@@ -89,9 +93,9 @@ test.describe('/profile/create', () => {
 		await page.goto('/profile/create', { waitUntil: 'domcontentloaded' });
 		await addSelectOption(page, /^State/, 'WA');
 
-		await page.getByLabel(/^State/).selectOption('WA');
+		await page.getByRole('combobox', { name: /^State/ }).selectOption('WA');
 
-		await expect(page.getByLabel(/^County/)).toContainText('King');
+		await expect(page.getByRole('combobox', { name: /^County/ })).toContainText('King');
 	});
 
 	test('opens wishlist setup help', async ({ page }) => {

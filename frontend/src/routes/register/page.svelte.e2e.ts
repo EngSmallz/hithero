@@ -3,7 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 const recaptchaSiteKey = '6Lf9uiIqAAAAAMt19WMR4q0aO-JMqks9Du0yHHlL';
 
 async function addSelectOption(page: Page, label: RegExp, value: string) {
-	await page.getByLabel(label).evaluate((select, optionValue) => {
+	await page.getByRole('combobox', { name: label }).evaluate((select, optionValue) => {
 		if (!(select instanceof HTMLSelectElement)) {
 			return;
 		}
@@ -27,10 +27,10 @@ test.describe('/register', () => {
 		await expect(page.getByLabel(/^Phone Number/)).toBeVisible();
 		await expect(page.getByLabel(/^Password/)).toBeVisible();
 		await expect(page.getByLabel(/^Confirm Password/)).toBeVisible();
-		await expect(page.getByLabel(/^State/)).toBeVisible();
-		await expect(page.getByLabel(/^County/)).toBeVisible();
-		await expect(page.getByLabel(/^School District/)).toBeVisible();
-		await expect(page.getByLabel(/^School required$/)).toBeVisible();
+		await expect(page.getByRole('combobox', { name: /^State/ })).toBeVisible();
+		await expect(page.getByRole('combobox', { name: /^County/ })).toBeVisible();
+		await expect(page.getByRole('combobox', { name: /^School District/ })).toBeVisible();
+		await expect(page.getByRole('combobox', { name: /^School required$/ })).toBeVisible();
 		await expect(page.getByLabel('I have read the Terms and Conditions')).toBeVisible();
 		await expect(page.locator('.g-recaptcha')).toHaveAttribute('data-sitekey', recaptchaSiteKey);
 	});
@@ -71,8 +71,8 @@ test.describe('/register', () => {
 		await page.goto('/register', { waitUntil: 'domcontentloaded' });
 		await addSelectOption(page, /^State/, 'WA');
 
-		await page.getByLabel(/^State/).selectOption('WA');
+		await page.getByRole('combobox', { name: /^State/ }).selectOption('WA');
 
-		await expect(page.getByLabel(/^County/)).toContainText('King');
+		await expect(page.getByRole('combobox', { name: /^County/ })).toContainText('King');
 	});
 });
