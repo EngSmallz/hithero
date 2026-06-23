@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, Request, Form, Depends
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, FileResponse
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 import os, logging, datetime, base64, mimetypes, requests, threading
 from dotenv import load_dotenv
@@ -7,7 +7,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.applications import Starlette
 from starlette.middleware.sessions import SessionMiddleware
-from starlette.responses import FileResponse
 from passlib.hash import sha256_crypt
 from sqlalchemy import create_engine, Column, Integer, String, func, LargeBinary, DateTime, ForeignKey, UniqueConstraint, select, cast
 from sqlalchemy.engine import make_url
@@ -20,6 +19,7 @@ from typing import Optional, List
 from tweepy import Client
 from backend.routers.admin import create_admin_router
 from backend.routers.forum import create_forum_router
+from backend.routers.legacy import create_legacy_router, register_legacy_error_handlers
 from backend.routers.profile import create_profile_router
 from backend.routers.teachers import create_teacher_router
 try:
@@ -138,80 +138,6 @@ ALLOWED_ATTRS = {"a": ["href"]}
 
 # Determine the path to the directory
 app.mount("/static", StaticFiles(directory="static"), name="static")
-BASE_STATIC_DIR = "static"
-PAGES_DIR = "pages"
-
-PUBLIC_PAGE_ALIASES = {
-    "/": "homepage.html",
-    "/home": "homepage.html",
-    "/about": "about.html",
-    "/contact": "contact.html",
-    "/partners": "partners.html",
-    "/register": "register.html",
-    "/login": "login.html",
-    "/forgot": "forgot.html",
-    "/update-password": "update_password.html",
-    "/reset-password": "reset_password.html",
-    "/wishlist-setup": "wishlist_setup.html",
-    "/terms": "terms_conditions.html",
-    "/teachers": "index.html",
-    "/403": "403.html",
-    "/404": "404.html",
-}
-
-PRIVATE_PAGE_ALIASES = {
-    "/forum": "forum.html",
-    "/forum/new": "create_post.html",
-    "/forum/post": "post.html",
-    "/teacher": "teacher.html",
-    "/validation": "validation.html",
-    "/admin": "admin.html",
-    "/profile/create": "create.html",
-    "/profile/edit": "edit_teacher.html",
-}
-
-LEGACY_PUBLIC_PAGE_REDIRECTS = {
-    "/pages/homepage.html": "/",
-    "/pages/index.html": "/teachers",
-    "/pages/about.html": "/about",
-    "/pages/contact.html": "/contact",
-    "/pages/partners.html": "/partners",
-    "/pages/register.html": "/register",
-    "/pages/login.html": "/login",
-    "/pages/forgot.html": "/forgot",
-    "/pages/terms_conditions.html": "/terms",
-    "/pages/403.html": "/403",
-    "/pages/404.html": "/404",
-}
-
-PAGE_ROUTE_METHODS = ["GET", "HEAD"]
-
-ADS_TXT_PATH = f"{BASE_STATIC_DIR}/ads.txt"
-SITEMAP_XML_PATH = f"{BASE_STATIC_DIR}/sitemap.xml"
-
-
-def serve_page(page_name: str, status_code: int = 200) -> FileResponse:
-    return FileResponse(os.path.join(PAGES_DIR, page_name), status_code=status_code)
-
-# 1. Route for ads.txt (media_type='text/plain')
-@app.get("/ads.txt", include_in_schema=False)
-async def get_ads_txt():
-    """Serves ads.txt from the static folder at the root URL."""
-    return FileResponse(ADS_TXT_PATH, media_type='text/plain')
-
-# 2. Route for sitemap.xml (media_type='application/xml')
-@app.get("/sitemap.xml", include_in_schema=False)
-async def get_sitemap_xml():
-    """Serves sitemap.xml from the static folder at the root URL."""
-    return FileResponse(SITEMAP_XML_PATH, media_type='application/xml')
-
-# --- Configuration for Promotional Images Mapping ---
-PROMO_IMAGE_MAPPING = {
-    "seattlewolf": "images/partners/1007TheWolf.png",
-    "livefree": "images/partners/965CountryColor.png",
-    "basecamp": "images/partners/BaseCamp.png",
-    "coastal": "images/partners/Coastal.png"
-}
 
 ###cronjob ip white list
 CRONJOB_ALLOWED_IPS = {
@@ -1161,93 +1087,17 @@ async def contact_us(name: str = Form(...), email: str = Form(...), subject: str
         logger.error(f"Internal Server Error: {str(e)}") 
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
-for route_path, page_name in PUBLIC_PAGE_ALIASES.items():
-    async def public_page_alias(_request: Request, page_name: str = page_name):
-        return serve_page(page_name)
-
-    app.add_api_route(route_path, public_page_alias, methods=PAGE_ROUTE_METHODS, include_in_schema=False)
-
-
-for route_path, page_name in PRIVATE_PAGE_ALIASES.items():
-    async def private_page_alias(_request: Request, page_name: str = page_name):
-        return serve_page(page_name)
-
-    app.add_api_route(route_path, private_page_alias, methods=PAGE_ROUTE_METHODS, include_in_schema=False)
-
-
-for legacy_path, clean_path in LEGACY_PUBLIC_PAGE_REDIRECTS.items():
-    async def legacy_public_page_redirect(_request: Request, clean_path: str = clean_path):
-        return RedirectResponse(url=clean_path, status_code=307)
-
-    app.add_api_route(legacy_path, legacy_public_page_redirect, methods=PAGE_ROUTE_METHODS, include_in_schema=False)
-
-
+app.include_router(
+    create_legacy_router(
+        session_factory=SessionLocal,
+        teacher_model=TeacherList,
+        spotlight_model=Spotlight,
+        set_teacher_session=set_teacher_session,
+        logger=logger,
+    )
+)
 app.mount("/pages", StaticFiles(directory="pages"), name="pages")
-
-
-# Custom 404 error handler
-@app.exception_handler(404)
-async def not_found(request: Request, exc: HTTPException):
-    return serve_page("404.html", status_code=404)
-
-# Custom 403 error handler
-@app.exception_handler(403)
-async def forbidden(request: Request, exc: HTTPException):
-    return serve_page("403.html", status_code=403)
-
-#api that gets spotlight data based on token
-@app.get("/spotlight/{token}")
-async def get_spotlight_info(request: Request, token: str):
-    db = SessionLocal()
-    try:
-        query = select(Spotlight).where(cast(Spotlight.token, String) == cast(token, String))
-        result = db.execute(query)
-        spotlight_info = result.fetchone()
-        if spotlight_info:
-            data = spotlight_info[0]
-            if data.image_data:
-                image_data = base64.b64encode(data.image_data).decode('utf-8')
-            else:
-                image_data = None
-            request.session['state'] = data.state
-            request.session['county'] = data.county
-            if data.district:
-                request.session['district'] = data.district
-            if data.school:
-                request.session['school'] = data.school
-                request.session['teacher'] = data.name
-            data_dict = {
-                "state": data.state,
-                "county": data.county,
-                "district": data.district,
-                "school": data.school,
-                "name": data.name,
-                "image_data": image_data
-            }
-            return data_dict
-        else:
-            raise HTTPException(status_code=404, detail="Spotlight info not found for the given token")
-    except Exception as e:
-        logger.error(f"Internal Server Error: {str(e)}") 
-        raise HTTPException(status_code=500, detail=f"Internal server error")
-    finally:
-        db.close()
-
-##this api gets the token, gets the data, sets the data, then redirects
-@app.get("/teacher/{url_id}")
-async def get_teacher_info(url_id: str, request: Request):
-    db = SessionLocal()
-    try:
-        query = select(TeacherList).where(cast(TeacherList.url_id, String) == url_id)
-        result = db.execute(query)
-        teacher_info = result.fetchone()
-        if not teacher_info:
-            return RedirectResponse(url="/404")
-        set_teacher_session(request, teacher_info[0])
-
-        return RedirectResponse(url="/teacher")
-    except Exception as e:
-        return RedirectResponse(url="/404")
+register_legacy_error_handlers(app)
 
 app.include_router(
     create_teacher_router(
@@ -1258,50 +1108,6 @@ app.include_router(
         profile_response_model=TeacherProfileResponse,
     )
 )
-
-# --- Modified API Endpoint for Promotional Items ---
-@app.get("/{token}", response_class=HTMLResponse)
-async def get_promotional_page_with_hero(request: Request, token: str):
-    """
-    Sets a session variable with the promo token and redirects to the homepage.
-    The homepage's JavaScript will then pick up this token and display the promo hero.
-    """
-    lookup_token = token.lower()
-    relative_image_path = PROMO_IMAGE_MAPPING.get(lookup_token)
-
-    if not relative_image_path:
-        relative_image_path = PROMO_IMAGE_MAPPING.get("default")
-        if not relative_image_path:
-            raise HTTPException(status_code=404, detail="Promotional image not found and no default image available in mapping.")
-
-    full_filesystem_path = os.path.join(BASE_STATIC_DIR, relative_image_path)
-    if not os.path.exists(full_filesystem_path):
-        if token != "default":
-            default_relative_path = PROMO_IMAGE_MAPPING.get("default")
-            if default_relative_path and os.path.exists(os.path.join(BASE_STATIC_DIR, default_relative_path)):
-                relative_image_path = default_relative_path
-            else:
-                raise HTTPException(status_code=404, detail=f"Image for token '{token}' not found and default image file is also missing.")
-        else:
-            raise HTTPException(status_code=404, detail="Default promotional image file not found.")
-
-    # Store the actual static URL of the image in the session
-    promo_image_url = f"/static/{relative_image_path}"
-    request.session["promo_image_url"] = promo_image_url
-    request.session["promo_title"] = f"Working together to serve our communities!" # Example title
-
-    # Redirect to the homepage
-    return RedirectResponse(url="/")
-
-# --- API to get promo info (called by JavaScript) ---
-@app.get("/promo/get_promo_info/")
-async def get_promo_info(request: Request):
-    promo_info = {
-        "promo_image_url": request.session.pop("promo_image_url", None), # Pop to clear after use
-        "promo_title": request.session.pop("promo_title", None),
-    }
-    # Clear the session variables after they are fetched
-    return JSONResponse(content=promo_info)
 
 app.include_router(
     create_forum_router(
