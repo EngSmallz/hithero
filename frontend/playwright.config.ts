@@ -4,8 +4,8 @@ const backendPort = Number(process.env.PLAYWRIGHT_BACKEND_PORT ?? 8001);
 const frontendPort = Number(process.env.PLAYWRIGHT_FRONTEND_PORT ?? 4173);
 const backendOrigin = `http://localhost:${backendPort}`;
 const frontendOrigin = `http://localhost:${frontendPort}`;
-const databaseSuffix =
-	process.env.TEST_WORKER_INDEX ?? process.env.PLAYWRIGHT_WORKER_INDEX ?? 'main';
+const testDatabaseUrl =
+	process.env.TEST_DATABASE_URL ?? 'sqlite:///./.tmp/hithero-playwright.sqlite';
 const parseWorkers = (value: string | undefined, fallback: number | string) =>
 	value ? (value.endsWith('%') ? value : Number(value)) : fallback;
 const frontendCommand = process.env.PLAYWRIGHT_SKIP_BUILD
@@ -25,7 +25,7 @@ export default defineConfig({
 				APP_ENV: 'test',
 				CORS_ALLOW_ORIGINS: frontendOrigin,
 				SECRET_KEY: 'test-secret',
-				TEST_DATABASE_URL: `sqlite:///./.tmp/hithero-playwright-${databaseSuffix}.sqlite`,
+				TEST_DATABASE_URL: testDatabaseUrl,
 				PYTHONPATH: 'tests/stubs'
 			},
 			reuseExistingServer: false
