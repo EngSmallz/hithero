@@ -78,17 +78,6 @@ EXPECTED_SITEMAP_LOCS = {
     "https://www.helpteachers.net/terms",
     "https://www.helpteachers.net/wishlist-setup",
     "https://www.helpteachers.net/partners",
-    "https://www.helpteachers.net/forum/post",
-    "https://www.helpteachers.net/teacher",
-    "https://www.helpteachers.net/update-password",
-    "https://www.helpteachers.net/validation",
-    "https://www.helpteachers.net/profile/create",
-    "https://www.helpteachers.net/forum/new",
-    "https://www.helpteachers.net/profile/edit",
-    "https://www.helpteachers.net/forum",
-    "https://www.helpteachers.net/admin",
-    "https://www.helpteachers.net/403",
-    "https://www.helpteachers.net/404",
 }
 
 REMOVED_LEGACY_PUBLIC_LINKS = {

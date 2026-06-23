@@ -1,7 +1,24 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import Button from '$lib/components/Button.svelte';
 	import Seo from '$lib/components/Seo.svelte';
+	import { getBackendOrigin } from '$lib/api/client';
 	import { routes } from '$lib/routes';
+
+	type FeaturedTeacher = {
+		name?: string | null;
+		state?: string | null;
+		county?: string | null;
+		school?: string | null;
+		image_data?: string | null;
+	};
+
+	type Promo = {
+		promo_image_url?: string | null;
+		promo_title?: string | null;
+	};
+
+	const backendOrigin = getBackendOrigin();
 
 	const metrics = [
 		{
@@ -26,13 +43,6 @@
 
 	const actionCards = [
 		{
-			title: 'Teacher of the Day',
-			description: 'Meet educators who are making a daily difference for students.',
-			image: '/images/homepage/tile_border_1.jpg',
-			href: routes.teachers,
-			label: 'Browse Teachers'
-		},
-		{
 			title: 'Are You a Teacher?',
 			description: 'Register to create your profile and share your classroom needs.',
 			image: '/images/homepage/tile_border_3.jpg',
@@ -45,15 +55,78 @@
 			image: '/images/homepage/tile_border_4.jpg',
 			externalHref: 'https://www.paypal.com/donate/?hosted_button_id=B8NRR79ZEV2PS',
 			label: 'Donate'
-		},
-		{
-			title: 'Find a Random Teacher',
-			description: 'Start browsing and discover a teacher whose classroom you can support.',
-			image: '/images/homepage/tile_border_2.jpg',
-			href: routes.teachers,
-			label: 'Find Teachers'
 		}
 	];
+
+	let spotlight = $state<FeaturedTeacher | null>(null);
+	let randomTeacher = $state<FeaturedTeacher | null>(null);
+	let promo = $state<Promo | null>(null);
+	let spotlightError = $state('');
+	let randomTeacherError = $state('');
+	let isLoadingRandomTeacher = $state(false);
+
+	onMount(() => {
+		void Promise.all([loadSpotlight(), loadPromo()]);
+	});
+
+	async function loadSpotlight() {
+		try {
+			const response = await fetch(`${backendOrigin}/spotlight/teacher`, {
+				credentials: 'include'
+			});
+			if (!response.ok) {
+				throw new Error('Teacher of the Day is temporarily unavailable.');
+			}
+			spotlight = (await response.json()) as FeaturedTeacher;
+			spotlightError = '';
+		} catch (error) {
+			spotlightError =
+				error instanceof Error ? error.message : 'Teacher of the Day is temporarily unavailable.';
+		}
+	}
+
+	async function loadPromo() {
+		try {
+			const response = await fetch(`${backendOrigin}/promo/get_promo_info/`, {
+				credentials: 'include'
+			});
+			if (!response.ok) return;
+			const loadedPromo = (await response.json()) as Promo;
+			promo = loadedPromo.promo_image_url ? loadedPromo : null;
+		} catch {
+			promo = null;
+		}
+	}
+
+	async function findRandomTeacher() {
+		isLoadingRandomTeacher = true;
+		randomTeacherError = '';
+		try {
+			const response = await fetch(`${backendOrigin}/api/random_teacher/`, {
+				credentials: 'include'
+			});
+			if (!response.ok) {
+				throw new Error('A random teacher could not be selected. Please try again.');
+			}
+			randomTeacher = (await response.json()) as FeaturedTeacher;
+		} catch (error) {
+			randomTeacher = null;
+			randomTeacherError =
+				error instanceof Error ? error.message : 'A random teacher could not be selected.';
+		} finally {
+			isLoadingRandomTeacher = false;
+		}
+	}
+
+	function teacherImage(teacher: FeaturedTeacher): string {
+		return teacher.image_data
+			? `data:image/jpeg;base64,${teacher.image_data}`
+			: '/images/apple.jpg';
+	}
+
+	function promoImageUrl(value: string): string {
+		return /^https?:\/\//.test(value) ? value : new URL(value, backendOrigin).toString();
+	}
 </script>
 
 <Seo
@@ -85,6 +158,22 @@
 		</div>
 	</section>
 
+	{#if promo?.promo_image_url}
+		<section
+			class="mt-8 overflow-hidden rounded-lg border-4 border-green-600 bg-green-950 p-6 text-center text-white shadow-lg"
+			aria-label="Special promotion"
+		>
+			<img
+				src={promoImageUrl(promo.promo_image_url)}
+				alt={promo.promo_title || 'Homeroom Heroes promotion'}
+				class="mx-auto max-h-96 w-auto rounded-md object-contain"
+			/>
+			<h2 class="mt-5 text-3xl font-bold tracking-normal">
+				{promo.promo_title || 'Special Promotion!'}
+			</h2>
+		</section>
+	{/if}
+
 	<section
 		class="mt-8 rounded-lg bg-gradient-to-r from-green-800 to-green-950 px-6 py-8 text-white shadow-lg"
 	>
@@ -112,6 +201,36 @@
 	</section>
 
 	<section class="mt-8 grid gap-6 md:grid-cols-2">
+		<article
+			class="relative min-h-72 overflow-hidden rounded-lg bg-cover bg-center shadow-md"
+			style="background-image: url('/images/homepage/tile_border_1.jpg');"
+		>
+			<div class="absolute inset-0 bg-slate-950/65"></div>
+			<div
+				class="relative z-10 flex h-full min-h-72 flex-col items-center justify-center p-8 text-center text-white"
+			>
+				<h2 class="text-3xl font-bold tracking-normal">Teacher of the Day</h2>
+				{#if spotlight}
+					<img
+						src={teacherImage(spotlight)}
+						alt={`${spotlight.name || 'Featured teacher'} profile`}
+						class="mt-5 size-36 rounded-full border-2 border-green-300 object-cover"
+					/>
+					<p class="mt-4 text-2xl font-semibold">{spotlight.name || 'Featured Teacher'}</p>
+					<p class="mt-1 text-base text-slate-100">
+						{spotlight.school || 'School unavailable'} in
+						{[spotlight.county, spotlight.state].filter(Boolean).join(', ')}
+					</p>
+					<Button href={routes.teacher} class="mt-6">View Teacher of the Day</Button>
+				{:else if spotlightError}
+					<p class="mt-4 max-w-md text-red-100">{spotlightError}</p>
+					<Button href={routes.teachers} variant="secondary" class="mt-6">Browse Teachers</Button>
+				{:else}
+					<p class="mt-4 text-slate-100">Loading teacher of the day...</p>
+				{/if}
+			</div>
+		</article>
+
 		{#each actionCards as card (card.title)}
 			<article
 				class="relative min-h-72 overflow-hidden rounded-lg bg-cover bg-center shadow-md"
@@ -140,5 +259,48 @@
 				</div>
 			</article>
 		{/each}
+
+		<article
+			class="relative min-h-72 overflow-hidden rounded-lg bg-cover bg-center shadow-md"
+			style="background-image: url('/images/homepage/tile_border_2.jpg');"
+		>
+			<div class="absolute inset-0 bg-slate-950/65"></div>
+			<div
+				class="relative z-10 flex h-full min-h-72 flex-col items-center justify-center p-8 text-center text-white"
+			>
+				<h2 class="text-3xl font-bold tracking-normal">Find a Random Teacher</h2>
+				<p class="mt-4 max-w-md text-lg leading-7 text-slate-100">
+					Discover a teacher at random and make a positive impact on their classroom.
+				</p>
+				<Button
+					type="button"
+					class="mt-6"
+					disabled={isLoadingRandomTeacher}
+					onclick={() => void findRandomTeacher()}
+				>
+					{isLoadingRandomTeacher ? 'Finding a Teacher...' : 'Find Random Teacher'}
+				</Button>
+
+				{#if randomTeacher}
+					<div class="mt-6 flex flex-col items-center">
+						<img
+							src={teacherImage(randomTeacher)}
+							alt={`${randomTeacher.name || 'Random teacher'} profile`}
+							class="size-36 rounded-full border-2 border-green-300 object-cover"
+						/>
+						<p class="mt-4 text-2xl font-semibold">{randomTeacher.name || 'Teacher'}</p>
+						<p class="mt-1 text-base text-slate-100">
+							{randomTeacher.school || 'School unavailable'} in
+							{[randomTeacher.county, randomTeacher.state].filter(Boolean).join(', ')}
+						</p>
+						<Button href={routes.teacher} variant="secondary" class="mt-4">
+							View Random Teacher
+						</Button>
+					</div>
+				{:else if randomTeacherError}
+					<p class="mt-4 text-red-100" role="alert">{randomTeacherError}</p>
+				{/if}
+			</div>
+		</article>
 	</section>
 </div>
