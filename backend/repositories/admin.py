@@ -1,4 +1,4 @@
-from sqlalchemy import String, cast, delete, select
+from sqlalchemy import String, cast, delete, insert, select
 
 
 class AdminRepository:
@@ -69,6 +69,57 @@ class AdminRepository:
             )
             db.commit()
             return True
+        except Exception:
+            db.rollback()
+            raise
+        finally:
+            db.close()
+
+    def validate_pending_user(self, user_email, *, role, current_user_id):
+        db = self._session_factory()
+        try:
+            user_result = db.execute(
+                select(self._pending_user_model).where(
+                    cast(self._pending_user_model.email, String)
+                    == cast(user_email, String)
+                )
+            ).fetchone()
+            if not user_result:
+                db.rollback()
+                return None, "missing"
+
+            user = user_result[0]
+            if role == "teacher":
+                teacher_result = db.execute(
+                    select(self._teacher_model).where(
+                        self._teacher_model.regUserID == current_user_id
+                    )
+                ).fetchone()
+                if (
+                    not teacher_result
+                    or user.state != teacher_result[0].state
+                    or user.county != teacher_result[0].county
+                    or user.district != teacher_result[0].district
+                ):
+                    db.rollback()
+                    return None, "forbidden"
+
+            db.execute(
+                insert(self._registered_user_model).values(
+                    email=user.email,
+                    password=user.password,
+                    role=user.role,
+                    phone_number=user.phone_number,
+                )
+            )
+            db.execute(
+                delete(self._pending_user_model).where(
+                    cast(self._pending_user_model.email, String)
+                    == cast(user_email, String)
+                )
+            )
+            db.commit()
+            return user.email, None
         except Exception:
             db.rollback()
             raise

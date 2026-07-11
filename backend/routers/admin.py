@@ -9,6 +9,7 @@ from backend.services.admin import (
     AdminService,
     PendingUserNotFound,
     UserAccountNotFound,
+    ValidationScopeForbidden,
 )
 
 
@@ -85,64 +86,26 @@ def create_admin_router(
         if role not in ("admin", "teacher"):
             raise HTTPException(status_code=403, detail="Access denied.")
 
-        db = session_factory()
         try:
-            user = db.execute(
-                select(pending_user_model).where(
-                    cast(pending_user_model.email, String)
-                    == cast(user_email, String)
-                )
-            ).fetchone()
-            if not user:
-                raise HTTPException(
-                    status_code=404,
-                    detail="User not found in new_users",
-                )
-
-            if role == "teacher":
-                user_id = get_current_id(request)
-                teacher_record = db.execute(
-                    select(teacher_model).where(
-                        teacher_model.regUserID == user_id
-                    )
-                ).fetchone()
-                if not teacher_record or (
-                    user[0].state != teacher_record[0].state
-                    or user[0].county != teacher_record[0].county
-                    or user[0].district != teacher_record[0].district
-                ):
-                    raise HTTPException(
-                        status_code=403,
-                        detail=(
-                            "You can only validate teachers in your own district."
-                        ),
-                    )
-
-            db.execute(
-                insert(registered_user_model).values(
-                    email=user[0].email,
-                    password=user[0].password,
-                    role=user[0].role,
-                    phone_number=user[0].phone_number,
-                )
+            validated_email = admin_service.validate_pending_user(
+                user_email,
+                role=role,
+                current_user_id=get_current_id(request),
             )
-            db.execute(
-                delete(pending_user_model).where(
-                    cast(pending_user_model.email, String)
-                    == cast(user_email, String)
-                )
-            )
-            db.commit()
-            send_validation_email(user[0].email)
+            send_validation_email(validated_email)
             return {"message": "User validated."}
+        except PendingUserNotFound:
+            raise HTTPException(status_code=404, detail="User not found in new_users")
+        except ValidationScopeForbidden:
+            raise HTTPException(
+                status_code=403,
+                detail="You can only validate teachers in your own district.",
+            )
         except HTTPException:
             raise
         except Exception as exc:
-            db.rollback()
             logger.error(f"Internal Server Error: {str(exc)}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
-        finally:
-            db.close()
 
     @router.get("/api/validation_list/")
     async def validation_page(
