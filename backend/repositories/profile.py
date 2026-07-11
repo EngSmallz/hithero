@@ -4,10 +4,18 @@ from sqlalchemy import String, cast, insert, select, update
 class ProfileRepository:
     """Persistence operations for teacher identity/profile lookups."""
 
-    def __init__(self, *, session_factory, teacher_model, registered_user_model=None):
+    def __init__(
+        self,
+        *,
+        session_factory,
+        teacher_model,
+        registered_user_model=None,
+        pending_user_model=None,
+    ):
         self._session_factory = session_factory
         self._teacher_model = teacher_model
         self._registered_user_model = registered_user_model
+        self._pending_user_model = pending_user_model
 
     def _context_conditions(self, context):
         model_fields = {
@@ -42,6 +50,68 @@ class ProfileRepository:
                 )
             ).fetchone()
             return result[0] if result else None
+        finally:
+            db.close()
+
+    def get_registered_user_by_email(self, email):
+        db = self._session_factory()
+        try:
+            result = db.execute(
+                select(self._registered_user_model).where(
+                    cast(self._registered_user_model.email, String)
+                    == cast(email, String)
+                )
+            ).fetchone()
+            return result[0] if result else None
+        finally:
+            db.close()
+
+    def get_pending_user_by_email(self, email):
+        db = self._session_factory()
+        try:
+            result = db.execute(
+                select(self._pending_user_model).where(
+                    cast(self._pending_user_model.email, String)
+                    == cast(email, String)
+                )
+            ).fetchone()
+            return result[0] if result else None
+        finally:
+            db.close()
+
+    def create_pending_user(
+        self,
+        *,
+        name,
+        email,
+        state,
+        county,
+        district,
+        school,
+        phone_number,
+        password,
+    ):
+        db = self._session_factory()
+        try:
+            db.add(
+                self._pending_user_model(
+                    name=name,
+                    email=email,
+                    state=state,
+                    county=county,
+                    district=district,
+                    school=school,
+                    phone_number=phone_number,
+                    password=password,
+                    role="teacher",
+                    report=0,
+                    emailed=0,
+                )
+            )
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
         finally:
             db.close()
 

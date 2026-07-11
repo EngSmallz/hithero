@@ -18,6 +18,7 @@ from backend.services.profile_mutations import (
     TeacherImageTooLarge,
     TeacherUrlIdConflict,
 )
+from backend.services.profile_auth import ProfileAuthService
 from backend.services.profile_reads import ProfileReadService
 
 
@@ -47,7 +48,9 @@ def create_profile_router(
         session_factory=session_factory,
         teacher_model=teacher_model,
         registered_user_model=registered_user_model,
+        pending_user_model=pending_user_model,
     )
+    profile_auth_service = ProfileAuthService(profile_repository)
     profile_read_service = ProfileReadService(profile_repository)
     profile_mutation_service = ProfileMutationService(profile_repository)
 
@@ -72,61 +75,26 @@ def create_profile_router(
                 detail="reCAPTCHA verification failed. Please try again.",
             )
 
-        db = session_factory()
         try:
-            existing_user = db.execute(
-                select(registered_user_model.id).where(
-                    cast(registered_user_model.email, String)
-                    == cast(email, String)
-                )
-            ).fetchone()
-            if existing_user:
-                return {"message": "User with this email already exists."}
-
-            pending_user = db.execute(
-                select(pending_user_model.id).where(
-                    cast(pending_user_model.email, String)
-                    == cast(email, String)
-                )
-            ).fetchone()
-            if pending_user:
-                return {
-                    "message": (
-                        "User with this email is already in the registration queue."
-                    )
-                }
-            if password != confirm_password:
-                return {"message": "Password do not match."}
-
-            db.add(
-                pending_user_model(
-                    name=name,
-                    email=email,
-                    state=state,
-                    county=county,
-                    district=district,
-                    school=school,
-                    phone_number=phone_number,
-                    password=sha256_crypt.hash(password),
-                    role="teacher",
-                    report=0,
-                    emailed=0,
-                )
+            message, send_email = profile_auth_service.register_user(
+                name=name,
+                email=email,
+                phone_number=phone_number,
+                password=password,
+                confirm_password=confirm_password,
+                state=state,
+                county=county,
+                district=district,
+                school=school,
             )
-            db.commit()
-            send_registration_email(email)
-            return {
-                "message": (
-                    "User registered successfully. You should recieve an email "
-                    "shortly. Please check your spam folder"
-                )
-            }
+            if send_email:
+                send_registration_email(email)
+            return {"message": message}
         except Exception as exc:
             logger.error(f"Registration error: {str(exc)}")
             return {
                 "message": "Registration unsuccessful. Please try again later."
             }
-
     @router.post("/profile/login/")
     @limiter.limit("5/minute")
     async def login_user(
@@ -134,31 +102,23 @@ def create_profile_router(
         email: str = Form(...),
         password: str = Form(...),
     ):
-        db = session_factory()
         try:
-            user = db.execute(
-                select(registered_user_model).where(
-                    cast(registered_user_model.email, String)
-                    == cast(email, String)
-                )
-            ).fetchone()
-            if user and sha256_crypt.verify(password, user[0].password):
+            user = profile_auth_service.authenticate_user(email, password)
+            if user:
                 request.session["user_email"] = email
-                request.session["user_role"] = user[0].role
-                request.session["user_id"] = user[0].id
+                request.session["user_role"] = user.role
+                request.session["user_id"] = user.id
                 return JSONResponse(
                     content={
-                        "message": f"Login successful as {user[0].role}",
-                        "createCount": user[0].createCount,
-                        "role": user[0].role,
+                        "message": f"Login successful as {user.role}",
+                        "createCount": user.createCount,
+                        "role": user.role,
                     }
                 )
             return JSONResponse(content={"message": "Invalid login credentials."})
         except Exception as exc:
             logger.error(f"Internal Server Error: {str(exc)}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
-        finally:
-            db.close()
 
     @router.post("/profile/logout/")
     async def logout_user(request: Request):
