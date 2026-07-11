@@ -5,8 +5,10 @@ from sqlalchemy import delete
 from backend.db.models import TeacherList
 from backend.repositories.profile import ProfileRepository
 from backend.services.profile_mutations import (
+    InvalidTeacherImage,
     InvalidTeacherUrlId,
     ProfileMutationService,
+    TeacherImageTooLarge,
     TeacherUrlIdConflict,
 )
 
@@ -28,6 +30,9 @@ class RecordingRepository:
 
     def update_teacher_url_id(self, user_id, url_id):
         self.url_id_update = (user_id, url_id)
+
+    def update_teacher_image(self, user_id, image_bytes):
+        self.image_update = (user_id, image_bytes)
 
     def get_profile_create_count(self, user_id):
         self.create_count_user_id = user_id
@@ -198,6 +203,79 @@ def test_profile_mutation_service_preserves_existing_profile_guard():
     assert not hasattr(repository, "profile_create")
 
 
+class MimeResult:
+    def __init__(self, mime=None, mime_type=None):
+        self.mime = mime
+        self.mime_type = mime_type
+
+
+def test_profile_mutation_service_validates_and_persists_teacher_image():
+    repository = RecordingRepository()
+    service = ProfileMutationService(repository)
+
+    updated = service.update_teacher_image(
+        42,
+        "teacher",
+        b"image-bytes",
+        image_size=11,
+        max_file_size=100,
+        detect_file_type=lambda _bytes: [MimeResult(mime="image/png")],
+    )
+
+    assert updated is True
+    assert repository.image_update == (42, b"image-bytes")
+
+
+def test_profile_mutation_service_preserves_image_validation_order_and_errors():
+    repository = RecordingRepository()
+    service = ProfileMutationService(repository)
+    detector_called = False
+
+    def detector(_bytes):
+        nonlocal detector_called
+        detector_called = True
+        return [MimeResult(mime="image/png")]
+
+    with pytest.raises(TeacherImageTooLarge):
+        service.update_teacher_image(
+            42,
+            "teacher",
+            b"large",
+            image_size=101,
+            max_file_size=100,
+            detect_file_type=detector,
+        )
+    assert detector_called is False
+
+    with pytest.raises(InvalidTeacherImage):
+        service.update_teacher_image(
+            42,
+            "teacher",
+            b"text",
+            image_size=4,
+            max_file_size=100,
+            detect_file_type=lambda _bytes: [MimeResult(mime="text/plain")],
+        )
+    assert not hasattr(repository, "image_update")
+
+
+def test_profile_mutation_service_returns_permission_message_without_persisting_image():
+    repository = RecordingRepository()
+    service = ProfileMutationService(repository)
+
+    updated = service.update_teacher_image(
+        42,
+        None,
+        b"image-bytes",
+        image_size=11,
+        max_file_size=100,
+        detect_file_type=lambda _bytes: [MimeResult(mime_type="image/jpeg")],
+    )
+
+    assert updated is False
+    assert not hasattr(repository, "image_update")
+
+
 class FailingSession:
     def __init__(self):
         self.rollback_called = False
@@ -267,6 +345,20 @@ def test_profile_repository_rolls_back_and_closes_failed_profile_creation():
             wishlist_url="https://example.test/list&tag=h0mer00mher0-20",
             url_id="teacher1234",
         )
+
+    assert session.rollback_called is True
+    assert session.closed is True
+
+
+def test_profile_repository_rolls_back_and_closes_failed_image_update():
+    session = FailingSession()
+    repository = ProfileRepository(
+        session_factory=lambda: session,
+        teacher_model=TeacherList,
+    )
+
+    with pytest.raises(RuntimeError, match="write failed"):
+        repository.update_teacher_image(42, b"image-bytes")
 
     assert session.rollback_called is True
     assert session.closed is True

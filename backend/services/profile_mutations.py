@@ -17,6 +17,20 @@ class TeacherUrlIdConflict(ValueError):
     """Raised when a teacher URL ID is already assigned to a profile."""
 
 
+class TeacherImageTooLarge(ValueError):
+    """Raised when an uploaded teacher image exceeds the configured limit."""
+
+
+class InvalidTeacherImage(ValueError):
+    """Raised when an uploaded teacher image has an unsupported MIME type."""
+
+
+IMAGE_TOO_LARGE_MESSAGE = "File size exceeds the allowed limit"
+INVALID_IMAGE_MESSAGE = (
+    "Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed."
+)
+
+
 class ProfileMutationService:
     """Transactional profile mutation use cases."""
 
@@ -47,6 +61,39 @@ class ProfileMutationService:
         if self._repository.get_teacher_by_url_id(url_id) is not None:
             raise TeacherUrlIdConflict("URL ID already in use.")
         self._repository.update_teacher_url_id(user_id, url_id)
+
+    def update_teacher_image(
+        self,
+        user_id,
+        role,
+        image_bytes,
+        *,
+        image_size,
+        max_file_size,
+        detect_file_type,
+    ):
+        if image_size > max_file_size:
+            raise TeacherImageTooLarge(IMAGE_TOO_LARGE_MESSAGE)
+
+        allowed_mime_types = {
+            "image/jpeg",
+            "image/png",
+            "image/gif",
+            "image/webp",
+        }
+        results = detect_file_type(image_bytes)
+        detected_type = None
+        if results:
+            detected_type = getattr(results[0], "mime", None)
+            if detected_type is None:
+                detected_type = getattr(results[0], "mime_type", None)
+        if detected_type not in allowed_mime_types:
+            raise InvalidTeacherImage(INVALID_IMAGE_MESSAGE)
+
+        if role:
+            self._repository.update_teacher_image(user_id, image_bytes)
+            return True
+        return False
 
     def create_teacher_profile(
         self,

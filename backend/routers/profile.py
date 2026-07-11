@@ -9,9 +9,13 @@ from sqlalchemy import String, cast, insert, select, update
 
 from backend.repositories.profile import ProfileRepository
 from backend.services.profile_mutations import (
+    IMAGE_TOO_LARGE_MESSAGE,
     INVALID_URL_ID_MESSAGE,
+    INVALID_IMAGE_MESSAGE,
+    InvalidTeacherImage,
     InvalidTeacherUrlId,
     ProfileMutationService,
+    TeacherImageTooLarge,
     TeacherUrlIdConflict,
 )
 from backend.services.profile_reads import ProfileReadService
@@ -354,52 +358,28 @@ def create_profile_router(
         image: UploadFile = Form(...),
         user_id: int = Depends(get_current_id),
     ):
-        db = session_factory()
         try:
-            if image.size > max_file_size:
-                raise HTTPException(
-                    status_code=400,
-                    detail="File size exceeds the allowed limit",
-                )
-
             image_bytes = await image.read()
-            allowed_mime_types = {
-                "image/jpeg",
-                "image/png",
-                "image/gif",
-                "image/webp",
-            }
-            results = detect_file_type(image_bytes)
-            detected_type = None
-            if results:
-                detected_type = getattr(results[0], "mime", None)
-                if detected_type is None:
-                    detected_type = getattr(results[0], "mime_type", None)
-            if detected_type not in allowed_mime_types:
-                raise HTTPException(
-                    status_code=400,
-                    detail=(
-                        "Invalid file type. Only JPEG, PNG, GIF, and WebP "
-                        "are allowed."
-                    ),
-                )
-
-            if role:
-                db.execute(
-                    update(teacher_model)
-                    .values(image_data=image_bytes)
-                    .where(teacher_model.regUserID == user_id)
-                )
-                db.commit()
+            updated = profile_mutation_service.update_teacher_image(
+                user_id,
+                role,
+                image_bytes,
+                image_size=image.size,
+                max_file_size=max_file_size,
+                detect_file_type=detect_file_type,
+            )
+            if updated:
                 return {"message": "Information updated."}
             return {"message": "Permission denied."}
+        except TeacherImageTooLarge:
+            raise HTTPException(status_code=400, detail=IMAGE_TOO_LARGE_MESSAGE)
+        except InvalidTeacherImage:
+            raise HTTPException(status_code=400, detail=INVALID_IMAGE_MESSAGE)
         except HTTPException:
             raise
         except Exception as exc:
             logger.error(f"Internal Server Error: {str(exc)}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
-        finally:
-            db.close()
 
     @router.get("/profile/myinfo/")
     async def get_myinfo(

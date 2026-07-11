@@ -75,6 +75,9 @@ class ProfileRepository:
     def update_teacher_url_id(self, user_id, url_id):
         self._update_teacher(user_id, url_id=url_id)
 
+    def update_teacher_image(self, user_id, image_bytes):
+        self._update_teacher(user_id, image_data=image_bytes)
+
     def get_profile_create_count(self, user_id):
         db = self._session_factory()
         try:
