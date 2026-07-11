@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Request, Form, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
-import os, logging, datetime, base64, mimetypes, requests, threading
+import os, logging, datetime, base64, mimetypes, requests
 from dotenv import load_dotenv
 from passlib.hash import sha256_crypt
 from sqlalchemy import create_engine, Column, Integer, String, func, LargeBinary, DateTime, ForeignKey, UniqueConstraint, select, cast, text
@@ -28,6 +28,7 @@ from backend.core.auth import (
     set_teacher_session,
 )
 from backend.main import create_app
+from backend.jobs.runner import run_one_shot_job
 from backend.db.base import Base
 from backend.db.session import (
     build_database_url,
@@ -551,23 +552,23 @@ def verify_cronjob_request(request: Request):
         raise HTTPException(status_code=403, detail="Forbidden")
 
 @app.post("/internal/run-wednesday-job")
-async def run_wednesday_job(request: Request, _: None = Depends(verify_cronjob_request)):
-    threading.Thread(target=wednesday_job, daemon=True).start()
+def run_wednesday_job(request: Request, _: None = Depends(verify_cronjob_request)):
+    run_one_shot_job("wednesday", wednesday_job)
     return {"status": "wednesday job started"}
 
 @app.post("/internal/run-tuesday-job")
-async def run_tuesday_job(request: Request, _: None = Depends(verify_cronjob_request)):
-    threading.Thread(target=tuesday_job, daemon=True).start()
+def run_tuesday_job(request: Request, _: None = Depends(verify_cronjob_request)):
+    run_one_shot_job("tuesday", tuesday_job)
     return {"status": "tuesday job started"}
 
 @app.post("/internal/run-thursday-job")
-async def run_thursday_job(request: Request, _: None = Depends(verify_cronjob_request)):
-    threading.Thread(target=thursday_job, daemon=True).start()
+def run_thursday_job(request: Request, _: None = Depends(verify_cronjob_request)):
+    run_one_shot_job("thursday", thursday_job)
     return {"status": "thursday job started"}
 
 @app.post("/internal/run-daily-job")
-async def run_daily_job(request: Request, _: None = Depends(verify_cronjob_request)):
-    threading.Thread(target=daily_job, daemon=True).start()
+def run_daily_job(request: Request, _: None = Depends(verify_cronjob_request)):
+    run_one_shot_job("daily", daily_job)
     return {"status": "daily job started"}
 
 
