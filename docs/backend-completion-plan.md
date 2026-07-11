@@ -15,10 +15,12 @@ database/model/router extraction slices are staged behind it.
 The database/session boundary slice and its verification are recorded in
 [`agent-reports/2026-07-10-b1-database-session-boundary.md`](../agent-reports/2026-07-10-b1-database-session-boundary.md).
 
-The model/schema boundary slice is implemented but awaiting its post-change
-full gate because the current escalation-approval usage limit prevented local
-server tests. Evidence and the exact pending command are recorded in
+The model/schema boundary slice and accumulated B1 package-boundary gate are
+verified; evidence is recorded in
 [`agent-reports/2026-07-10-b1-model-schema-boundaries.md`](../agent-reports/2026-07-10-b1-model-schema-boundaries.md).
+
+The router-registration composition boundary is recorded in
+[`agent-reports/2026-07-11-b1-api-registration-boundary.md`](../agent-reports/2026-07-11-b1-api-registration-boundary.md).
 
 The router-registration composition boundary is recorded in
 [`agent-reports/2026-07-11-b1-api-registration-boundary.md`](../agent-reports/2026-07-11-b1-api-registration-boundary.md).

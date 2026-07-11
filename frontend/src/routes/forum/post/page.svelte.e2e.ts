@@ -177,6 +177,7 @@ test.describe('/forum/post', () => {
 
 		await page.goto('/forum/post?id=101', { waitUntil: 'domcontentloaded' });
 		await expect(page.getByRole('heading', { level: 1, name: 'Discussion Detail' })).toBeVisible();
+		await page.waitForLoadState('networkidle');
 		await page.getByRole('button', { name: 'Open navigation' }).click();
 
 		const mobileNav = page.getByRole('navigation', { name: 'Mobile primary' });

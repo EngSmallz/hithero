@@ -45,6 +45,10 @@ PATH=/opt/miniconda3/bin:/usr/local/bin:$PATH make test-static
 
 Result: 169 passed in 28.21 seconds.
 
+The accumulated browser-inclusive gate after the later B1 boundary slices
+also passed: Python static 169, Playwright 97, integration 16, and legacy E2E
+38. Logs: `.tmp/test-logs/20260711-003807/`.
+
 ## Next step
 
 Run the accumulated browser-inclusive gate with the explicit combined PATH:

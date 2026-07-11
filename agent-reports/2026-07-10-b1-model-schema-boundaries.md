@@ -2,9 +2,10 @@
 
 ## Status
 
-Implemented and ready as a focused B1 milestone. The browser-inclusive full
-gate is still pending; the faster backend/static boundary checks below are not
-being represented as full-gate evidence.
+Implemented and verified as a focused B1 milestone. The browser-inclusive full
+gate has now passed for the accumulated B1 package-boundary changes. The
+faster checks below remain useful focused evidence but are not being
+substituted for that gate.
 
 ## Changes
 
@@ -48,13 +49,17 @@ An initial full-gate attempt after resuming failed before tests because the
 shell PATH omitted npm (`npm: command not found`). The correct runtime PATH for
 the later full gate is `/opt/miniconda3/bin:/usr/local/bin:$PATH`.
 
-## Pending verification and next step
+## Browser-inclusive verification
 
-After the next browser-inclusive verification window, run:
+The accumulated canonical gate now passes:
 
 ```text
 PATH=/opt/miniconda3/bin:/usr/local/bin:$PATH scripts/run-all-tests.sh
 ```
 
-If it passes, append the log directory to this report. Do not alter production
-schema or remove `app.py` compatibility imports in that follow-up.
+Results: Python static 169, frontend Playwright 97, frontend integration 16,
+and legacy pytest E2E 38 passed. Logs:
+`.tmp/test-logs/20260711-003807/`.
+
+Do not alter production schema or remove `app.py` compatibility imports in
+future slices without new proof.
