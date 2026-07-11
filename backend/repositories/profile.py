@@ -1,4 +1,4 @@
-from sqlalchemy import String, cast, select
+from sqlalchemy import String, cast, select, update
 
 
 class ProfileRepository:
@@ -41,5 +41,25 @@ class ProfileRepository:
                 )
             ).fetchone()
             return result[0] if result else None
+        finally:
+            db.close()
+
+    def update_teacher_school(self, user_id, *, state, county, district, school):
+        db = self._session_factory()
+        try:
+            db.execute(
+                update(self._teacher_model)
+                .where(self._teacher_model.regUserID == user_id)
+                .values(
+                    state=state,
+                    county=county,
+                    district=district,
+                    school=school,
+                )
+            )
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
         finally:
             db.close()
