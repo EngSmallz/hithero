@@ -3,10 +3,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 import os, logging, datetime, base64, mimetypes, requests, threading
 from dotenv import load_dotenv
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from starlette.applications import Starlette
-from starlette.middleware.sessions import SessionMiddleware
 from passlib.hash import sha256_crypt
 from sqlalchemy import create_engine, Column, Integer, String, func, LargeBinary, DateTime, ForeignKey, UniqueConstraint, select, cast
 from sqlalchemy.engine import make_url
@@ -16,6 +13,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import select, cast, delete, insert, update
 from typing import Optional, List
 from tweepy import Client
+from backend.core.settings import (
+    BackendSettings,
+    LOCAL_APP_ENVS,
+    LOCAL_CORS_ORIGINS,
+    PRODUCTION_CORS_ORIGINS,
+    get_cors_allow_origins,
+    session_cookie_https_only,
+)
+from backend.main import create_app
 from backend.routers.admin import create_admin_router
 from backend.routers.forum import create_forum_router
 from backend.routers.legacy import create_legacy_router, register_legacy_error_handlers
@@ -25,29 +31,6 @@ try:
     from azure.communication.email import EmailClient
 except ImportError:
     EmailClient = None
-try:
-    from slowapi import Limiter, _rate_limit_exceeded_handler
-    from slowapi.util import get_remote_address
-    from slowapi.errors import RateLimitExceeded
-except ImportError:
-    class RateLimitExceeded(Exception):
-        pass
-
-    def _rate_limit_exceeded_handler(request, exc):
-        return JSONResponse(status_code=429, content={"detail": "Rate limit exceeded"})
-
-    def get_remote_address(request):
-        client = getattr(request, "client", None)
-        return client.host if client else "testclient"
-
-    class Limiter:
-        def __init__(self, key_func):
-            self.key_func = key_func
-
-        def limit(self, _limit):
-            def decorator(func):
-                return func
-            return decorator
 try:
     import bleach
 except ImportError:
@@ -75,69 +58,19 @@ def detect_file_type(buffer):
         return puremagic.magic_string(buffer)
     return puremagic.magic_buffer(buffer)
 
-app = FastAPI()
 load_dotenv()
 logger = logging.getLogger(__name__)
-APP_ENV = os.getenv("APP_ENV", "").lower()
-LOCAL_APP_ENVS = {"dev", "development", "local"}
-
-
-PRODUCTION_CORS_ORIGINS = ["https://www.helpteachers.net", "https://helpteachers.net"]
-LOCAL_CORS_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:5174",
-    "http://127.0.0.1:5174",
-]
-
-
-def get_cors_allow_origins(app_env: str):
-    configured_origins = os.getenv("CORS_ALLOW_ORIGINS")
-    if configured_origins:
-        return [origin.strip() for origin in configured_origins.split(",") if origin.strip()]
-
-    origins = list(PRODUCTION_CORS_ORIGINS)
-    if app_env == "test" or app_env in LOCAL_APP_ENVS:
-        origins.extend(LOCAL_CORS_ORIGINS)
-
-    return origins
-
-
-def session_cookie_https_only(app_env: str):
-    return app_env != "test" and app_env not in LOCAL_APP_ENVS
-
-
-app.add_middleware(
-    SessionMiddleware,
-    secret_key=os.getenv("SECRET_KEY"),
-    https_only=session_cookie_https_only(APP_ENV),
-)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=get_cors_allow_origins(APP_ENV),
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PATCH", "DELETE"],
-    allow_headers=["*"],
-)
+settings = BackendSettings.from_environment()
+APP_ENV = settings.app_env
+app = create_app(settings)
+limiter = app.state.limiter
 RECAPTCHA_SECRET_KEY=os.getenv("SERVER_KEY_CAPTCHA")
 TEST_RECAPTCHA_TOKEN = os.getenv("TEST_RECAPTCHA_TOKEN", "hithero-test-recaptcha")
-
-##limiter
-limiter = Limiter(key_func=get_remote_address)
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-
-# Disable documentation routes
-app.openapi_url = None
-app.redoc_url = None
 
 # Forum formatting is intentionally limited to a small, sanitized HTML subset.
 ALLOWED_TAGS = ["b", "i", "em", "strong", "a", "p", "br"]
 ALLOWED_ATTRS = {"a": ["href"]}
 ALLOWED_PROTOCOLS = ["http", "https", "mailto"]
-
-# Determine the path to the directory
-app.mount("/static", StaticFiles(directory="static"), name="static")
 
 ###cronjob ip white list
 CRONJOB_ALLOWED_IPS = {

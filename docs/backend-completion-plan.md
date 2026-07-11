@@ -1,11 +1,16 @@
 # Backend Completion Plan
 
-**Status: B0 baseline complete (2026-07-10); B1 is the next active slice.**
+**Status: B0 complete; B1 application-factory slice in progress (2026-07-10).**
 
 The baseline route inventory, contract snapshot, and full-gate evidence are
 recorded in [`docs/backend-baseline-contracts.md`](backend-baseline-contracts.md)
 and [`agent-reports/2026-07-10-b0-backend-baseline-contracts.md`](../agent-reports/2026-07-10-b0-backend-baseline-contracts.md).
 No production schema or legacy browser route was changed in B0.
+
+B1 progress is tracked in
+[`agent-reports/2026-07-10-b1-application-factory.md`](../agent-reports/2026-07-10-b1-application-factory.md).
+The compatibility `app.py` export remains authoritative while the remaining
+database/model/router extraction slices are staged behind it.
 
 The frontend migration is substantially implemented, but the FastAPI backend is
 only partially modularized. `app.py` remains the composition root *and* holds
