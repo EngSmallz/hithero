@@ -224,34 +224,19 @@ def create_forum_router(
         post_id: int,
         role: str = Depends(get_current_role),
     ):
-        with forum_session() as db:
-            try:
-                if role != "admin":
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail="Access denied: Only administrators can delete posts.",
-                    )
-
-                post = db.query(post_model).filter(post_model.id == post_id).first()
-                if not post:
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND,
-                        detail="Post not found",
-                    )
-
-                db.delete(post)
-                db.commit()
-                return Response(status_code=status.HTTP_204_NO_CONTENT)
-            except HTTPException:
-                rollback_session(db)
-                raise
-            except Exception as exc:
-                rollback_session(db)
-                print(f"Database error during post deletion (ID: {post_id}): {exc}")
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Could not delete post due to a server error.",
-                )
+        try:
+            forum_service.delete_post(post_id=post_id, role=role)
+            return Response(status_code=status.HTTP_204_NO_CONTENT)
+        except LookupError as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
+        except PermissionError as exc:
+            raise HTTPException(status_code=403, detail=str(exc))
+        except Exception as exc:
+            print(f"Database error during post deletion (ID: {post_id}): {exc}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Could not delete post due to a server error.",
+            )
 
     @router.delete("/comment/{comment_id}/delete")
     def delete_comment(
@@ -259,51 +244,23 @@ def create_forum_router(
         current_user_id: int = Depends(get_current_id),
         role: str = Depends(get_current_role),
     ):
-        with forum_session() as db:
-            try:
-                comment = (
-                    db.query(comment_model)
-                    .filter(comment_model.id == comment_id)
-                    .first()
-                )
-                if not comment:
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND,
-                        detail="Comment not found",
-                    )
-
-                is_admin = role == "admin"
-                is_author = comment.user_id == current_user_id
-                if not (is_admin or is_author):
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail=(
-                            "Access denied: You can only delete your own comments "
-                            "or be an administrator."
-                        ),
-                    )
-
-                post = (
-                    db.query(post_model)
-                    .filter(post_model.id == comment.post_id)
-                    .first()
-                )
-                if post and post.comment_count > 0:
-                    post.comment_count -= 1
-
-                db.delete(comment)
-                db.commit()
-                return {"detail": f"Comment ID {comment_id} successfully deleted."}
-            except HTTPException:
-                rollback_session(db)
-                raise
-            except Exception as exc:
-                rollback_session(db)
-                print(f"Database error during comment deletion (ID: {comment_id}): {exc}")
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Could not delete comment due to a server error.",
-                )
+        try:
+            forum_service.delete_comment(
+                comment_id=comment_id,
+                current_user_id=current_user_id,
+                role=role,
+            )
+            return {"detail": f"Comment ID {comment_id} successfully deleted."}
+        except LookupError as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
+        except PermissionError as exc:
+            raise HTTPException(status_code=403, detail=str(exc))
+        except Exception as exc:
+            print(f"Database error during comment deletion (ID: {comment_id}): {exc}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Could not delete comment due to a server error.",
+            )
 
     @router.patch("/post/{post_id}/update")
     async def update_post(

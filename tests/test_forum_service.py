@@ -28,6 +28,14 @@ class RecordingRepository:
         self.comment_update_values = values
         return "updated-comment", None
 
+    def delete_post(self, **values):
+        self.post_delete_values = values
+        return None
+
+    def delete_comment(self, **values):
+        self.comment_delete_values = values
+        return None
+
 
 def test_forum_service_sanitizes_post_fields_before_persistence():
     repository = RecordingRepository()
@@ -124,6 +132,21 @@ def test_forum_service_sanitizes_and_delegates_post_and_comment_updates():
         "comment_id": 2,
         "user_id": 42,
         "content": "comment",
+    }
+
+
+def test_forum_service_delegates_delete_policy_inputs():
+    repository = RecordingRepository()
+    service = ForumService(repository)
+
+    service.delete_post(post_id=1, role="admin")
+    service.delete_comment(comment_id=2, current_user_id=42, role="teacher")
+
+    assert repository.post_delete_values == {"post_id": 1, "role": "admin"}
+    assert repository.comment_delete_values == {
+        "comment_id": 2,
+        "current_user_id": 42,
+        "role": "teacher",
     }
 
 

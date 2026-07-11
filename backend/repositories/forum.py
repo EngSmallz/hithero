@@ -157,3 +157,51 @@ class ForumRepository:
             raise
         finally:
             db.close()
+
+    def delete_post(self, *, post_id, role):
+        db = self._session_factory()
+        try:
+            if role != "admin":
+                db.rollback()
+                return "forbidden"
+            post = db.query(self._post_model).filter(
+                self._post_model.id == post_id
+            ).first()
+            if not post:
+                db.rollback()
+                return "missing"
+            db.delete(post)
+            db.commit()
+            return None
+        except Exception:
+            db.rollback()
+            raise
+        finally:
+            db.close()
+
+    def delete_comment(self, *, comment_id, current_user_id, role):
+        db = self._session_factory()
+        try:
+            comment = db.query(self._comment_model).filter(
+                self._comment_model.id == comment_id
+            ).first()
+            if not comment:
+                db.rollback()
+                return "missing"
+            if role != "admin" and comment.user_id != current_user_id:
+                db.rollback()
+                return "forbidden"
+
+            post = db.query(self._post_model).filter(
+                self._post_model.id == comment.post_id
+            ).first()
+            if post and post.comment_count > 0:
+                post.comment_count -= 1
+            db.delete(comment)
+            db.commit()
+            return None
+        except Exception:
+            db.rollback()
+            raise
+        finally:
+            db.close()

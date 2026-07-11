@@ -72,3 +72,25 @@ class ForumService:
                 "Not authorized to edit this comment. You must be the author."
             )
         return comment
+
+    def delete_post(self, *, post_id, role):
+        error = self._repository.delete_post(post_id=post_id, role=role)
+        if error == "forbidden":
+            raise PermissionError(
+                "Access denied: Only administrators can delete posts."
+            )
+        if error == "missing":
+            raise LookupError("Post not found")
+
+    def delete_comment(self, *, comment_id, current_user_id, role):
+        error = self._repository.delete_comment(
+            comment_id=comment_id,
+            current_user_id=current_user_id,
+            role=role,
+        )
+        if error == "missing":
+            raise LookupError("Comment not found")
+        if error == "forbidden":
+            raise PermissionError(
+                "Access denied: You can only delete your own comments or be an administrator."
+            )
