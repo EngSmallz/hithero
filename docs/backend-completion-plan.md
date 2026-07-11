@@ -12,6 +12,9 @@ B1 progress is tracked in
 The compatibility `app.py` export remains authoritative while the remaining
 database/model/router extraction slices are staged behind it.
 
+The database/session boundary slice and its verification are recorded in
+[`agent-reports/2026-07-10-b1-database-session-boundary.md`](../agent-reports/2026-07-10-b1-database-session-boundary.md).
+
 The frontend migration is substantially implemented, but the FastAPI backend is
 only partially modularized. `app.py` remains the composition root *and* holds
 database models, infrastructure adapters, scheduled-job logic, shared auth

@@ -176,6 +176,7 @@ test.describe('/forum/post', () => {
 		await page.setViewportSize({ width: 390, height: 844 });
 
 		await page.goto('/forum/post?id=101', { waitUntil: 'domcontentloaded' });
+		await expect(page.getByRole('heading', { level: 1, name: 'Discussion Detail' })).toBeVisible();
 		await page.getByRole('button', { name: 'Open navigation' }).click();
 
 		const mobileNav = page.getByRole('navigation', { name: 'Mobile primary' });

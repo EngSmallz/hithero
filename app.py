@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from passlib.hash import sha256_crypt
 from sqlalchemy import create_engine, Column, Integer, String, func, LargeBinary, DateTime, ForeignKey, UniqueConstraint, select, cast
 from sqlalchemy.engine import make_url
-from sqlalchemy.orm import declarative_base, sessionmaker, Session, relationship
+from sqlalchemy.orm import Session, relationship
 from sqlalchemy.pool import StaticPool
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import select, cast, delete, insert, update
@@ -22,6 +22,14 @@ from backend.core.settings import (
     session_cookie_https_only,
 )
 from backend.main import create_app
+from backend.db.base import Base
+from backend.db.session import (
+    build_database_url,
+    build_engine_kwargs,
+    build_sql_server_url,
+    create_database_resources,
+    ensure_sqlite_database_directory,
+)
 from backend.routers.admin import create_admin_router
 from backend.routers.forum import create_forum_router
 from backend.routers.legacy import create_legacy_router, register_legacy_error_handlers
@@ -82,53 +90,6 @@ CRONJOB_ALLOWED_IPS = {
 }
 
 
-# Load environment variables
-DATABASE_SERVER = os.getenv("DATABASE_SERVER")
-DATABASE_NAME = os.getenv("DATABASE_NAME")
-DATABASE_UID = os.getenv("DATABASE_UID")
-DATABASE_PASSWORD = os.getenv("DATABASE_PASSWORD")
-DATABASE_PORT = os.getenv("DATABASE_PORT")
-
-def build_sql_server_url():
-    return f"mssql+pyodbc://{DATABASE_UID}:{DATABASE_PASSWORD}@{DATABASE_SERVER}:{DATABASE_PORT}/{DATABASE_NAME}?driver=ODBC+Driver+18+for+SQL+Server"
-
-
-def build_database_url(app_env: str):
-    explicit_database_url = os.getenv("DATABASE_URL")
-    if explicit_database_url:
-        return explicit_database_url
-
-    if app_env == "test":
-        return os.getenv("TEST_DATABASE_URL", "sqlite:///:memory:")
-
-    if app_env in LOCAL_APP_ENVS:
-        return os.getenv("LOCAL_DATABASE_URL", "sqlite:///./.local/hithero-dev.sqlite")
-
-    return build_sql_server_url()
-
-
-def ensure_sqlite_database_directory(database_url: str):
-    url = make_url(database_url)
-    if not url.drivername.startswith("sqlite") or not url.database or url.database == ":memory:":
-        return
-
-    database_directory = os.path.dirname(os.path.abspath(url.database))
-    if database_directory:
-        os.makedirs(database_directory, exist_ok=True)
-
-
-def build_engine_kwargs(database_url: str):
-    url = make_url(database_url)
-    engine_options = {}
-
-    if url.drivername.startswith("sqlite"):
-        engine_options["connect_args"] = {"check_same_thread": False}
-        if url.database == ":memory:":
-            engine_options["poolclass"] = StaticPool
-
-    return engine_options
-
-
 def sqlite_random_ordering():
     return func.random()
 
@@ -140,14 +101,12 @@ def database_random_ordering():
     return func.newid()
 
 
-# Construct SQLAlchemy database URL. Test/local imports must not depend on the
-# production SQL Server configuration or create production-like tables.
-SQLALCHEMY_DATABASE_URL = build_database_url(APP_ENV)
-ensure_sqlite_database_directory(SQLALCHEMY_DATABASE_URL)
-
-engine = create_engine(SQLALCHEMY_DATABASE_URL, **build_engine_kwargs(SQLALCHEMY_DATABASE_URL))
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
+# Construct SQLAlchemy database resources. Test/local imports must not depend
+# on the production SQL Server configuration or create production-like tables.
+database_resources = create_database_resources(APP_ENV)
+SQLALCHEMY_DATABASE_URL = database_resources.database_url
+engine = database_resources.engine
+SessionLocal = database_resources.session_factory
 
 # Maximum allowed file size in bytes (e.g., 1MB)
 MAX_FILE_SIZE = 1 * 1024 * 1024
