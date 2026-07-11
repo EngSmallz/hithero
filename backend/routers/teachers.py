@@ -2,27 +2,10 @@ from typing import Optional
 
 from fastapi import APIRouter, Form, HTTPException
 from fastapi.responses import JSONResponse
-from sqlalchemy import String, cast, func, select
+from sqlalchemy import String, cast, select
 
-from backend.services.teachers import serialize_teacher_profile, serialize_teacher_summary
-
-
-def _clean_optional_filter(value: Optional[str]):
-    if value is None:
-        return None
-
-    stripped = value.strip()
-    return stripped or None
-
-
-def _sorted_distinct_values(db, column, *conditions):
-    query = select(cast(column, String)).distinct()
-    for condition in conditions:
-        if condition is not None:
-            query = query.where(condition)
-
-    values = db.execute(query).scalars().all()
-    return sorted({value for value in values if value})
+from backend.repositories.teachers import TeacherDirectoryRepository
+from backend.services.teacher_directory import TeacherDirectoryService
 
 
 def create_teacher_router(
@@ -34,88 +17,13 @@ def create_teacher_router(
     profile_response_model,
 ):
     router = APIRouter()
-
-    def build_directory_response(
-        db,
-        state: Optional[str] = None,
-        county: Optional[str] = None,
-        district: Optional[str] = None,
-        school: Optional[str] = None,
-        page: int = 1,
-        page_size: int = 24,
-    ):
-        state = _clean_optional_filter(state)
-        county = _clean_optional_filter(county)
-        district = _clean_optional_filter(district)
-        school = _clean_optional_filter(school)
-        page = max(1, page)
-        page_size = max(1, min(page_size, 100))
-
-        conditions = [
-            teacher_model.name.is_not(None),
-            teacher_model.url_id.is_not(None),
-            cast(teacher_model.url_id, String) != "",
-        ]
-        if state:
-            conditions.append(cast(teacher_model.state, String) == state)
-        if county:
-            conditions.append(cast(teacher_model.county, String) == county)
-        if district:
-            conditions.append(cast(teacher_model.district, String) == district)
-        if school:
-            conditions.append(cast(teacher_model.school, String) == school)
-
-        total = db.execute(
-            select(func.count()).select_from(teacher_model).where(*conditions)
-        ).scalar_one()
-        total_pages = (total + page_size - 1) // page_size if total else 0
-        if total_pages:
-            page = min(page, total_pages)
-        offset = (page - 1) * page_size
-
-        teacher_query = (
-            select(teacher_model)
-            .where(*conditions)
-            .order_by(cast(teacher_model.name, String))
-            .offset(offset)
-            .limit(page_size)
+    directory_service = TeacherDirectoryService(
+        TeacherDirectoryRepository(
+            session_factory=session_factory,
+            school_model=school_model,
+            teacher_model=teacher_model,
         )
-
-        teachers = db.execute(teacher_query).scalars().all()
-
-        county_conditions = [cast(teacher_model.state, String) == state] if state else []
-        district_conditions = county_conditions + (
-            [cast(teacher_model.county, String) == county] if county else []
-        )
-        school_conditions = district_conditions + (
-            [cast(teacher_model.district, String) == district] if district else []
-        )
-
-        return {
-            "teachers": [serialize_teacher_summary(teacher) for teacher in teachers],
-            "filters": {
-                "states": _sorted_distinct_values(db, teacher_model.state),
-                "counties": _sorted_distinct_values(
-                    db, teacher_model.county, *county_conditions
-                ),
-                "districts": _sorted_distinct_values(
-                    db, teacher_model.district, *district_conditions
-                ),
-                "schools": _sorted_distinct_values(
-                    db, teacher_model.school, *school_conditions
-                ),
-            },
-            "total": total,
-            "page": page,
-            "page_size": page_size,
-            "total_pages": total_pages,
-            "applied_filters": {
-                "state": state,
-                "county": county,
-                "district": district,
-                "school": school,
-            },
-        }
+    )
 
     @router.get("/api/get_states/")
     async def get_states():
@@ -261,38 +169,21 @@ def create_teacher_router(
         page: int = 1,
         page_size: int = 24,
     ):
-        db = session_factory()
-        try:
-            return build_directory_response(
-                db,
-                state=state,
-                county=county,
-                district=district,
-                school=school,
-                page=page,
-                page_size=page_size,
-            )
-        finally:
-            db.close()
+        return directory_service.build_directory_response(
+            state=state,
+            county=county,
+            district=district,
+            school=school,
+            page=page,
+            page_size=page_size,
+        )
 
     @router.get("/api/teacher/{url_id}/", response_model=profile_response_model)
     async def get_public_teacher_profile(url_id: str):
-        db = session_factory()
-        try:
-            teacher = db.execute(
-                select(teacher_model).where(
-                    cast(teacher_model.url_id, String) == url_id
-                )
-            ).scalar_one_or_none()
-
-            if not teacher:
-                return JSONResponse(
-                    status_code=404, content={"detail": "Teacher not found"}
-                )
-
-            return serialize_teacher_profile(teacher)
-        finally:
-            db.close()
+        profile = directory_service.get_public_teacher_profile(url_id)
+        if profile is None:
+            return JSONResponse(status_code=404, content={"detail": "Teacher not found"})
+        return profile
 
     @router.post("/api/index_teachers/")
     async def index_teachers(

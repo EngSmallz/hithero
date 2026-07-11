@@ -25,6 +25,9 @@ The router-registration composition boundary is recorded in
 The shared auth/session core boundary is recorded in
 [`agent-reports/2026-07-11-b1-auth-core.md`](../agent-reports/2026-07-11-b1-auth-core.md).
 
+The first teacher-directory service/repository slice is recorded in
+[`agent-reports/2026-07-11-b2-teacher-directory.md`](../agent-reports/2026-07-11-b2-teacher-directory.md).
+
 The frontend migration is substantially implemented, but the FastAPI backend is
 only partially modularized. `app.py` remains the composition root *and* holds
 database models, infrastructure adapters, scheduled-job logic, shared auth
