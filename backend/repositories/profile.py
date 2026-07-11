@@ -212,6 +212,9 @@ class ProfileRepository:
     def update_teacher_wishlist(self, user_id, wishlist_url):
         self._update_teacher(user_id, wishlist_url=wishlist_url)
 
+    def update_teacher_about_me(self, user_id, about_me):
+        self._update_teacher(user_id, about_me=about_me)
+
     def get_teacher_by_url_id(self, url_id):
         db = self._session_factory()
         try:

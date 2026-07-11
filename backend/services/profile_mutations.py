@@ -55,6 +55,9 @@ class ProfileMutationService:
             wishlist + "&tag=h0mer00mher0-20",
         )
 
+    def update_teacher_about_me(self, user_id, about_me):
+        self._repository.update_teacher_about_me(user_id, about_me)
+
     def update_teacher_url_id(self, user_id, url_id):
         if not URL_ID_PATTERN.match(url_id):
             raise InvalidTeacherUrlId(INVALID_URL_ID_MESSAGE)

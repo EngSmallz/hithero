@@ -21,6 +21,9 @@ class RecordingRepository:
     def update_teacher_name(self, user_id, name):
         self.name_update = (user_id, name)
 
+    def update_teacher_about_me(self, user_id, about_me):
+        self.about_me_update = (user_id, about_me)
+
     def update_teacher_wishlist(self, user_id, wishlist_url):
         self.wishlist_update = (user_id, wishlist_url)
 
@@ -74,6 +77,18 @@ def test_profile_mutation_service_preserves_name_and_wishlist_updates():
     assert repository.wishlist_update == (
         42,
         "https://example.test/list&tag=h0mer00mher0-20",
+    )
+
+
+def test_profile_mutation_service_preserves_about_me_update():
+    repository = RecordingRepository()
+    service = ProfileMutationService(repository)
+
+    service.update_teacher_about_me(42, "Updated classroom information")
+
+    assert repository.about_me_update == (
+        42,
+        "Updated classroom information",
     )
 
 

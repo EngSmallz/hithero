@@ -212,22 +212,14 @@ def create_profile_router(
         user_id: int = Depends(get_current_id),
         role: str = Depends(get_current_role),
     ):
-        db = session_factory()
         try:
             if not role:
                 raise HTTPException(status_code=403, detail="Permission denied.")
-            db.execute(
-                update(teacher_model)
-                .where(teacher_model.regUserID == user_id)
-                .values(about_me=aboutMe)
-            )
-            db.commit()
+            profile_mutation_service.update_teacher_about_me(user_id, aboutMe)
             return {"message": "Info updated."}
         except Exception as exc:
             logger.error(f"Internal Server Error: {str(exc)}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
-        finally:
-            db.close()
 
     @router.post("/profile/update_teacher_school/")
     async def update_teacher_school(
