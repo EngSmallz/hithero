@@ -1,9 +1,7 @@
 import html
-from contextlib import contextmanager
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Path, Request, Response, status
-from sqlalchemy import desc
 
 from backend.repositories.forum import ForumRepository
 from backend.services.forum import ForumService
@@ -34,20 +32,6 @@ def create_forum_router(
         vote_model=vote_model,
     )
     forum_service = ForumService(forum_repository)
-
-    @contextmanager
-    def forum_session():
-        db = session_factory()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    def rollback_session(db):
-        try:
-            db.rollback()
-        except Exception as exc:
-            print(f"Database error during rollback: {exc}")
 
     def sanitize(value: str):
         decoded = value or ""
@@ -101,36 +85,39 @@ def create_forum_router(
 
     @router.get("/get_posts")
     def get_posts():
-        with forum_session() as db:
-            try:
-                posts = db.query(post_model).order_by(post_model.created_at.desc()).all()
-                return [serialize(post) for post in posts]
-            except Exception as exc:
-                print(f"Database error during post retrieval: {exc}")
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Could not retrieve posts due to a server error.",
+        try:
+            return [
+                forum_service.serialize(
+                    post,
+                    model_to_dict=model_to_dict,
+                    sanitize=sanitize,
                 )
+                for post in forum_service.get_posts()
+            ]
+        except Exception as exc:
+            print(f"Database error during post retrieval: {exc}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Could not retrieve posts due to a server error.",
+            )
 
     @router.get("/get_post")
     def get_post(post_id: int):
-        with forum_session() as db:
-            try:
-                post = db.query(post_model).filter(post_model.id == post_id).first()
-                if post is None:
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND,
-                        detail=f"Post with ID {post_id} not found.",
-                    )
-                return serialize(post)
-            except HTTPException:
-                raise
-            except Exception as exc:
-                print(f"Database error during single post retrieval (ID: {post_id}): {exc}")
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Could not retrieve post due to a server error.",
-                )
+        try:
+            post = forum_service.get_post(post_id)
+            return forum_service.serialize(
+                post,
+                model_to_dict=model_to_dict,
+                sanitize=sanitize,
+            )
+        except LookupError as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
+        except Exception as exc:
+            print(f"Database error during single post retrieval (ID: {post_id}): {exc}")
+            raise HTTPException(
+                status_code=500,
+                detail="Could not retrieve post due to a server error.",
+            )
 
     @router.post("/posts/{post_id}/vote")
     def handle_post_vote(
@@ -194,30 +181,24 @@ def create_forum_router(
 
     @router.get("/comments/{post_id}/")
     def get_comments_for_post(post_id: int = Path(..., gt=0)) -> List[dict]:
-        with forum_session() as db:
-            try:
-                post = db.query(post_model).filter(post_model.id == post_id).first()
-                if not post:
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND,
-                        detail=f"Post with ID {post_id} not found.",
-                    )
-
-                comments = (
-                    db.query(comment_model)
-                    .filter(comment_model.post_id == post_id)
-                    .order_by(desc(comment_model.created_at))
-                    .all()
+        try:
+            comments = forum_service.get_comments(post_id)
+            return [
+                forum_service.serialize(
+                    comment,
+                    model_to_dict=model_to_dict,
+                    sanitize=sanitize,
                 )
-                return [serialize(comment) for comment in comments]
-            except HTTPException:
-                raise
-            except Exception as exc:
-                print(f"Database error during comment retrieval on post {post_id}: {exc}")
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Could not retrieve comments due to a server error.",
-                )
+                for comment in comments
+            ]
+        except LookupError as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
+        except Exception as exc:
+            print(f"Database error during comment retrieval on post {post_id}: {exc}")
+            raise HTTPException(
+                status_code=500,
+                detail="Could not retrieve comments due to a server error.",
+            )
 
     @router.delete("/post/{post_id}/delete")
     def delete_post(

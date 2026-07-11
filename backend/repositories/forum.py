@@ -205,3 +205,35 @@ class ForumRepository:
             raise
         finally:
             db.close()
+
+    def get_posts(self):
+        db = self._session_factory()
+        try:
+            return db.query(self._post_model).order_by(
+                self._post_model.created_at.desc()
+            ).all()
+        finally:
+            db.close()
+
+    def get_post(self, post_id):
+        db = self._session_factory()
+        try:
+            return db.query(self._post_model).filter(
+                self._post_model.id == post_id
+            ).first()
+        finally:
+            db.close()
+
+    def get_comments(self, post_id):
+        db = self._session_factory()
+        try:
+            post = db.query(self._post_model).filter(
+                self._post_model.id == post_id
+            ).first()
+            if not post:
+                return None
+            return db.query(self._comment_model).filter(
+                self._comment_model.post_id == post_id
+            ).order_by(self._comment_model.created_at.desc()).all()
+        finally:
+            db.close()

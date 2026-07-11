@@ -36,6 +36,15 @@ class RecordingRepository:
         self.comment_delete_values = values
         return None
 
+    def get_posts(self):
+        return ["post"]
+
+    def get_post(self, _post_id):
+        return "post"
+
+    def get_comments(self, _post_id):
+        return ["comment"]
+
 
 def test_forum_service_sanitizes_post_fields_before_persistence():
     repository = RecordingRepository()
@@ -148,6 +157,27 @@ def test_forum_service_delegates_delete_policy_inputs():
         "current_user_id": 42,
         "role": "teacher",
     }
+
+
+def test_forum_service_delegates_reads_and_maps_missing_records():
+    repository = RecordingRepository()
+    service = ForumService(repository)
+    assert service.get_posts() == ["post"]
+    assert service.get_post(1) == "post"
+    assert service.get_comments(1) == ["comment"]
+
+    class MissingRepository(RecordingRepository):
+        def get_post(self, _post_id):
+            return None
+
+        def get_comments(self, _post_id):
+            return None
+
+    missing = ForumService(MissingRepository())
+    with pytest.raises(LookupError, match="Post with ID 1 not found"):
+        missing.get_post(1)
+    with pytest.raises(LookupError, match="Post with ID 1 not found"):
+        missing.get_comments(1)
 
 
 class FailingSession:

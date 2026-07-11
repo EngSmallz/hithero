@@ -4,6 +4,30 @@ class ForumService:
     def __init__(self, repository):
         self._repository = repository
 
+    @staticmethod
+    def serialize(record, *, model_to_dict, sanitize):
+        data = model_to_dict(record)
+        if "title" in data:
+            data["title"] = sanitize(data["title"])
+        if "content" in data:
+            data["content"] = sanitize(data["content"])
+        return data
+
+    def get_posts(self):
+        return self._repository.get_posts()
+
+    def get_post(self, post_id):
+        post = self._repository.get_post(post_id)
+        if post is None:
+            raise LookupError(f"Post with ID {post_id} not found.")
+        return post
+
+    def get_comments(self, post_id):
+        comments = self._repository.get_comments(post_id)
+        if comments is None:
+            raise LookupError(f"Post with ID {post_id} not found.")
+        return comments
+
     def create_post(self, *, title, content, user_id, sanitize):
         return self._repository.create_post(
             title=sanitize(title),
