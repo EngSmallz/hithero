@@ -5,7 +5,11 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from sqlalchemy import String, cast, delete, insert, select, update
 
 from backend.repositories.admin import AdminRepository
-from backend.services.admin import AdminService, UserAccountNotFound
+from backend.services.admin import (
+    AdminService,
+    PendingUserNotFound,
+    UserAccountNotFound,
+)
 
 
 def create_admin_router(
@@ -28,6 +32,7 @@ def create_admin_router(
         session_factory=session_factory,
         registered_user_model=registered_user_model,
         teacher_model=teacher_model,
+        pending_user_model=pending_user_model,
     )
     admin_service = AdminService(account_repository)
 
@@ -200,33 +205,14 @@ def create_admin_router(
                 detail="No permission to to action.",
             )
 
-        db = session_factory()
         try:
-            user = db.execute(
-                select(pending_user_model).where(
-                    cast(pending_user_model.email, String)
-                    == cast(user_email, String)
-                )
-            ).fetchone()
-            if not user:
-                raise HTTPException(
-                    status_code=404,
-                    detail="User not found in new_users",
-                )
-            db.execute(
-                delete(pending_user_model).where(
-                    cast(pending_user_model.email, String)
-                    == cast(user_email, String)
-                )
-            )
-            db.commit()
+            admin_service.delete_pending_user(user_email)
             return {"message": "User deleted successfully."}
+        except PendingUserNotFound:
+            raise HTTPException(status_code=404, detail="User not found in new_users")
         except Exception as exc:
-            db.rollback()
             logger.error(f"Internal Server Error: {str(exc)}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
-        finally:
-            db.close()
 
     @router.post("/validation/report_user/{user_email}")
     async def report_user(

@@ -3,7 +3,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import delete
 
 from backend.repositories.admin import AdminRepository
-from backend.services.admin import AdminService, UserAccountNotFound
+from backend.services.admin import AdminService, PendingUserNotFound, UserAccountNotFound
 
 
 class RecordingRepository:
@@ -13,6 +13,10 @@ class RecordingRepository:
 
     def delete_user_account(self, target_email):
         self.target_email = target_email
+        return self.deleted
+
+    def delete_pending_user(self, user_email):
+        self.pending_email = user_email
         return self.deleted
 
 
@@ -34,6 +38,18 @@ def test_admin_service_maps_missing_account_to_domain_error():
 
     with pytest.raises(UserAccountNotFound, match="target@example.test"):
         service.delete_user_account("target@example.test")
+
+
+def test_admin_service_deletes_pending_user_and_maps_missing_user():
+    repository = RecordingRepository()
+    service = AdminService(repository)
+    service.delete_pending_user("pending@example.test")
+    assert repository.pending_email == "pending@example.test"
+
+    with pytest.raises(PendingUserNotFound):
+        AdminService(RecordingRepository(deleted=False)).delete_pending_user(
+            "missing@example.test"
+        )
 
 
 class FailingSession:
@@ -63,6 +79,24 @@ def test_admin_repository_rolls_back_and_closes_failed_account_deletion(
 
     with pytest.raises(RuntimeError, match="delete failed"):
         repository.delete_user_account("target@example.test")
+
+    assert session.rollback_called is True
+    assert session.closed is True
+
+
+def test_admin_repository_rolls_back_and_closes_failed_pending_deletion(
+    app_module,
+):
+    session = FailingSession()
+    repository = AdminRepository(
+        session_factory=lambda: session,
+        registered_user_model=app_module.RegisteredUsers,
+        teacher_model=app_module.TeacherList,
+        pending_user_model=app_module.NewUsers,
+    )
+
+    with pytest.raises(RuntimeError, match="delete failed"):
+        repository.delete_pending_user("pending@example.test")
 
     assert session.rollback_called is True
     assert session.closed is True
