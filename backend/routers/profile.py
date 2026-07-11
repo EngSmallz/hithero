@@ -1,5 +1,4 @@
 import datetime
-import re
 import secrets
 import time
 
@@ -9,7 +8,12 @@ from passlib.hash import sha256_crypt
 from sqlalchemy import String, cast, insert, select, update
 
 from backend.repositories.profile import ProfileRepository
-from backend.services.profile_mutations import ProfileMutationService
+from backend.services.profile_mutations import (
+    INVALID_URL_ID_MESSAGE,
+    InvalidTeacherUrlId,
+    ProfileMutationService,
+    TeacherUrlIdConflict,
+)
 from backend.services.profile_reads import ProfileReadService
 
 
@@ -358,45 +362,20 @@ def create_profile_router(
         user_id: int = Depends(get_current_id),
         role: str = Depends(get_current_role),
     ):
-        db = session_factory()
         try:
             if not role:
                 raise HTTPException(status_code=403, detail="Permission denied.")
-            if not re.match(r"^[a-zA-Z0-9_-]{3,50}$", url_id):
-                raise HTTPException(
-                    status_code=400,
-                    detail=(
-                        "URL ID may only contain letters, numbers, hyphens, "
-                        "and underscores (3–50 characters)."
-                    ),
-                )
-            existing_teacher = (
-                db.query(teacher_model)
-                .where(
-                    cast(teacher_model.url_id, String)
-                    == cast(url_id, String)
-                )
-                .first()
-            )
-            if existing_teacher:
-                raise HTTPException(
-                    status_code=409,
-                    detail="URL ID already in use.",
-                )
-            db.execute(
-                update(teacher_model)
-                .where(teacher_model.regUserID == user_id)
-                .values(url_id=url_id)
-            )
-            db.commit()
+            profile_mutation_service.update_teacher_url_id(user_id, url_id)
             return {"message": "URL ID updated successfully."}
+        except InvalidTeacherUrlId:
+            raise HTTPException(status_code=400, detail=INVALID_URL_ID_MESSAGE)
+        except TeacherUrlIdConflict:
+            raise HTTPException(status_code=409, detail="URL ID already in use.")
         except HTTPException:
             raise
         except Exception as exc:
             logger.error(f"Internal Server Error: {str(exc)}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
-        finally:
-            db.close()
 
     @router.post("/profile/update_teacher_image/")
     async def edit_teacher_image(

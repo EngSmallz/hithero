@@ -59,6 +59,21 @@ class ProfileRepository:
     def update_teacher_wishlist(self, user_id, wishlist_url):
         self._update_teacher(user_id, wishlist_url=wishlist_url)
 
+    def get_teacher_by_url_id(self, url_id):
+        db = self._session_factory()
+        try:
+            result = db.execute(
+                select(self._teacher_model).where(
+                    cast(self._teacher_model.url_id, String) == cast(url_id, String)
+                )
+            ).fetchone()
+            return result[0] if result else None
+        finally:
+            db.close()
+
+    def update_teacher_url_id(self, user_id, url_id):
+        self._update_teacher(user_id, url_id=url_id)
+
     def _update_teacher(self, user_id, **values):
         db = self._session_factory()
         try:
