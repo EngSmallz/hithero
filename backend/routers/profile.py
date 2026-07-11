@@ -1,4 +1,3 @@
-import base64
 import datetime
 import re
 import secrets
@@ -8,6 +7,9 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse, RedirectResponse
 from passlib.hash import sha256_crypt
 from sqlalchemy import String, cast, insert, select, update
+
+from backend.repositories.profile import ProfileRepository
+from backend.services.profile_reads import ProfileReadService
 
 
 def create_profile_router(
@@ -32,15 +34,12 @@ def create_profile_router(
     logger,
 ):
     router = APIRouter()
-
-    def teacher_session_response(teacher):
-        return {
-            "state": teacher.state,
-            "county": teacher.county,
-            "district": teacher.district,
-            "school": teacher.school,
-            "teacher": teacher.name,
-        }
+    profile_read_service = ProfileReadService(
+        ProfileRepository(
+            session_factory=session_factory,
+            teacher_model=teacher_model,
+        )
+    )
 
     @router.post("/profile/register/")
     @limiter.limit("5/minute")
@@ -247,48 +246,21 @@ def create_profile_router(
 
     @router.get("/api/get_teacher_info/")
     async def get_teacher_info(request: Request):
-        db = session_factory()
         try:
-            teacher_info = db.execute(
-                select(teacher_model).where(
-                    (cast(teacher_model.state, String)
-                    == get_index_cookie("state", request))
-                    & (cast(teacher_model.county, String)
-                    == get_index_cookie("county", request))
-                    & (cast(teacher_model.district, String)
-                    == get_index_cookie("district", request))
-                    & (cast(teacher_model.school, String)
-                    == get_index_cookie("school", request))
-                    & (cast(teacher_model.name, String)
-                    == get_index_cookie("teacher", request))
-                )
-            ).fetchone()
-            if not teacher_info:
-                raise HTTPException(status_code=404, detail="Teacher not found")
-
-            teacher = teacher_info[0]
-            image_data = (
-                base64.b64encode(teacher.image_data).decode("utf-8")
-                if teacher.image_data
-                else None
+            teacher_info = profile_read_service.get_teacher_info(
+                {
+                    field: get_index_cookie(field, request)
+                    for field in ("state", "county", "district", "school", "teacher")
+                }
             )
-            return {
-                "state": teacher.state,
-                "county": teacher.county,
-                "district": teacher.district,
-                "school": teacher.school,
-                "name": teacher.name,
-                "wishlist_url": teacher.wishlist_url,
-                "about_me": teacher.about_me,
-                "image_data": image_data,
-            }
+            if teacher_info is None:
+                raise HTTPException(status_code=404, detail="Teacher not found")
+            return teacher_info
         except HTTPException:
             raise
         except Exception as exc:
             logger.error(f"Internal Server Error: {str(exc)}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
-        finally:
-            db.close()
 
     @router.post("/profile/update_info/")
     async def update_info(
@@ -509,24 +481,18 @@ def create_profile_router(
         request: Request,
         user_id: int = Depends(get_current_id),
     ):
-        db = session_factory()
         try:
-            teacher_data = db.execute(
-                select(teacher_model).where(
-                    teacher_model.regUserID == user_id
-                )
-            ).fetchone()
+            teacher_data = profile_read_service.get_myinfo(user_id)
             if teacher_data:
-                set_teacher_session(request, teacher_data[0])
-                return teacher_session_response(teacher_data[0])
+                teacher, session_data = teacher_data
+                set_teacher_session(request, teacher)
+                return session_data
             return {
                 "message": "Your account does not have a database listing"
             }
         except Exception as exc:
             logger.error(f"Internal Server Error: {str(exc)}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
-        finally:
-            db.close()
 
     @router.post("/profile/update_password/")
     async def update_password(
@@ -574,36 +540,19 @@ def create_profile_router(
         user_id: int = Depends(get_current_id),
         role: str = Depends(get_current_role),
     ):
-        db = session_factory()
         try:
-            if role == "teacher":
-                teacher_data = db.execute(
-                    select(teacher_model.regUserID).where(
-                        (cast(teacher_model.state, String)
-                        == get_index_cookie("state", request))
-                        & (cast(teacher_model.county, String)
-                        == get_index_cookie("county", request))
-                        & (cast(teacher_model.district, String)
-                        == get_index_cookie("district", request))
-                        & (cast(teacher_model.school, String)
-                        == get_index_cookie("school", request))
-                        & (cast(teacher_model.name, String)
-                        == get_index_cookie("teacher", request))
-                    )
-                ).scalar()
-                if teacher_data == user_id:
-                    return {
-                        "status": "success",
-                        "message": "Access granted",
-                    }
+            context = {
+                field: get_index_cookie(field, request)
+                for field in ("state", "county", "district", "school", "teacher")
+            }
+            if profile_read_service.has_teacher_access(context, user_id, role):
+                return {"status": "success", "message": "Access granted"}
             raise HTTPException(status_code=403, detail="No access")
         except HTTPException:
             raise
         except Exception as exc:
             logger.error(f"Internal Server Error: {str(exc)}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
-        finally:
-            db.close()
 
     @router.post("/profile/forgot_password/")
     @limiter.limit("5/minute")
@@ -732,34 +681,23 @@ def create_profile_router(
 
     @router.get("/api/teacher_url/")
     async def get_teacher_url(request: Request):
-        db = session_factory()
         try:
-            token = db.execute(
-                select(teacher_model.url_id).where(
-                    (cast(teacher_model.state, String)
-                    == get_index_cookie("state", request))
-                    & (cast(teacher_model.county, String)
-                    == get_index_cookie("county", request))
-                    & (cast(teacher_model.district, String)
-                    == get_index_cookie("district", request))
-                    & (cast(teacher_model.school, String)
-                    == get_index_cookie("school", request))
-                    & (cast(teacher_model.name, String)
-                    == get_index_cookie("teacher", request))
-                )
-            ).fetchone()
-            if not token:
+            url = profile_read_service.get_teacher_url(
+                {
+                    field: get_index_cookie(field, request)
+                    for field in ("state", "county", "district", "school", "teacher")
+                }
+            )
+            if url is None:
                 raise HTTPException(
                     status_code=404,
                     detail="No matching teacher found",
                 )
-            return {"url": "www.HelpTeachers.net/teacher/" + token[0]}
+            return {"url": url}
         except HTTPException:
             raise
         except Exception as exc:
             logger.error(f"Internal Server Error: {str(exc)}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
-        finally:
-            db.close()
 
     return router
