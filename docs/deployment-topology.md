@@ -117,15 +117,20 @@ The public sitemap and robots policy are tested by `tests/test_static_html_contr
 
 ## Health Checks
 
-There is no dedicated `/healthz` endpoint yet. Until one exists, use lightweight HTTP probes that exercise each service:
+FastAPI exposes two non-sensitive operational probes:
+
+- `GET /healthz` is process liveness and returns `200 {"status":"ok"}`.
+- `GET /readyz` runs `SELECT 1` through the configured database session and
+  returns `200 {"status":"ready"}` or `503 {"status":"not_ready"}`.
+
+Use these probes directly for backend process/load-balancer checks. The
+frontend and static probes remain useful for end-to-end deployment checks:
 
 ```text
 SvelteKit page probe:  GET /
-FastAPI data probe:   GET /api/teachers/?page=1&page_size=1
-Static file probe:    GET /static/robots.txt
+FastAPI readiness:     GET /readyz
+Static file probe:     GET /static/robots.txt
 ```
-
-Add a dedicated backend health endpoint before relying on database-aware production liveness checks.
 
 ## Verification Gate
 

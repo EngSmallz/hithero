@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field
 import os, logging, datetime, base64, mimetypes, requests, threading
 from dotenv import load_dotenv
 from passlib.hash import sha256_crypt
-from sqlalchemy import create_engine, Column, Integer, String, func, LargeBinary, DateTime, ForeignKey, UniqueConstraint, select, cast
+from sqlalchemy import create_engine, Column, Integer, String, func, LargeBinary, DateTime, ForeignKey, UniqueConstraint, select, cast, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session, relationship
 from sqlalchemy.pool import StaticPool
@@ -127,6 +127,17 @@ database_resources = create_database_resources(APP_ENV)
 SQLALCHEMY_DATABASE_URL = database_resources.database_url
 engine = database_resources.engine
 SessionLocal = database_resources.session_factory
+
+
+def database_ready():
+    db = SessionLocal()
+    try:
+        db.execute(text("SELECT 1"))
+    finally:
+        db.close()
+
+
+app.state.readiness_check = database_ready
 
 # Maximum allowed file size in bytes (e.g., 1MB)
 MAX_FILE_SIZE = 1 * 1024 * 1024

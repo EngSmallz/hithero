@@ -44,6 +44,23 @@ def create_app(settings: BackendSettings | None = None):
 
     settings = settings or BackendSettings.from_environment()
     application = FastAPI(openapi_url=None, redoc_url=None)
+    application.state.readiness_check = lambda: True
+
+    @application.get("/healthz", include_in_schema=False)
+    def healthz():
+        return {"status": "ok"}
+
+    @application.get("/readyz", include_in_schema=False)
+    def readyz():
+        try:
+            application.state.readiness_check()
+        except Exception:
+            return JSONResponse(
+                status_code=503,
+                content={"status": "not_ready"},
+            )
+        return {"status": "ready"}
+
     application.add_middleware(
         SessionMiddleware,
         secret_key=settings.secret_key,

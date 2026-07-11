@@ -1,6 +1,6 @@
 # Backend Completion Plan
 
-**Status: B0 complete; B1 package boundaries complete; B2 directory and initial profile slices complete (2026-07-11).**
+**Status: B0 complete; B1 package boundaries complete; B2 domain extraction complete (2026-07-11); B3 in progress.**
 
 The baseline route inventory, contract snapshot, and full-gate evidence are
 recorded in [`docs/backend-baseline-contracts.md`](backend-baseline-contracts.md)
@@ -36,6 +36,11 @@ The first transactional profile mutation slice is recorded in
 
 The profile name/wishlist mutation slice is recorded in
 [`agent-reports/2026-07-11-b2-profile-simple-mutations.md`](../agent-reports/2026-07-11-b2-profile-simple-mutations.md).
+
+The remaining B2 profile, forum, and admin extraction slices are recorded in
+the dated `agent-reports/2026-07-11-b2-*.md` reports. The latest accumulated
+backend static evidence is 232 passing tests; no production schema or legacy
+browser route was changed during B2.
 
 The frontend migration is substantially implemented, but the FastAPI backend is
 only partially modularized. `app.py` remains the composition root *and* holds
