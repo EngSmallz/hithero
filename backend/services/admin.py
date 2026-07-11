@@ -56,6 +56,36 @@ class AdminService:
             current_user_id=current_user_id,
         )
 
+    def get_validation_users(self, *, role, user_id):
+        if role == "admin":
+            return None, self._repository.get_pending_users()
+        teacher = self._repository.get_teacher_by_user_id(user_id)
+        if teacher is None:
+            return None, []
+        return teacher, self._repository.get_pending_users(
+            scope={
+                "state": teacher.state,
+                "county": teacher.county,
+                "district": teacher.district,
+            }
+        )
+
+    def build_teacher_report(self, *, state, county=None, district=None, school=None):
+        rows = self._repository.get_teacher_report_rows(
+            state=state,
+            county=county,
+            district=district,
+            school=school,
+        )
+        if rows is None:
+            return None
+        data = ["Name\tSchool\tEmail\tPhone"]
+        data.extend(
+            f"{name}\t{school_name}\t{email}\t{phone}"
+            for name, school_name, email, phone in rows
+        )
+        return "\n".join(data)
+
     def _update_pending_flag(self, user_email, *, flag_name, role, current_user_id):
         if not self._repository.update_pending_flag(
             user_email,

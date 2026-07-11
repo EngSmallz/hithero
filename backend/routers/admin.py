@@ -88,35 +88,14 @@ def create_admin_router(
         role: str = Depends(get_current_role),
         user_id: int = Depends(get_current_id),
     ):
-        db = session_factory()
         try:
-            if role == "admin":
-                new_users = db.execute(select(pending_user_model)).fetchall()
-                return {
-                    "new_users": serialize_pending_users(new_users),
-                    "role": role,
-                }
-
-            if role == "teacher":
-                teacher_data = db.execute(
-                    select(teacher_model).where(
-                        teacher_model.regUserID == user_id
-                    )
-                ).fetchone()
-                if not teacher_data:
-                    return {"new_users": [], "role": role}
-
-                set_teacher_session(request, teacher_data[0])
-                state = get_index_cookie("state", request)
-                county = get_index_cookie("county", request)
-                district = get_index_cookie("district", request)
-                new_users = db.execute(
-                    select(pending_user_model).where(
-                        (cast(pending_user_model.state, String) == state)
-                        & (cast(pending_user_model.county, String) == county)
-                        & (cast(pending_user_model.district, String) == district)
-                    )
-                ).fetchall()
+            teacher, new_users = admin_service.get_validation_users(
+                role=role,
+                user_id=user_id,
+            )
+            if teacher is not None:
+                set_teacher_session(request, teacher)
+            if role in ("admin", "teacher"):
                 return {
                     "new_users": serialize_pending_users(new_users),
                     "role": role,
@@ -129,8 +108,6 @@ def create_admin_router(
         except Exception as exc:
             logger.error(f"Internal Server Error: {str(exc)}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
-        finally:
-            db.close()
 
     @router.post("/validation/delete_user/{user_email}")
     async def delete_user(
@@ -208,48 +185,17 @@ def create_admin_router(
                 ),
             )
 
-        db = session_factory()
         try:
-            query = select(
-                teacher_model.name,
-                teacher_model.school,
-                teacher_model.regUserID,
-            ).where(cast(teacher_model.state, String) == state)
-            if county:
-                query = query.where(cast(teacher_model.county, String) == county)
-            if district:
-                query = query.where(
-                    cast(teacher_model.district, String) == district
-                )
-            if school:
-                query = query.where(cast(teacher_model.school, String) == school)
-
-            teachers = db.execute(query).fetchall()
-            if not teachers:
+            report = admin_service.build_teacher_report(
+                state=state,
+                county=county,
+                district=district,
+                school=school,
+            )
+            if report is None:
                 raise HTTPException(
                     status_code=404,
                     detail="No teachers found with the specified criteria.",
-                )
-
-            reg_user_ids = [teacher.regUserID for teacher in teachers]
-            users = db.execute(
-                select(
-                    registered_user_model.id,
-                    registered_user_model.email,
-                    registered_user_model.phone_number,
-                ).where(registered_user_model.id.in_(reg_user_ids))
-            ).fetchall()
-
-            data = ["Name\tSchool\tEmail\tPhone"]
-            user_dict = {
-                user.id: {"email": user.email, "phone": user.phone_number}
-                for user in users
-            }
-            for teacher in teachers:
-                user = user_dict.get(teacher.regUserID, {})
-                data.append(
-                    f"{teacher.name}\t{teacher.school}\t"
-                    f"{user.get('email', 'N/A')}\t{user.get('phone', 'N/A')}"
                 )
 
             with tempfile.NamedTemporaryFile(
@@ -258,7 +204,7 @@ def create_admin_router(
                 suffix=".txt",
                 delete=False,
             ) as temp_file:
-                temp_file.write("\n".join(data))
+                temp_file.write(report)
                 file_path = temp_file.name
 
             try:
@@ -277,8 +223,6 @@ def create_admin_router(
         except Exception as exc:
             logger.error(f"Report generation error: {str(exc)}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
-        finally:
-            db.close()
 
     @router.post("/profile/delete/")
     async def admin_delete_user_account(

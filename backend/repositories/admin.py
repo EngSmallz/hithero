@@ -177,3 +177,78 @@ class AdminRepository:
             raise
         finally:
             db.close()
+
+    def get_teacher_by_user_id(self, user_id):
+        db = self._session_factory()
+        try:
+            result = db.execute(
+                select(self._teacher_model).where(
+                    self._teacher_model.regUserID == user_id
+                )
+            ).fetchone()
+            return result[0] if result else None
+        finally:
+            db.close()
+
+    def get_pending_users(self, *, scope=None):
+        db = self._session_factory()
+        try:
+            query = select(self._pending_user_model)
+            if scope:
+                query = query.where(
+                    cast(self._pending_user_model.state, String) == scope["state"],
+                    cast(self._pending_user_model.county, String) == scope["county"],
+                    cast(self._pending_user_model.district, String)
+                    == scope["district"],
+                )
+            return [row[0] for row in db.execute(query).fetchall()]
+        finally:
+            db.close()
+
+    def get_teacher_report_rows(self, *, state, county=None, district=None, school=None):
+        db = self._session_factory()
+        try:
+            query = select(
+                self._teacher_model.name,
+                self._teacher_model.school,
+                self._teacher_model.regUserID,
+            ).where(cast(self._teacher_model.state, String) == state)
+            if county:
+                query = query.where(
+                    cast(self._teacher_model.county, String) == county
+                )
+            if district:
+                query = query.where(
+                    cast(self._teacher_model.district, String) == district
+                )
+            if school:
+                query = query.where(
+                    cast(self._teacher_model.school, String) == school
+                )
+
+            teachers = db.execute(query).fetchall()
+            if not teachers:
+                return None
+            user_ids = [teacher.regUserID for teacher in teachers]
+            users = db.execute(
+                select(
+                    self._registered_user_model.id,
+                    self._registered_user_model.email,
+                    self._registered_user_model.phone_number,
+                ).where(self._registered_user_model.id.in_(user_ids))
+            ).fetchall()
+            user_dict = {
+                user.id: {"email": user.email, "phone": user.phone_number}
+                for user in users
+            }
+            return [
+                (
+                    teacher.name,
+                    teacher.school,
+                    user_dict.get(teacher.regUserID, {}).get("email", "N/A"),
+                    user_dict.get(teacher.regUserID, {}).get("phone", "N/A"),
+                )
+                for teacher in teachers
+            ]
+        finally:
+            db.close()
