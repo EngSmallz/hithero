@@ -1,6 +1,6 @@
 # Backend Completion Plan
 
-**Status: B0 complete; B1 application-factory slice in progress (2026-07-10).**
+**Status: B0 complete; B1 package-boundary extraction in progress (2026-07-11).**
 
 The baseline route inventory, contract snapshot, and full-gate evidence are
 recorded in [`docs/backend-baseline-contracts.md`](backend-baseline-contracts.md)
@@ -22,8 +22,8 @@ verified; evidence is recorded in
 The router-registration composition boundary is recorded in
 [`agent-reports/2026-07-11-b1-api-registration-boundary.md`](../agent-reports/2026-07-11-b1-api-registration-boundary.md).
 
-The router-registration composition boundary is recorded in
-[`agent-reports/2026-07-11-b1-api-registration-boundary.md`](../agent-reports/2026-07-11-b1-api-registration-boundary.md).
+The shared auth/session core boundary is recorded in
+[`agent-reports/2026-07-11-b1-auth-core.md`](../agent-reports/2026-07-11-b1-auth-core.md).
 
 The frontend migration is substantially implemented, but the FastAPI backend is
 only partially modularized. `app.py` remains the composition root *and* holds
@@ -104,6 +104,8 @@ Tasks:
 4. Move Pydantic models to `backend/schemas`; use request and response models
    consistently.
 5. Move shared auth/session dependencies and settings to `backend/core`.
+   The shared session helper extraction is verified; remaining auth/security
+   normalization is tracked in B3.
 6. Leave a temporary compatibility `app.py` that exports the ASGI `app`, then
    remove it only after all deployment commands use the new application entry
    point.

@@ -20,6 +20,13 @@ from backend.core.settings import (
     get_cors_allow_origins,
     session_cookie_https_only,
 )
+from backend.core.auth import (
+    get_current_id,
+    get_current_role,
+    get_current_email,
+    get_index_cookie,
+    set_teacher_session,
+)
 from backend.main import create_app
 from backend.db.base import Base
 from backend.db.session import (
@@ -133,25 +140,6 @@ if APP_ENV != "test":
 
 
 #########functions############
-def get_current_id(request: Request):
-    return request.session.get("user_id", None)
-
-def get_current_role(request: Request):
-    return request.session.get("user_role", None)
-
-def get_current_email(request: Request):
-    return request.session.get("user_email", None)
-
-def get_index_cookie(index: str, request: Request):
-    return request.session.get(index, None)
-
-def set_teacher_session(request: Request, teacher):
-    request.session["state"] = teacher.state
-    request.session["county"] = teacher.county
-    request.session["district"] = teacher.district
-    request.session["school"] = teacher.school
-    request.session["teacher"] = teacher.name
-
 def render_email_template(template_path: str, data: dict) -> str:
     """
     Loads an HTML template and replaces placeholders with provided data.
