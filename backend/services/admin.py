@@ -39,3 +39,29 @@ class AdminService:
         if error == "forbidden":
             raise ValidationScopeForbidden(user_email)
         return email
+
+    def report_pending_user(self, user_email, *, role, current_user_id):
+        return self._update_pending_flag(
+            user_email,
+            flag_name="report",
+            role=role,
+            current_user_id=current_user_id,
+        )
+
+    def mark_pending_user_emailed(self, user_email, *, role, current_user_id):
+        return self._update_pending_flag(
+            user_email,
+            flag_name="emailed",
+            role=role,
+            current_user_id=current_user_id,
+        )
+
+    def _update_pending_flag(self, user_email, *, flag_name, role, current_user_id):
+        if not self._repository.update_pending_flag(
+            user_email,
+            flag_name=flag_name,
+            flag_value=1,
+            role=role,
+            current_user_id=current_user_id,
+        ):
+            raise ValidationScopeForbidden(user_email)

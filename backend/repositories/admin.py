@@ -1,4 +1,4 @@
-from sqlalchemy import String, cast, delete, insert, select
+from sqlalchemy import String, cast, delete, insert, select, update
 
 
 class AdminRepository:
@@ -120,6 +120,58 @@ class AdminRepository:
             )
             db.commit()
             return user.email, None
+        except Exception:
+            db.rollback()
+            raise
+        finally:
+            db.close()
+
+    def update_pending_flag(
+        self,
+        user_email,
+        *,
+        flag_name,
+        flag_value,
+        role,
+        current_user_id,
+    ):
+        db = self._session_factory()
+        try:
+            pending_result = db.execute(
+                select(self._pending_user_model).where(
+                    cast(self._pending_user_model.email, String)
+                    == cast(user_email, String)
+                )
+            ).fetchone()
+            pending_user = pending_result[0] if pending_result else None
+
+            if role == "teacher":
+                teacher_result = db.execute(
+                    select(self._teacher_model).where(
+                        self._teacher_model.regUserID == current_user_id
+                    )
+                ).fetchone()
+                if (
+                    not pending_user
+                    or not teacher_result
+                    or pending_user.state != teacher_result[0].state
+                    or pending_user.county != teacher_result[0].county
+                    or pending_user.district != teacher_result[0].district
+                ):
+                    db.rollback()
+                    return False
+
+            if pending_user:
+                db.execute(
+                    update(self._pending_user_model)
+                    .where(
+                        cast(self._pending_user_model.email, String)
+                        == cast(user_email, String)
+                    )
+                    .values(**{flag_name: flag_value})
+                )
+            db.commit()
+            return True
         except Exception:
             db.rollback()
             raise

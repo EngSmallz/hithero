@@ -52,31 +52,6 @@ def create_admin_router(
             for row in rows
         ]
 
-    def require_teacher_scope(db, request, role, user_email):
-        if role == "admin":
-            return
-
-        pending_user = db.execute(
-            select(pending_user_model).where(
-                cast(pending_user_model.email, String)
-                == cast(user_email, String)
-            )
-        ).fetchone()
-        teacher = db.execute(
-            select(teacher_model).where(
-                teacher_model.regUserID == get_current_id(request)
-            )
-        ).fetchone()
-        if not pending_user or not teacher or (
-            pending_user[0].state != teacher[0].state
-            or pending_user[0].county != teacher[0].county
-            or pending_user[0].district != teacher[0].district
-        ):
-            raise HTTPException(
-                status_code=403,
-                detail="You can only moderate teachers in your own district.",
-            )
-
     @router.post("/validation/validate_user/{user_email}")
     async def move_user(
         user_email: str,
@@ -186,25 +161,16 @@ def create_admin_router(
         if role not in ("admin", "teacher"):
             raise HTTPException(status_code=403, detail="Access denied.")
 
-        db = session_factory()
         try:
-            require_teacher_scope(db, request, role, user_email)
-            db.execute(
-                update(pending_user_model)
-                .where(
-                    cast(pending_user_model.email, String)
-                    == cast(user_email, String)
-                )
-                .values(report=1)
+            admin_service.report_pending_user(
+                user_email,
+                role=role,
+                current_user_id=get_current_id(request),
             )
-            db.commit()
             return {"message": "User reported."}
         except Exception as exc:
-            db.rollback()
             logger.error(f"Internal Server Error: {str(exc)}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
-        finally:
-            db.close()
 
     @router.post("/validation/emailed_user/{user_email}")
     async def emailed_user(
@@ -215,25 +181,16 @@ def create_admin_router(
         if role not in ("admin", "teacher"):
             raise HTTPException(status_code=403, detail="Access denied.")
 
-        db = session_factory()
         try:
-            require_teacher_scope(db, request, role, user_email)
-            db.execute(
-                update(pending_user_model)
-                .where(
-                    cast(pending_user_model.email, String)
-                    == cast(user_email, String)
-                )
-                .values(emailed=1)
+            admin_service.mark_pending_user_emailed(
+                user_email,
+                role=role,
+                current_user_id=get_current_id(request),
             )
-            db.commit()
             return {"message": "User emailed."}
         except Exception as exc:
-            db.rollback()
             logger.error(f"Internal Server Error: {str(exc)}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
-        finally:
-            db.close()
 
     @router.post("/admin/generate_teacher_report/")
     async def generate_teacher_report(

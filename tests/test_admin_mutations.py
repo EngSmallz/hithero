@@ -24,6 +24,11 @@ class RecordingRepository:
         self.validation_values = values
         return (user_email if self.deleted else None, None if self.deleted else "missing")
 
+    def update_pending_flag(self, user_email, **values):
+        self.flag_email = user_email
+        self.flag_values = values
+        return self.deleted
+
 
 def test_admin_service_deletes_account_and_preserves_message():
     repository = RecordingRepository()
@@ -120,6 +125,32 @@ def test_admin_service_validates_pending_user_with_scope_inputs():
     assert repository.validation_values == {
         "role": "teacher",
         "current_user_id": 42,
+    }
+
+
+def test_admin_service_updates_report_and_emailed_flags():
+    repository = RecordingRepository()
+    service = AdminService(repository)
+
+    service.report_pending_user(
+        "pending@example.test", role="teacher", current_user_id=42
+    )
+    assert repository.flag_email == "pending@example.test"
+    assert repository.flag_values == {
+        "flag_name": "report",
+        "flag_value": 1,
+        "role": "teacher",
+        "current_user_id": 42,
+    }
+
+    service.mark_pending_user_emailed(
+        "pending@example.test", role="admin", current_user_id=None
+    )
+    assert repository.flag_values == {
+        "flag_name": "emailed",
+        "flag_value": 1,
+        "role": "admin",
+        "current_user_id": None,
     }
 
 
