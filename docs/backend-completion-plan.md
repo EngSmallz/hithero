@@ -1,6 +1,11 @@
 # Backend Completion Plan
 
-**Status: proposed backlog — backend modernization is not complete.**
+**Status: B0 baseline complete (2026-07-10); B1 is the next active slice.**
+
+The baseline route inventory, contract snapshot, and full-gate evidence are
+recorded in [`docs/backend-baseline-contracts.md`](backend-baseline-contracts.md)
+and [`agent-reports/2026-07-10-b0-backend-baseline-contracts.md`](../agent-reports/2026-07-10-b0-backend-baseline-contracts.md).
+No production schema or legacy browser route was changed in B0.
 
 The frontend migration is substantially implemented, but the FastAPI backend is
 only partially modularized. `app.py` remains the composition root *and* holds
