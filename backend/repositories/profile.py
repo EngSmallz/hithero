@@ -45,17 +45,27 @@ class ProfileRepository:
             db.close()
 
     def update_teacher_school(self, user_id, *, state, county, district, school):
+        self._update_teacher(
+            user_id,
+            state=state,
+            county=county,
+            district=district,
+            school=school,
+        )
+
+    def update_teacher_name(self, user_id, name):
+        self._update_teacher(user_id, name=name)
+
+    def update_teacher_wishlist(self, user_id, wishlist_url):
+        self._update_teacher(user_id, wishlist_url=wishlist_url)
+
+    def _update_teacher(self, user_id, **values):
         db = self._session_factory()
         try:
             db.execute(
                 update(self._teacher_model)
                 .where(self._teacher_model.regUserID == user_id)
-                .values(
-                    state=state,
-                    county=county,
-                    district=district,
-                    school=school,
-                )
+                .values(**values)
             )
             db.commit()
         except Exception:

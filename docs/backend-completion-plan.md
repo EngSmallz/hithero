@@ -34,6 +34,9 @@ The read-only profile service slice is recorded in
 The first transactional profile mutation slice is recorded in
 [`agent-reports/2026-07-11-b2-profile-school-mutation.md`](../agent-reports/2026-07-11-b2-profile-school-mutation.md).
 
+The profile name/wishlist mutation slice is recorded in
+[`agent-reports/2026-07-11-b2-profile-simple-mutations.md`](../agent-reports/2026-07-11-b2-profile-simple-mutations.md).
+
 The frontend migration is substantially implemented, but the FastAPI backend is
 only partially modularized. `app.py` remains the composition root *and* holds
 database models, infrastructure adapters, scheduled-job logic, shared auth

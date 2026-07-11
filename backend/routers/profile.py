@@ -326,23 +326,14 @@ def create_profile_router(
         user_id: int = Depends(get_current_id),
         role: str = Depends(get_current_role),
     ):
-        db = session_factory()
         try:
             if not role:
                 raise HTTPException(status_code=403, detail="Permission denied.")
-            db.execute(
-                update(teacher_model)
-                .where(teacher_model.regUserID == user_id)
-                .values(name=teacher)
-            )
-            db.commit()
+            profile_mutation_service.update_teacher_name(user_id, teacher)
             return {"message": "Name updated."}
         except Exception as exc:
-            db.rollback()
             logger.error(f"Internal Server Error: {str(exc)}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
-        finally:
-            db.close()
 
     @router.post("/profile/update_wishlist/")
     async def update_wishlist(
@@ -351,22 +342,14 @@ def create_profile_router(
         user_id: int = Depends(get_current_id),
         role: str = Depends(get_current_role),
     ):
-        db = session_factory()
         try:
             if not role:
                 raise HTTPException(status_code=403, detail="Permission denied.")
-            db.execute(
-                update(teacher_model)
-                .where(teacher_model.regUserID == user_id)
-                .values(wishlist_url=wishlist + "&tag=h0mer00mher0-20")
-            )
-            db.commit()
+            profile_mutation_service.update_teacher_wishlist(user_id, wishlist)
             return {"message": "Wishlist updated."}
         except Exception as exc:
             logger.error(f"Internal Server Error: {str(exc)}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
-        finally:
-            db.close()
 
     @router.post("/profile/update_url_id/")
     async def update_url_id(

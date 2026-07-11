@@ -10,6 +10,12 @@ class RecordingRepository:
         self.user_id = user_id
         self.values = values
 
+    def update_teacher_name(self, user_id, name):
+        self.name_update = (user_id, name)
+
+    def update_teacher_wishlist(self, user_id, wishlist_url):
+        self.wishlist_update = (user_id, wishlist_url)
+
 
 def test_profile_mutation_service_passes_school_update_as_one_use_case():
     repository = RecordingRepository()
@@ -30,6 +36,20 @@ def test_profile_mutation_service_passes_school_update_as_one_use_case():
         "district": "District 1",
         "school": "Example School",
     }
+
+
+def test_profile_mutation_service_preserves_name_and_wishlist_updates():
+    repository = RecordingRepository()
+    service = ProfileMutationService(repository)
+
+    service.update_teacher_name(42, "Updated Teacher")
+    service.update_teacher_wishlist(42, "https://example.test/list")
+
+    assert repository.name_update == (42, "Updated Teacher")
+    assert repository.wishlist_update == (
+        42,
+        "https://example.test/list&tag=h0mer00mher0-20",
+    )
 
 
 class FailingSession:
