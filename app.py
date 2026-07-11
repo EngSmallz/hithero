@@ -147,7 +147,7 @@ def init_db():
     Base.metadata.create_all(bind=engine)
 
 
-if APP_ENV != "test":
+if APP_ENV in LOCAL_APP_ENVS:
     init_db()
 
 
