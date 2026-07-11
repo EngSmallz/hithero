@@ -110,3 +110,50 @@ class ForumRepository:
             raise
         finally:
             db.close()
+
+    def update_post(self, *, post_id, user_id, title, content):
+        db = self._session_factory()
+        try:
+            post = db.query(self._post_model).filter(
+                self._post_model.id == post_id
+            ).first()
+            if not post:
+                db.rollback()
+                return None, "missing"
+            if post.user_id != user_id:
+                db.rollback()
+                return None, "forbidden"
+
+            post.title = title
+            post.content = content
+            db.commit()
+            db.refresh(post)
+            return post, None
+        except Exception:
+            db.rollback()
+            raise
+        finally:
+            db.close()
+
+    def update_comment(self, *, comment_id, user_id, content):
+        db = self._session_factory()
+        try:
+            comment = db.query(self._comment_model).filter(
+                self._comment_model.id == comment_id
+            ).first()
+            if not comment:
+                db.rollback()
+                return None, "missing"
+            if comment.user_id != user_id:
+                db.rollback()
+                return None, "forbidden"
+
+            comment.content = content
+            db.commit()
+            db.refresh(comment)
+            return comment, None
+        except Exception:
+            db.rollback()
+            raise
+        finally:
+            db.close()

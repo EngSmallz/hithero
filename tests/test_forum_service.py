@@ -20,6 +20,14 @@ class RecordingRepository:
         self.vote_values = values
         return "post"
 
+    def update_post(self, **values):
+        self.post_update_values = values
+        return "updated-post", None
+
+    def update_comment(self, **values):
+        self.comment_update_values = values
+        return "updated-comment", None
+
 
 def test_forum_service_sanitizes_post_fields_before_persistence():
     repository = RecordingRepository()
@@ -86,6 +94,37 @@ def test_forum_service_maps_missing_comment_records_and_posts():
         )
     with pytest.raises(LookupError, match="Post with ID 1 not found"):
         service.record_vote(post_id=1, user_id=42, vote_type=1)
+
+
+def test_forum_service_sanitizes_and_delegates_post_and_comment_updates():
+    repository = RecordingRepository()
+    service = ForumService(repository)
+
+    assert service.update_post(
+        post_id=1,
+        user_id=42,
+        title=" title ",
+        content=" body ",
+        sanitize=lambda value: value.strip(),
+    ) == "updated-post"
+    assert repository.post_update_values == {
+        "post_id": 1,
+        "user_id": 42,
+        "title": "title",
+        "content": "body",
+    }
+
+    assert service.update_comment(
+        comment_id=2,
+        user_id=42,
+        content=" comment ",
+        sanitize=lambda value: value.strip(),
+    ) == "updated-comment"
+    assert repository.comment_update_values == {
+        "comment_id": 2,
+        "user_id": 42,
+        "content": "comment",
+    }
 
 
 class FailingSession:

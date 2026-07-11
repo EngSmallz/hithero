@@ -43,3 +43,32 @@ class ForumService:
         if post is None:
             raise LookupError(f"Post with ID {post_id} not found.")
         return post
+
+    def update_post(self, *, post_id, user_id, title, content, sanitize):
+        post, error = self._repository.update_post(
+            post_id=post_id,
+            user_id=user_id,
+            title=sanitize(title),
+            content=sanitize(content),
+        )
+        if error == "missing":
+            raise LookupError(f"Post with ID {post_id} not found.")
+        if error == "forbidden":
+            raise PermissionError(
+                "Not authorized to edit this post. You must be the author."
+            )
+        return post
+
+    def update_comment(self, *, comment_id, user_id, content, sanitize):
+        comment, error = self._repository.update_comment(
+            comment_id=comment_id,
+            user_id=user_id,
+            content=sanitize(content),
+        )
+        if error == "missing":
+            raise LookupError(f"Comment with ID {comment_id} not found.")
+        if error == "forbidden":
+            raise PermissionError(
+                "Not authorized to edit this comment. You must be the author."
+            )
+        return comment

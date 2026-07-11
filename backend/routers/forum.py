@@ -311,36 +311,24 @@ def create_forum_router(
         post_data: post_update_model,
         user_id: int = Depends(get_current_id),
     ):
-        with forum_session() as db:
-            try:
-                existing_post = (
-                    db.query(post_model).filter(post_model.id == post_id).first()
-                )
-                if existing_post is None:
-                    raise HTTPException(
-                        status_code=404,
-                        detail=f"Post with ID {post_id} not found.",
-                    )
-                if existing_post.user_id != user_id:
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail="Not authorized to edit this post. You must be the author.",
-                    )
-
-                existing_post.title = sanitize(post_data.title)
-                existing_post.content = sanitize(post_data.content)
-                db.commit()
-                db.refresh(existing_post)
-                return serialize(existing_post)
-            except HTTPException:
-                rollback_session(db)
-                raise
-            except Exception:
-                rollback_session(db)
-                raise HTTPException(
-                    status_code=500,
-                    detail="Internal server error during post update.",
-                )
+        try:
+            post = forum_service.update_post(
+                post_id=post_id,
+                user_id=user_id,
+                title=post_data.title,
+                content=post_data.content,
+                sanitize=sanitize,
+            )
+            return serialize(post)
+        except LookupError as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
+        except PermissionError as exc:
+            raise HTTPException(status_code=403, detail=str(exc))
+        except Exception:
+            raise HTTPException(
+                status_code=500,
+                detail="Internal server error during post update.",
+            )
 
     @router.patch("/comment/{comment_id}/update")
     async def update_comment(
@@ -348,39 +336,22 @@ def create_forum_router(
         content: str = Form(...),
         user_id: int = Depends(get_current_id),
     ):
-        with forum_session() as db:
-            try:
-                existing_comment = (
-                    db.query(comment_model)
-                    .filter(comment_model.id == comment_id)
-                    .first()
-                )
-                if existing_comment is None:
-                    raise HTTPException(
-                        status_code=404,
-                        detail=f"Comment with ID {comment_id} not found.",
-                    )
-                if existing_comment.user_id != user_id:
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail=(
-                            "Not authorized to edit this comment. "
-                            "You must be the author."
-                        ),
-                    )
-
-                existing_comment.content = sanitize(content)
-                db.commit()
-                db.refresh(existing_comment)
-                return serialize(existing_comment)
-            except HTTPException:
-                rollback_session(db)
-                raise
-            except Exception:
-                rollback_session(db)
-                raise HTTPException(
-                    status_code=500,
-                    detail="Internal server error during comment update.",
-                )
+        try:
+            comment = forum_service.update_comment(
+                comment_id=comment_id,
+                user_id=user_id,
+                content=content,
+                sanitize=sanitize,
+            )
+            return serialize(comment)
+        except LookupError as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
+        except PermissionError as exc:
+            raise HTTPException(status_code=403, detail=str(exc))
+        except Exception:
+            raise HTTPException(
+                status_code=500,
+                detail="Internal server error during comment update.",
+            )
 
     return router
