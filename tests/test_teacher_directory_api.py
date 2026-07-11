@@ -49,6 +49,32 @@ def seed_teacher_directory(app_module):
         db.close()
 
 
+def seed_school_options(app_module):
+    app_module.init_db()
+    db = app_module.SessionLocal()
+    try:
+        db.execute(delete(app_module.School))
+        db.add_all(
+            [
+                app_module.School(
+                    school_name="Lincoln High School",
+                    district="Seattle Public Schools",
+                    county="King",
+                    state="WA",
+                ),
+                app_module.School(
+                    school_name="Everett High School",
+                    district="Everett Public Schools",
+                    county="Snohomish",
+                    state="WA",
+                ),
+            ]
+        )
+        db.commit()
+    finally:
+        db.close()
+
+
 def test_teacher_directory_api_returns_filters_and_teacher_summaries(app_module):
     seed_teacher_directory(app_module)
     client = TestClient(app_module.app)
@@ -219,3 +245,51 @@ def test_random_teacher_preserves_not_found_status(app_module):
     response = TestClient(app_module.app).get("/api/random_teacher/")
 
     assert response.status_code == 404
+
+
+def test_teacher_directory_option_and_index_routes_preserve_legacy_contracts(
+    app_module,
+):
+    seed_teacher_directory(app_module)
+    seed_school_options(app_module)
+    client = TestClient(app_module.app)
+
+    assert client.get("/api/get_states/").json() == ["WA"]
+    assert client.get("/api/get_counties/WA").json() == ["King", "Snohomish"]
+    assert client.get("/api/get_districts/WA/King").json() == [
+        "Seattle Public Schools"
+    ]
+    assert client.get("/api/get_schools/WA/King/Seattle%20Public%20Schools").json() == [
+        "Lincoln High School"
+    ]
+
+    assert client.get("/api/index_states/").json() == ["OR", "WA"]
+    assert client.get("/api/index_counties/WA").json() == ["King", "Snohomish"]
+    assert client.get("/api/index_districts/WA/King").json() == [
+        "Seattle Public Schools"
+    ]
+    assert client.get(
+        "/api/index_schools/WA/King/Seattle%20Public%20Schools"
+    ).json() == ["Lincoln High School"]
+
+    response = client.post("/api/index_teachers/", data={"state": "WA", "county": "King"})
+    assert response.status_code == 200
+    assert response.json() == [{"name": "Alice Adams", "url_id": "alice-adams"}]
+
+
+def test_teacher_directory_option_and_index_routes_preserve_not_found_messages(
+    app_module,
+):
+    seed_teacher_directory(app_module)
+    client = TestClient(app_module.app)
+
+    assert client.get("/api/get_counties/AK").json() == {
+        "message": "No counties found for state: AK"
+    }
+    assert client.get("/api/index_districts/AK/Unknown").json() == {
+        "message": "No districts found for state: AK and county: Unknown"
+    }
+    response = client.post("/api/index_teachers/", data={"state": "AK"})
+    assert response.status_code == 404
+    assert response.headers["content-type"].startswith("text/html")
+    assert "Page Does Not Exist" in response.text

@@ -117,3 +117,123 @@ class TeacherDirectoryRepository:
             ).scalar_one_or_none()
         finally:
             db.close()
+
+    def get_school_states(self):
+        db = self._session_factory()
+        try:
+            values = db.query(self._school_model.state).distinct().all()
+            return sorted([value[0] for value in values])
+        finally:
+            db.close()
+
+    def get_school_counties(self, state: str):
+        db = self._session_factory()
+        try:
+            values = db.execute(
+                select(self._school_model.county)
+                .distinct()
+                .where(self._school_model.state == state)
+            ).fetchall()
+            return sorted([value[0] for value in values])
+        finally:
+            db.close()
+
+    def get_school_districts(self, state: str, county: str):
+        db = self._session_factory()
+        try:
+            values = db.execute(
+                select(self._school_model.district)
+                .distinct()
+                .where(
+                    (self._school_model.state == state)
+                    & (self._school_model.county == county)
+                )
+            ).fetchall()
+            return sorted([value[0] for value in values])
+        finally:
+            db.close()
+
+    def get_school_names(self, state: str, county: str, district: str):
+        db = self._session_factory()
+        try:
+            values = db.execute(
+                select(self._school_model.school_name)
+                .distinct()
+                .where(
+                    (self._school_model.state == state)
+                    & (self._school_model.county == county)
+                    & (self._school_model.district == district)
+                )
+            ).fetchall()
+            return sorted([value[0] for value in values])
+        finally:
+            db.close()
+
+    def get_index_states(self):
+        db = self._session_factory()
+        try:
+            values = db.query(cast(self._teacher_model.state, String)).distinct().all()
+            return sorted([value[0] for value in values])
+        finally:
+            db.close()
+
+    def get_index_counties(self, state: str):
+        db = self._session_factory()
+        try:
+            values = db.execute(
+                select(cast(self._teacher_model.county, String))
+                .distinct()
+                .where(cast(self._teacher_model.state, String) == state)
+            ).fetchall()
+            return sorted([value[0] for value in values])
+        finally:
+            db.close()
+
+    def get_index_districts(self, state: str, county: str):
+        db = self._session_factory()
+        try:
+            values = db.execute(
+                select(cast(self._teacher_model.district, String))
+                .distinct()
+                .where(
+                    (cast(self._teacher_model.state, String) == state)
+                    & (cast(self._teacher_model.county, String) == county)
+                )
+            ).fetchall()
+            return sorted([value[0] for value in values])
+        finally:
+            db.close()
+
+    def get_index_schools(self, state: str, county: str, district: str):
+        db = self._session_factory()
+        try:
+            values = db.execute(
+                select(cast(self._teacher_model.school, String))
+                .distinct()
+                .where(
+                    (cast(self._teacher_model.state, String) == state)
+                    & (cast(self._teacher_model.county, String) == county)
+                    & (cast(self._teacher_model.district, String) == district)
+                )
+            ).fetchall()
+            return sorted([value[0] for value in values])
+        finally:
+            db.close()
+
+    def find_index_teachers(self, *, state, county=None, district=None, school=None):
+        db = self._session_factory()
+        try:
+            query = select(self._teacher_model.name, self._teacher_model.url_id).where(
+                cast(self._teacher_model.state, String) == state
+            )
+            if county:
+                query = query.where(cast(self._teacher_model.county, String) == county)
+            if district:
+                query = query.where(
+                    cast(self._teacher_model.district, String) == district
+                )
+            if school:
+                query = query.where(cast(self._teacher_model.school, String) == school)
+            return db.execute(query).fetchall()
+        finally:
+            db.close()

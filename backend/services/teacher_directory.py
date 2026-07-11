@@ -70,3 +70,62 @@ class TeacherDirectoryService:
         if teacher is None:
             return None
         return serialize_teacher_profile(teacher)
+
+    def get_school_states(self):
+        return self._repository.get_school_states()
+
+    def get_school_counties(self, state: str):
+        values = self._repository.get_school_counties(state)
+        return values or {"message": f"No counties found for state: {state}"}
+
+    def get_school_districts(self, state: str, county: str):
+        values = self._repository.get_school_districts(state, county)
+        if values:
+            return values
+        return {"message": f"No districts found for state: {state} and county: {county}"}
+
+    def get_school_names(self, state: str, county: str, district: str):
+        values = self._repository.get_school_names(state, county, district)
+        if values:
+            return values
+        return {
+            "message": (
+                f"No schools found for state: {state}, county: {county}, "
+                f"and district: {district}"
+            )
+        }
+
+    def get_index_states(self):
+        return self._repository.get_index_states()
+
+    def get_index_counties(self, state: str):
+        values = self._repository.get_index_counties(state)
+        return values or {"message": f"No counties found for state: {state}"}
+
+    def get_index_districts(self, state: str, county: str):
+        values = self._repository.get_index_districts(state, county)
+        if values:
+            return values
+        return {"message": f"No districts found for state: {state} and county: {county}"}
+
+    def get_index_schools(self, state: str, county: str, district: str):
+        values = self._repository.get_index_schools(state, county, district)
+        if values:
+            return values
+        return {
+            "message": (
+                f"No schools found for state: {state}, county: {county}, "
+                f"and district: {district}"
+            )
+        }
+
+    def find_index_teachers(self, *, state, county=None, district=None, school=None):
+        teachers = self._repository.find_index_teachers(
+            state=state,
+            county=county,
+            district=district,
+            school=school,
+        )
+        if not teachers:
+            return None
+        return [{"name": teacher.name, "url_id": teacher.url_id} for teacher in teachers]
