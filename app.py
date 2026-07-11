@@ -3,7 +3,6 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 import os, logging, datetime, base64, mimetypes, requests, threading
 from dotenv import load_dotenv
-from fastapi.staticfiles import StaticFiles
 from passlib.hash import sha256_crypt
 from sqlalchemy import create_engine, Column, Integer, String, func, LargeBinary, DateTime, ForeignKey, UniqueConstraint, select, cast
 from sqlalchemy.engine import make_url
@@ -48,11 +47,7 @@ from backend.schemas.teachers import (
     TeacherDirectorySummary,
     TeacherProfileResponse,
 )
-from backend.routers.admin import create_admin_router
-from backend.routers.forum import create_forum_router
-from backend.routers.legacy import create_legacy_router, register_legacy_error_handlers
-from backend.routers.profile import create_profile_router
-from backend.routers.teachers import create_teacher_router
+from backend.api.register import register_routers
 try:
     from azure.communication.email import EmailClient
 except ImportError:
@@ -822,85 +817,43 @@ async def contact_us(name: str = Form(...), email: str = Form(...), subject: str
         logger.error(f"Internal Server Error: {str(e)}") 
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
-app.include_router(
-    create_legacy_router(
-        session_factory=SessionLocal,
-        teacher_model=TeacherList,
-        spotlight_model=Spotlight,
-        set_teacher_session=set_teacher_session,
-        logger=logger,
-    )
-)
-app.mount("/pages", StaticFiles(directory="pages"), name="pages")
-register_legacy_error_handlers(app)
-
-app.include_router(
-    create_teacher_router(
-        session_factory=SessionLocal,
-        school_model=School,
-        teacher_model=TeacherList,
-        directory_response_model=TeacherDirectoryResponse,
-        profile_response_model=TeacherProfileResponse,
-    )
-)
-
-app.include_router(
-    create_forum_router(
-        session_factory=SessionLocal,
-        post_model=ForumPost,
-        comment_model=ForumComment,
-        vote_model=PostVote,
-        vote_input_model=VoteInput,
-        post_update_model=PostUpdate,
-        get_current_id=get_current_id,
-        get_current_role=get_current_role,
-        limiter=limiter,
-        clean_html=bleach.clean,
-        allowed_tags=ALLOWED_TAGS,
-        allowed_attrs=ALLOWED_ATTRS,
-        allowed_protocols=ALLOWED_PROTOCOLS,
-        model_to_dict=model_to_dict,
-    )
-)
-
-app.include_router(
-    create_profile_router(
-        session_factory=SessionLocal,
-        pending_user_model=NewUsers,
-        registered_user_model=RegisteredUsers,
-        teacher_model=TeacherList,
-        reset_token_model=PasswordResetToken,
-        get_current_id=get_current_id,
-        get_current_role=get_current_role,
-        get_current_email=get_current_email,
-        get_index_cookie=get_index_cookie,
-        set_teacher_session=set_teacher_session,
-        verify_recaptcha=verify_recaptcha,
-        send_registration_email=send_registration_email,
-        render_email_template=render_email_template,
-        send_email=send_email,
-        limiter=limiter,
-        detect_file_type=detect_file_type,
-        max_file_size=MAX_FILE_SIZE,
-        logger=logger,
-    )
-)
-
-app.include_router(
-    create_admin_router(
-        session_factory=SessionLocal,
-        pending_user_model=NewUsers,
-        registered_user_model=RegisteredUsers,
-        teacher_model=TeacherList,
-        get_current_id=get_current_id,
-        get_current_role=get_current_role,
-        set_teacher_session=set_teacher_session,
-        get_index_cookie=get_index_cookie,
-        send_validation_email=send_validation_email,
-        send_attachment=send_attachment,
-        logger=logger,
-        get_admin_secret=os.getenv,
-    )
+register_routers(
+    app,
+    session_factory=SessionLocal,
+    teacher_model=TeacherList,
+    spotlight_model=Spotlight,
+    school_model=School,
+    directory_response_model=TeacherDirectoryResponse,
+    profile_response_model=TeacherProfileResponse,
+    post_model=ForumPost,
+    comment_model=ForumComment,
+    vote_model=PostVote,
+    vote_input_model=VoteInput,
+    post_update_model=PostUpdate,
+    pending_user_model=NewUsers,
+    registered_user_model=RegisteredUsers,
+    reset_token_model=PasswordResetToken,
+    get_current_id=get_current_id,
+    get_current_role=get_current_role,
+    get_current_email=get_current_email,
+    get_index_cookie=get_index_cookie,
+    set_teacher_session=set_teacher_session,
+    verify_recaptcha=verify_recaptcha,
+    send_registration_email=send_registration_email,
+    render_email_template=render_email_template,
+    send_email=send_email,
+    get_admin_secret=os.getenv,
+    send_validation_email=send_validation_email,
+    send_attachment=send_attachment,
+    detect_file_type=detect_file_type,
+    max_file_size=MAX_FILE_SIZE,
+    limiter=limiter,
+    clean_html=bleach.clean,
+    allowed_tags=ALLOWED_TAGS,
+    allowed_attrs=ALLOWED_ATTRS,
+    allowed_protocols=ALLOWED_PROTOCOLS,
+    model_to_dict=model_to_dict,
+    logger=logger,
 )
 
 

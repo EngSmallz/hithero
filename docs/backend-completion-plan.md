@@ -20,6 +20,9 @@ full gate because the current escalation-approval usage limit prevented local
 server tests. Evidence and the exact pending command are recorded in
 [`agent-reports/2026-07-10-b1-model-schema-boundaries.md`](../agent-reports/2026-07-10-b1-model-schema-boundaries.md).
 
+The router-registration composition boundary is recorded in
+[`agent-reports/2026-07-11-b1-api-registration-boundary.md`](../agent-reports/2026-07-11-b1-api-registration-boundary.md).
+
 The frontend migration is substantially implemented, but the FastAPI backend is
 only partially modularized. `app.py` remains the composition root *and* holds
 database models, infrastructure adapters, scheduled-job logic, shared auth
