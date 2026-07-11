@@ -25,6 +25,10 @@ test.describe('/update-password', () => {
 		await expect(page.getByLabel(/^New Password/)).toBeVisible();
 		await expect(page.getByLabel(/^Confirm New Password/)).toBeVisible();
 		await expect(page.getByRole('button', { name: 'Submit' })).toBeVisible();
+		await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+			'content',
+			'noindex, nofollow'
+		);
 	});
 
 	test('opens mobile navigation', async ({ page }) => {

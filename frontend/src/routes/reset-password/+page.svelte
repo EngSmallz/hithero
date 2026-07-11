@@ -7,6 +7,7 @@
 	import Seo from '$lib/components/Seo.svelte';
 	import { getBackendOrigin } from '$lib/api/client';
 	import { routes } from '$lib/routes';
+	import type { ActionData } from './$types';
 
 	type StatusVariant = 'info' | 'success' | 'warning' | 'error';
 	type StatusMessage = { variant: StatusVariant; message: string };
@@ -21,6 +22,15 @@
 	let isSubmitting = $state(false);
 	let hasResetPassword = $state(false);
 	let status = $state<StatusMessage | null>(null);
+	let { form } = $props<{ form?: ActionData }>();
+	let formStatus = $derived(
+		form?.message
+			? {
+					variant: (form.success ? 'success' : 'error') as StatusVariant,
+					message: form.message
+				}
+			: null
+	);
 
 	async function submitResetPasswordForm(event: SubmitEvent) {
 		event.preventDefault();
@@ -84,7 +94,21 @@
 	narrow
 >
 	<div class="mx-auto max-w-md">
-		{#if !token}
+		{#if hasResetPassword || form?.success}
+			<section class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+				<h2 class="text-3xl font-bold tracking-normal text-green-800">Password Reset!</h2>
+				{#if status || formStatus}
+					<div class="mt-5">
+						{#if status}
+							<Alert variant={status.variant}>{status.message}</Alert>
+						{:else if formStatus}
+							<Alert variant={formStatus.variant}>{formStatus.message}</Alert>
+						{/if}
+					</div>
+				{/if}
+				<Button href={routes.login} class="mt-6 w-full">Go to Login</Button>
+			</section>
+		{:else if !token}
 			<section class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
 				<h2 class="text-3xl font-bold tracking-normal text-red-700">Invalid Reset Link</h2>
 				<p class="mt-4 text-base leading-7 text-slate-700">
@@ -96,20 +120,9 @@
 					<Button href={routes.forgot} variant="secondary" class="w-full">Request New Link</Button>
 				</div>
 			</section>
-		{:else if hasResetPassword}
-			<section class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-				<h2 class="text-3xl font-bold tracking-normal text-green-800">Password Reset!</h2>
-				{#if status}
-					<div class="mt-5">
-						<Alert variant={status.variant}>{status.message}</Alert>
-					</div>
-				{/if}
-				<Button href={routes.login} class="mt-6 w-full">Go to Login</Button>
-			</section>
 		{:else}
 			<section class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
 				<form
-					action={resetPasswordEndpoint}
 					method="post"
 					enctype="multipart/form-data"
 					class="space-y-5"
@@ -148,9 +161,13 @@
 					<Button href={routes.login} variant="ghost" class="w-full">Back to Login</Button>
 				</div>
 
-				{#if status}
+				{#if status || formStatus}
 					<div class="mt-5">
-						<Alert variant={status.variant}>{status.message}</Alert>
+						{#if status}
+							<Alert variant={status.variant}>{status.message}</Alert>
+						{:else if formStatus}
+							<Alert variant={formStatus.variant}>{formStatus.message}</Alert>
+						{/if}
 					</div>
 				{/if}
 			</section>

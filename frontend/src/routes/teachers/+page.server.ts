@@ -13,12 +13,20 @@ const emptyDirectory = (
 		schools: []
 	},
 	total: 0,
+	page: 1,
+	page_size: 24,
+	total_pages: 0,
 	applied_filters: appliedFilters
 });
 
 const getOptionalSearchParam = (url: URL, key: string): string | undefined => {
 	const value = url.searchParams.get(key)?.trim();
 	return value || undefined;
+};
+
+const getPage = (url: URL): number => {
+	const page = Number(url.searchParams.get('page'));
+	return Number.isInteger(page) && page > 0 ? page : 1;
 };
 
 export const load: PageServerLoad = async ({ fetch, url }) => {
@@ -34,7 +42,8 @@ export const load: PageServerLoad = async ({ fetch, url }) => {
 			fetch,
 			query: {
 				...selectedFilters,
-				limit: 200
+				page: getPage(url),
+				page_size: 24
 			}
 		});
 

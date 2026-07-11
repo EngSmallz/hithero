@@ -28,15 +28,21 @@ async function installTeacherProfileStub(page: Page) {
 }
 
 async function addSchoolSelections(page: Page) {
+	const stateSelect = page.getByRole('combobox', { name: /^State/ });
 	await addSelectOption(page, /^State/, 'WA');
-	await page.getByRole('combobox', { name: /^State/ }).selectOption('WA');
-	await addSelectOption(page, /^County/, 'King');
+	await expect(stateSelect).toContainText('WA');
+	await stateSelect.selectOption('WA');
+	await expect(page.getByRole('combobox', { name: /^County/ })).toContainText('King');
 	await page.getByRole('combobox', { name: /^County/ }).selectOption('King');
-	await addSelectOption(page, /^School District/, 'Seattle Public Schools');
+	await expect(page.getByRole('combobox', { name: /^School District/ })).toContainText(
+		'Seattle Public Schools'
+	);
 	await page
 		.getByRole('combobox', { name: /^School District/ })
 		.selectOption('Seattle Public Schools');
-	await addSelectOption(page, /^School required$/, 'Evergreen Elementary');
+	await expect(page.getByRole('combobox', { name: /^School required$/ })).toContainText(
+		'Evergreen Elementary'
+	);
 	await page
 		.getByRole('combobox', { name: /^School required$/ })
 		.selectOption('Evergreen Elementary');
@@ -60,6 +66,10 @@ test.describe('/profile/create', () => {
 		await expect(page.getByText('500 characters remaining')).toBeVisible();
 		await expect(page.getByLabel(/^Amazon Wishlist URL/)).toBeVisible();
 		await expect(page.getByRole('button', { name: 'Submit' })).toBeVisible();
+		await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+			'content',
+			'noindex, nofollow'
+		);
 	});
 
 	test('redirects unauthenticated visitors to login before rendering', async ({ page }) => {
@@ -142,7 +152,8 @@ test.describe('/profile/create', () => {
 			});
 		});
 
-		await page.goto('/profile/create', { waitUntil: 'domcontentloaded' });
+		await page.goto('/profile/create', { waitUntil: 'load' });
+		await page.waitForLoadState('networkidle');
 		await addSchoolSelections(page);
 		await page.getByLabel(/^Full Name/).fill('Integration Teacher');
 		await page.getByLabel(/^About Me/).fill('I help students build durable skills.');

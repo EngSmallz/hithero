@@ -6,21 +6,29 @@
 	import FormField from '$lib/components/FormField.svelte';
 	import PageShell from '$lib/components/PageShell.svelte';
 	import Seo from '$lib/components/Seo.svelte';
-	import { getBackendOrigin } from '$lib/api/client';
+	import { apiFetch } from '$lib/api/client';
 	import { routes } from '$lib/routes';
+	import type { ActionData } from './$types';
 
-	type ApiMessage = { detail?: string; message?: string };
 	type CreatedPost = { id?: number; detail?: string; message?: string };
 	type StatusVariant = 'info' | 'success' | 'warning' | 'error';
 	type StatusMessage = { variant: StatusVariant; message: string };
 
-	const backendOrigin = getBackendOrigin();
-	const createPostEndpoint = `${backendOrigin}/forum/create_post`;
+	let { form } = $props<{ form?: ActionData }>();
+
 	const inputClass =
 		'block min-h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-950 shadow-sm focus:border-green-600 focus:outline-2 focus:outline-green-600';
 
 	let isSubmitting = $state(false);
 	let status = $state<StatusMessage | null>(null);
+	let serverStatus = $derived<StatusMessage | null>(
+		form?.message
+			? {
+					variant: form.success ? 'success' : 'error',
+					message: form.message
+				}
+			: null
+	);
 
 	async function submitPostForm(event: SubmitEvent) {
 		event.preventDefault();
@@ -34,17 +42,11 @@
 		status = { variant: 'info', message: 'Creating your discussion...' };
 
 		try {
-			const response = await fetch(createPostEndpoint, {
+			const body = await apiFetch<CreatedPost>('/forum/create_post', {
 				method: 'POST',
-				body: new FormData(form),
-				credentials: 'include'
+				body: new FormData(form)
 			});
-			const body = (await response.json().catch(() => ({}))) as CreatedPost | ApiMessage;
 			const message = body.detail || body.message;
-
-			if (!response.ok) {
-				throw new Error(message || 'Could not create the discussion. Please try again.');
-			}
 
 			if ('id' in body && body.id) {
 				status = { variant: 'success', message: 'Discussion created.' };
@@ -88,7 +90,7 @@
 >
 	<section class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
 		<form
-			action={createPostEndpoint}
+			action={resolve(routes.forumNew as '/')}
 			method="post"
 			enctype="multipart/form-data"
 			class="space-y-5"
@@ -98,7 +100,12 @@
 				<input id="title" name="title" type="text" required maxlength="255" class={inputClass} />
 			</FormField>
 
-			<FormField id="content" label="Content" required>
+			<FormField
+				id="content"
+				label="Content"
+				help="Supported HTML: <b>, <i>, <em>, <strong>, <a>, <p>, and <br>. Other tags and attributes are removed."
+				required
+			>
 				<textarea
 					id="content"
 					name="content"
@@ -115,9 +122,27 @@
 			</div>
 		</form>
 
-		{#if status}
-			<div class="mt-5">
-				<Alert variant={status.variant}>{status.message}</Alert>
+		{#if status || serverStatus}
+			<div class="mt-5 space-y-3">
+				{#if serverStatus}
+					<Alert variant={serverStatus.variant}>{serverStatus.message}</Alert>
+				{/if}
+				{#if form?.success && form.postId}
+					{#if form.title}
+						<p class="text-sm text-slate-700">
+							Created: <span class="font-semibold text-slate-950">{form.title}</span>
+						</p>
+					{/if}
+					<div class="flex flex-col gap-3 sm:flex-row">
+						<Button href={`${routes.forumPost}?id=${encodeURIComponent(form.postId)}`}>
+							Open Discussion
+						</Button>
+						<Button href={routes.forum} variant="secondary">Back to Forum</Button>
+					</div>
+				{/if}
+				{#if status}
+					<Alert variant={status.variant}>{status.message}</Alert>
+				{/if}
 			</div>
 		{/if}
 	</section>

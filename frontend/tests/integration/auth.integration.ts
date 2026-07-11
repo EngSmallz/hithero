@@ -1,8 +1,10 @@
 import {
 	expect,
 	test as base,
+	type APIResponse,
 	type Page,
-	type Response as PlaywrightResponse
+	type Response as PlaywrightResponse,
+	type TestInfo
 } from '@playwright/test';
 import { execFile } from 'node:child_process';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -14,6 +16,8 @@ import net from 'node:net';
 import { spawn, type ChildProcessByStdio, type SpawnOptionsWithoutStdio } from 'node:child_process';
 
 const TEST_RECAPTCHA_TOKEN = 'hithero-test-recaptcha';
+const PYTHON = process.env.PYTHON ?? 'python3';
+const TEST_RUN_ID = `${Date.now().toString(36)}-${process.pid}`;
 const __filename = fileURLToPath(import.meta.url);
 const integrationDir = dirname(__filename);
 const frontendDir = resolve(integrationDir, '../..');
@@ -77,6 +81,12 @@ type ForumPostRecord = {
 	comment_count: number;
 };
 
+type SvelteKitRedirectAction = {
+	type?: string;
+	status?: number;
+	location?: string;
+};
+
 class ManagedProcess {
 	readonly child: ChildProcessByStdio<null, Readable, Readable>;
 	private output = '';
@@ -125,6 +135,30 @@ class ManagedProcess {
 }
 
 let stack: TestStack;
+
+function uniqueTestId(label: string, testInfo: TestInfo): string {
+	const slug = label
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-|-$/g, '');
+
+	return `${slug}-${TEST_RUN_ID}-w${testInfo.workerIndex}-r${testInfo.retry}`;
+}
+
+function uniqueEmail(label: string, testInfo: TestInfo): string {
+	return `${uniqueTestId(label, testInfo)}@example.test`;
+}
+
+function uniqueSchool(label: string, testInfo: TestInfo) {
+	const id = uniqueTestId(label, testInfo);
+
+	return {
+		state: `Integration State ${id}`,
+		county: `Integration County ${id}`,
+		district: `Integration District ${id}`,
+		school: `Integration Elementary ${id}`
+	};
+}
 
 const test = base.extend<Record<never, never>, { workerStack: TestStack }>({
 	workerStack: [
@@ -176,7 +210,7 @@ async function startStack(workerIndex: number): Promise<TestStack> {
 	try {
 		backend = new ManagedProcess(
 			`FastAPI worker ${workerIndex}`,
-			'python',
+			PYTHON,
 			['-m', 'uvicorn', 'app:app', '--host', '127.0.0.1', '--port', String(backendPort)],
 			{ cwd: rootDir, env }
 		);
@@ -216,15 +250,16 @@ async function startStack(workerIndex: number): Promise<TestStack> {
 test('teacher login posts to FastAPI and redirects teachers without a profile', async ({
 	page,
 	context
-}) => {
+}, testInfo) => {
+	const email = uniqueEmail('teacher-login', testInfo);
 	await seedLoginUser({
-		email: 'teacher.integration@example.test',
+		email,
 		password: 'correct horse battery staple',
 		createCount: 0
 	});
 
 	await gotoFrontend(page, '/login');
-	await page.getByLabel(/^Email/).fill('teacher.integration@example.test');
+	await page.getByLabel(/^Email/).fill(email);
 	await page.getByLabel(/^Password/).fill('correct horse battery staple');
 
 	const loginResponse = await submitAndWaitForBackendPost(
@@ -244,8 +279,8 @@ test('teacher login posts to FastAPI and redirects teachers without a profile', 
 
 test('wrong password posts to FastAPI and stays on login with invalid credential message', async ({
 	page
-}) => {
-	const email = 'wrong.password.integration@example.test';
+}, testInfo) => {
+	const email = uniqueEmail('wrong-password', testInfo);
 	await seedLoginUser({
 		email,
 		password: 'correct horse battery staple',
@@ -269,8 +304,8 @@ test('wrong password posts to FastAPI and stays on login with invalid credential
 
 test('forgot password posts to FastAPI and creates a reset token for a registered user', async ({
 	page
-}) => {
-	const email = 'forgot.integration@example.test';
+}, testInfo) => {
+	const email = uniqueEmail('forgot-password', testInfo);
 	await seedLoginUser({
 		email,
 		password: 'correct horse battery staple',
@@ -302,9 +337,10 @@ test('forgot password posts to FastAPI and creates a reset token for a registere
 
 test('reset password posts to FastAPI and updates the registered user password', async ({
 	page
-}) => {
-	const email = 'reset.integration@example.test';
-	const resetToken = 'integration-reset-token';
+}, testInfo) => {
+	const id = uniqueTestId('reset-password', testInfo);
+	const email = `${id}@example.test`;
+	const resetToken = `${id}-token`;
 	const newPassword = 'new correct horse battery staple';
 	await seedLoginUser({
 		email,
@@ -347,8 +383,8 @@ test('reset password posts to FastAPI and updates the registered user password',
 
 test('update password posts to FastAPI and changes the logged-in user password', async ({
 	page
-}) => {
-	const email = 'update.password.integration@example.test';
+}, testInfo) => {
+	const email = uniqueEmail('update-password', testInfo);
 	const oldPassword = 'old correct horse battery staple';
 	const newPassword = 'new correct horse battery staple';
 	await seedLoginUser({
@@ -391,14 +427,47 @@ test('update password posts to FastAPI and changes the logged-in user password',
 	});
 });
 
-test('profile creation posts to FastAPI and creates a TeacherList row', async ({ page }) => {
-	await seedSchool({
-		state: 'Integration State',
-		county: 'Integration County',
-		district: 'Integration District',
-		school: 'Integration Elementary'
+test('native update-password action redirects after changing the password', async ({
+	page
+}, testInfo) => {
+	const email = uniqueEmail('native-update-password', testInfo);
+	const oldPassword = 'old correct horse battery staple';
+	const newPassword = 'new correct horse battery staple';
+	await seedLoginUser({
+		email,
+		password: oldPassword,
+		createCount: 1
 	});
-	const email = 'profile.integration@example.test';
+
+	await loginThroughSvelteAction(page, email, oldPassword);
+
+	const updateResponse = await page.request.post(`${stack.frontendOrigin}/update-password`, {
+		form: {
+			old_password: oldPassword,
+			new_password: newPassword,
+			new_password_confirmed: newPassword
+		},
+		maxRedirects: 0
+	});
+
+	await expectSvelteKitActionRedirect(updateResponse, '/teacher');
+
+	const registeredUser = await getRegisteredUser(email, newPassword);
+	expect(registeredUser).toMatchObject({
+		email,
+		create_count: 1,
+		password_is_hashed: true,
+		password_matches: true
+	});
+});
+
+test('profile creation posts to FastAPI and creates a TeacherList row', async ({
+	page
+}, testInfo) => {
+	const school = uniqueSchool('profile-create', testInfo);
+	const email = uniqueEmail('profile-create', testInfo);
+	const teacherName = `Integration Profile Teacher ${uniqueTestId('profile-create', testInfo)}`;
+	await seedSchool(school);
 	const password = 'correct horse battery staple';
 	await seedLoginUser({
 		email,
@@ -417,16 +486,16 @@ test('profile creation posts to FastAPI and creates a TeacherList row', async ({
 	);
 	expect(loginResponse.status()).toBe(200);
 	await expect(page).toHaveURL(`${stack.frontendOrigin}/profile/create`);
-	await expect(page.getByLabel(/^State/)).toContainText('Integration State');
+	await expect(page.getByLabel(/^State/)).toContainText(school.state);
 
-	await page.getByLabel(/^Full Name/).fill('Integration Profile Teacher');
-	await page.getByLabel(/^State/).selectOption('Integration State');
-	await expect(page.getByLabel(/^County/)).toContainText('Integration County');
-	await page.getByLabel(/^County/).selectOption('Integration County');
-	await expect(page.getByLabel(/^School District/)).toContainText('Integration District');
-	await page.getByLabel(/^School District/).selectOption('Integration District');
-	await expect(page.getByLabel(/^School required$/)).toContainText('Integration Elementary');
-	await page.getByLabel(/^School required$/).selectOption('Integration Elementary');
+	await page.getByLabel(/^Full Name/).fill(teacherName);
+	await page.getByLabel(/^State/).selectOption(school.state);
+	await expect(page.getByLabel(/^County/)).toContainText(school.county);
+	await page.getByLabel(/^County/).selectOption(school.county);
+	await expect(page.getByLabel(/^School District/)).toContainText(school.district);
+	await page.getByLabel(/^School District/).selectOption(school.district);
+	await expect(page.getByLabel(/^School required$/)).toContainText(school.school);
+	await page.getByLabel(/^School required$/).selectOption(school.school);
 	await page.getByLabel(/^About Me/).fill('I help students build durable skills.');
 	await page.getByLabel(/^Amazon Wishlist URL/).fill('https://example.com/wishlist');
 
@@ -441,11 +510,11 @@ test('profile creation posts to FastAPI and creates a TeacherList row', async ({
 
 	const teacherProfile = await getTeacherProfile(email);
 	expect(teacherProfile).toMatchObject({
-		name: 'Integration Profile Teacher',
-		state: 'Integration State',
-		county: 'Integration County',
-		district: 'Integration District',
-		school: 'Integration Elementary',
+		name: teacherName,
+		state: school.state,
+		county: school.county,
+		district: school.district,
+		school: school.school,
 		wishlist_url: 'https://example.com/wishlist&tag=h0mer00mher0-20',
 		about_me: 'I help students build durable skills.',
 		url_id_present: true
@@ -457,8 +526,12 @@ test('profile creation posts to FastAPI and creates a TeacherList row', async ({
 
 test('teacher page loads real FastAPI data through SvelteKit for logged-in teachers', async ({
 	page
-}) => {
-	const email = 'teacher.page.integration@example.test';
+}, testInfo) => {
+	const id = uniqueTestId('teacher-page', testInfo);
+	const email = `${id}@example.test`;
+	const school = uniqueSchool('teacher-page', testInfo);
+	const teacherName = `Integration Page Teacher ${id}`;
+	const urlId = `integration-page-teacher-${id}`;
 	const password = 'correct horse battery staple';
 	await seedLoginUser({
 		email,
@@ -467,14 +540,14 @@ test('teacher page loads real FastAPI data through SvelteKit for logged-in teach
 	});
 	await seedTeacherProfile({
 		email,
-		name: 'Integration Page Teacher',
-		state: 'Integration State',
-		county: 'Integration County',
-		district: 'Integration District',
-		school: 'Integration Elementary',
+		name: teacherName,
+		state: school.state,
+		county: school.county,
+		district: school.district,
+		school: school.school,
 		wishlistUrl: 'https://example.com/integration-wishlist',
 		aboutMe: 'Integration students need fresh classroom supplies.',
-		urlId: 'integration-page-teacher'
+		urlId
 	});
 
 	await gotoFrontend(page, '/login');
@@ -490,11 +563,9 @@ test('teacher page loads real FastAPI data through SvelteKit for logged-in teach
 
 	await gotoFrontend(page, '/teacher');
 
-	await expect(
-		page.getByRole('heading', { level: 1, name: 'Integration Page Teacher' })
-	).toBeVisible();
-	await expect(page.getByText('School: Integration Elementary')).toBeVisible();
-	await expect(page.getByText('Location: Integration County, Integration State')).toBeVisible();
+	await expect(page.getByRole('heading', { level: 1, name: teacherName })).toBeVisible();
+	await expect(page.getByText(`School: ${school.school}`)).toBeVisible();
+	await expect(page.getByText(`Location: ${school.county}, ${school.state}`)).toBeVisible();
 	await expect(page.getByText('Integration students need fresh classroom supplies.')).toBeVisible();
 	await expect(page.getByRole('link', { name: 'View Wishlist' })).toHaveAttribute(
 		'href',
@@ -504,8 +575,14 @@ test('teacher page loads real FastAPI data through SvelteKit for logged-in teach
 	await expect(page.getByRole('link', { name: 'Update Password' })).toBeVisible();
 });
 
-test('public teacher URL renders server HTML and metadata from FastAPI data', async ({ page }) => {
-	const email = 'public.teacher.integration@example.test';
+test('public teacher URL renders server HTML and metadata from FastAPI data', async ({
+	page
+}, testInfo) => {
+	const id = uniqueTestId('public-teacher', testInfo);
+	const email = `${id}@example.test`;
+	const school = uniqueSchool('public-teacher', testInfo);
+	const teacherName = `Public Integration Teacher ${id}`;
+	const urlId = `public-integration-teacher-${id}`;
 	await seedLoginUser({
 		email,
 		password: 'correct horse battery staple',
@@ -513,35 +590,33 @@ test('public teacher URL renders server HTML and metadata from FastAPI data', as
 	});
 	await seedTeacherProfile({
 		email,
-		name: 'Public Integration Teacher',
-		state: 'Integration State',
-		county: 'Integration County',
-		district: 'Integration District',
-		school: 'Integration Elementary',
+		name: teacherName,
+		state: school.state,
+		county: school.county,
+		district: school.district,
+		school: school.school,
 		wishlistUrl: 'https://example.com/public-wishlist',
 		aboutMe: 'This public teacher page was rendered on the server.',
-		urlId: 'public-integration-teacher'
+		urlId
 	});
 
-	const response = await page.goto(`${stack.frontendOrigin}/teacher/public-integration-teacher`, {
+	const response = await page.goto(`${stack.frontendOrigin}/teacher/${urlId}`, {
 		waitUntil: 'domcontentloaded'
 	});
 	expect(response?.status()).toBe(200);
-	await expect(page).toHaveTitle('Public Integration Teacher - Homeroom Heroes Teacher Profile');
+	await expect(page).toHaveTitle(`${teacherName} - Homeroom Heroes Teacher Profile`);
 	await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
 		'href',
-		'https://www.helpteachers.net/teacher/public-integration-teacher'
+		`https://www.helpteachers.net/teacher/${urlId}`
 	);
 
 	const initialHtml = await response?.text();
-	expect(initialHtml).toContain('Public Integration Teacher');
+	expect(initialHtml).toContain(teacherName);
 	expect(initialHtml).toContain('This public teacher page was rendered on the server.');
 
-	await expect(
-		page.getByRole('heading', { level: 1, name: 'Public Integration Teacher' })
-	).toBeVisible();
-	await expect(page.getByText('School: Integration Elementary')).toBeVisible();
-	await expect(page.getByText('Location: Integration County, Integration State')).toBeVisible();
+	await expect(page.getByRole('heading', { level: 1, name: teacherName })).toBeVisible();
+	await expect(page.getByText(`School: ${school.school}`)).toBeVisible();
+	await expect(page.getByText(`Location: ${school.county}, ${school.state}`)).toBeVisible();
 	await expect(page.getByRole('link', { name: 'View Wishlist' })).toHaveAttribute(
 		'href',
 		'https://example.com/public-wishlist'
@@ -558,14 +633,15 @@ test('public teacher URL returns a real 404 for missing teachers', async ({ page
 	await expect(page.getByText('Teacher not found')).toBeVisible();
 });
 
-test('profile edit posts an about-me update to FastAPI and persists it', async ({ page }) => {
-	await seedSchool({
-		state: 'Integration State',
-		county: 'Integration County',
-		district: 'Integration District',
-		school: 'Integration Elementary'
-	});
-	const email = 'profile.edit.integration@example.test';
+test('profile edit posts an about-me update to FastAPI and persists it', async ({
+	page
+}, testInfo) => {
+	const id = uniqueTestId('profile-edit', testInfo);
+	const email = `${id}@example.test`;
+	const school = uniqueSchool('profile-edit', testInfo);
+	const teacherName = `Editable Integration Teacher ${id}`;
+	const urlId = `editable-integration-teacher-${id}`;
+	await seedSchool(school);
 	const password = 'correct horse battery staple';
 	await seedLoginUser({
 		email,
@@ -574,14 +650,14 @@ test('profile edit posts an about-me update to FastAPI and persists it', async (
 	});
 	await seedTeacherProfile({
 		email,
-		name: 'Editable Integration Teacher',
-		state: 'Integration State',
-		county: 'Integration County',
-		district: 'Integration District',
-		school: 'Integration Elementary',
+		name: teacherName,
+		state: school.state,
+		county: school.county,
+		district: school.district,
+		school: school.school,
 		wishlistUrl: 'https://example.com/edit-wishlist',
 		aboutMe: 'Original classroom story.',
-		urlId: 'editable-integration-teacher'
+		urlId
 	});
 
 	await gotoFrontend(page, '/login');
@@ -596,7 +672,7 @@ test('profile edit posts an about-me update to FastAPI and persists it', async (
 	expect(loginResponse.status()).toBe(200);
 
 	await gotoFrontend(page, '/profile/edit');
-	await expect(page.getByLabel(/^Name/)).toHaveValue('Editable Integration Teacher');
+	await expect(page.getByLabel(/^Name/)).toHaveValue(teacherName);
 	await expect(page.getByLabel(/^About Me/)).toHaveValue('Original classroom story.');
 
 	await page.getByLabel(/^About Me/).fill('Updated classroom story from SvelteKit.');
@@ -613,26 +689,74 @@ test('profile edit posts an about-me update to FastAPI and persists it', async (
 	expect(teacherProfile.about_me).toBe('Updated classroom story from SvelteKit.');
 });
 
-test('forum list loads real FastAPI posts through SvelteKit', async ({ page }) => {
-	const email = 'forum.integration@example.test';
+test('native profile edit action redirects after persisting an about-me update', async ({
+	page
+}, testInfo) => {
+	const id = uniqueTestId('native-profile-edit', testInfo);
+	const email = `${id}@example.test`;
+	const school = uniqueSchool('native-profile-edit', testInfo);
+	const teacherName = `Native Editable Teacher ${id}`;
+	const urlId = `native-editable-teacher-${id}`;
+	const password = 'correct horse battery staple';
+	await seedSchool(school);
 	await seedLoginUser({
 		email,
-		password: 'correct horse battery staple',
+		password,
+		createCount: 1
+	});
+	await seedTeacherProfile({
+		email,
+		name: teacherName,
+		state: school.state,
+		county: school.county,
+		district: school.district,
+		school: school.school,
+		wishlistUrl: 'https://example.com/native-edit-wishlist',
+		aboutMe: 'Original native classroom story.',
+		urlId
+	});
+	await loginThroughSvelteAction(page, email, password);
+
+	const updateResponse = await page.request.post(
+		`${stack.frontendOrigin}/profile/edit?/updateInfo`,
+		{
+			form: {
+				aboutMe: 'Updated native classroom story from SvelteKit.'
+			},
+			maxRedirects: 0
+		}
+	);
+
+	await expectSvelteKitActionRedirect(updateResponse, '/teacher?profile_update=Info%20updated.');
+
+	const teacherProfile = await getTeacherProfile(email);
+	expect(teacherProfile.about_me).toBe('Updated native classroom story from SvelteKit.');
+});
+
+test('forum list loads real FastAPI posts through SvelteKit', async ({ page }, testInfo) => {
+	const id = uniqueTestId('forum-list', testInfo);
+	const email = `${id}@example.test`;
+	const password = 'correct horse battery staple';
+	const title = `Integration forum discussion ${id}`;
+	await seedLoginUser({
+		email,
+		password,
 		createCount: 1
 	});
 	await seedForumPost({
 		email,
-		title: 'Integration forum discussion',
+		title,
 		content: 'This forum post came from the isolated FastAPI database.',
 		createdAt: '2026-06-10T12:00:00',
 		upvoteCount: 5,
 		commentCount: 2
 	});
+	await loginThroughSvelteAction(page, email, password);
 
 	await gotoFrontend(page, '/forum');
 
 	await expect(page.getByRole('heading', { level: 1, name: "The Teachers' Lounge" })).toBeVisible();
-	const discussionPost = page.getByRole('link', { name: /Integration forum discussion/ });
+	const discussionPost = page.getByRole('link').filter({ hasText: title });
 	await expect(discussionPost).toBeVisible();
 	await expect(discussionPost.getByText('isolated FastAPI database')).toBeVisible();
 	await expect(discussionPost.getByText('5 upvotes')).toBeVisible();
@@ -641,12 +765,14 @@ test('forum list loads real FastAPI posts through SvelteKit', async ({ page }) =
 
 test('forum post detail loads real FastAPI post and comments through SvelteKit', async ({
 	page
-}) => {
-	const email = 'forum.detail.integration@example.test';
-	const title = 'Integration forum detail discussion';
+}, testInfo) => {
+	const id = uniqueTestId('forum-detail', testInfo);
+	const email = `${id}@example.test`;
+	const password = 'correct horse battery staple';
+	const title = `Integration forum detail discussion ${id}`;
 	await seedLoginUser({
 		email,
-		password: 'correct horse battery staple',
+		password,
 		createCount: 1
 	});
 	await seedForumPost({
@@ -664,13 +790,12 @@ test('forum post detail loads real FastAPI post and comments through SvelteKit',
 		createdAt: '2026-06-11T12:00:00'
 	});
 	const post = await getForumPost(title);
+	await loginThroughSvelteAction(page, email, password);
 
 	await gotoFrontend(page, `/forum/post?id=${post.id}`);
 
 	await expect(page.getByRole('heading', { level: 1, name: 'Discussion Detail' })).toBeVisible();
-	await expect(
-		page.getByRole('heading', { level: 2, name: 'Integration forum detail discussion' })
-	).toBeVisible();
+	await expect(page.getByRole('heading', { level: 2, name: title })).toBeVisible();
 	await expect(
 		page.getByText('detailed forum post came from the isolated FastAPI database')
 	).toBeVisible();
@@ -681,10 +806,11 @@ test('forum post detail loads real FastAPI post and comments through SvelteKit',
 	).toBeVisible();
 });
 
-test('logged-in forum users can vote and comment through SvelteKit', async ({ page }) => {
-	const email = 'forum.actions.integration@example.test';
+test('logged-in forum users can vote and comment through SvelteKit', async ({ page }, testInfo) => {
+	const id = uniqueTestId('forum-actions', testInfo);
+	const email = `${id}@example.test`;
 	const password = 'correct horse battery staple';
-	const title = 'Interactive integration discussion';
+	const title = `Interactive integration discussion ${id}`;
 	await seedLoginUser({ email, password, createCount: 1 });
 	await seedForumPost({
 		email,
@@ -729,33 +855,33 @@ test('logged-in forum users can vote and comment through SvelteKit', async ({ pa
 	expect(persistedPost.comment_count).toBe(1);
 });
 
-test('registration posts to FastAPI and queues a NewUsers validation row', async ({ page }) => {
-	await seedSchool({
-		state: 'Integration State',
-		county: 'Integration County',
-		district: 'Integration District',
-		school: 'Integration Elementary'
-	});
+test('registration posts to FastAPI and queues a NewUsers validation row', async ({
+	page
+}, testInfo) => {
+	const id = uniqueTestId('registration', testInfo);
+	const school = uniqueSchool('registration', testInfo);
+	const email = `${id}@example.test`;
+	const teacherName = `Integration Teacher ${id}`;
+	await seedSchool(school);
 	await installRecaptchaStub(page);
 
-	const email = 'new.teacher.integration@example.test';
 	const password = 'registration password';
 
 	await gotoFrontend(page, '/register');
-	await expect(page.getByLabel(/^State/)).toContainText('Integration State');
+	await expect(page.getByLabel(/^State/)).toContainText(school.state);
 
-	await page.getByLabel(/^Name/).fill('Integration Teacher');
+	await page.getByLabel(/^Name/).fill(teacherName);
 	await page.getByLabel(/^Email/).fill(email);
 	await page.getByLabel(/^Phone Number/).fill('555-0199');
 	await page.getByLabel(/^Password/).fill(password);
 	await page.getByLabel(/^Confirm Password/).fill(password);
-	await page.getByLabel(/^State/).selectOption('Integration State');
-	await expect(page.getByLabel(/^County/)).toContainText('Integration County');
-	await page.getByLabel(/^County/).selectOption('Integration County');
-	await expect(page.getByLabel(/^School District/)).toContainText('Integration District');
-	await page.getByLabel(/^School District/).selectOption('Integration District');
-	await expect(page.getByLabel(/^School required$/)).toContainText('Integration Elementary');
-	await page.getByLabel(/^School required$/).selectOption('Integration Elementary');
+	await page.getByLabel(/^State/).selectOption(school.state);
+	await expect(page.getByLabel(/^County/)).toContainText(school.county);
+	await page.getByLabel(/^County/).selectOption(school.county);
+	await expect(page.getByLabel(/^School District/)).toContainText(school.district);
+	await page.getByLabel(/^School District/).selectOption(school.district);
+	await expect(page.getByLabel(/^School required$/)).toContainText(school.school);
+	await page.getByLabel(/^School required$/).selectOption(school.school);
 	await page.getByLabel('I have read the Terms and Conditions').check();
 
 	const registerResponse = await submitAndWaitForBackendPost(
@@ -770,12 +896,12 @@ test('registration posts to FastAPI and queues a NewUsers validation row', async
 	const newUser = await getNewUser(email, password);
 	expect(newUser).toMatchObject({
 		email,
-		name: 'Integration Teacher',
+		name: teacherName,
 		phone_number: '555-0199',
-		state: 'Integration State',
-		county: 'Integration County',
-		district: 'Integration District',
-		school: 'Integration Elementary',
+		state: school.state,
+		county: school.county,
+		district: school.district,
+		school: school.school,
 		role: 'teacher',
 		report: 0,
 		emailed: 0,
@@ -969,6 +1095,56 @@ async function getForumPost(title: string): Promise<ForumPostRecord> {
 	return record as ForumPostRecord;
 }
 
+async function loginThroughSvelteAction(
+	page: Page,
+	email: string,
+	password: string
+): Promise<void> {
+	const response = await page.request.post(`${stack.frontendOrigin}/login`, {
+		form: { email, password },
+		maxRedirects: 0
+	});
+
+	await expectSvelteKitActionRedirect(response, '/');
+	await copySessionCookieToPage(page, response);
+}
+
+async function expectSvelteKitActionRedirect(
+	response: APIResponse,
+	location: string
+): Promise<void> {
+	if (response.status() === 303) {
+		expect(response.headers().location).toBe(location);
+		return;
+	}
+
+	expect(response.status()).toBe(200);
+	const body = (await response.json().catch(() => null)) as SvelteKitRedirectAction | null;
+	expect(body).toMatchObject({
+		type: 'redirect',
+		status: 303,
+		location
+	});
+}
+
+async function copySessionCookieToPage(page: Page, response: APIResponse): Promise<void> {
+	const setCookie = response.headers()['set-cookie'];
+	const match = setCookie?.match(/^session=([^;]+)/);
+	if (!match) {
+		return;
+	}
+
+	await page.context().addCookies([
+		{
+			name: 'session',
+			value: decodeURIComponent(match[1]),
+			url: stack.frontendOrigin,
+			httpOnly: true,
+			sameSite: 'Lax'
+		}
+	]);
+}
+
 async function submitAndWaitForBackendPost(
 	page: Page,
 	action: () => Promise<void>,
@@ -991,15 +1167,24 @@ async function installRecaptchaStub(page: Page): Promise<void> {
 	await page.route('https://www.google.com/recaptcha/**', async (route) => {
 		await route.fulfill({
 			contentType: 'application/javascript',
-			body: `window.grecaptcha = { getResponse: () => '${TEST_RECAPTCHA_TOKEN}', reset: () => {} };`
+			body: `window.grecaptcha = {
+				render: () => 1,
+				getResponse: () => '${TEST_RECAPTCHA_TOKEN}',
+				reset: () => {}
+			};`
 		});
 	});
 	await page.addInitScript((token: string) => {
 		(
 			window as Window & {
-				grecaptcha?: { getResponse: () => string; reset: () => void };
+				grecaptcha?: {
+					render: () => number;
+					getResponse: () => string;
+					reset: () => void;
+				};
 			}
 		).grecaptcha = {
+			render: () => 1,
 			getResponse: () => token,
 			reset: () => {}
 		};
@@ -1008,10 +1193,10 @@ async function installRecaptchaStub(page: Page): Promise<void> {
 
 async function runDbHelper(args: string[], env: NodeJS.ProcessEnv): Promise<string> {
 	return new Promise((resolveOutput, rejectOutput) => {
-		execFile('python', [dbHelperPath, ...args], { cwd: rootDir, env }, (error, stdout, stderr) => {
+		execFile(PYTHON, [dbHelperPath, ...args], { cwd: rootDir, env }, (error, stdout, stderr) => {
 			if (error) {
 				rejectOutput(
-					new Error(`DB helper failed: python ${dbHelperPath} ${args.join(' ')}\n${stderr}`)
+					new Error(`DB helper failed: ${PYTHON} ${dbHelperPath} ${args.join(' ')}\n${stderr}`)
 				);
 				return;
 			}

@@ -13,7 +13,12 @@
 		"lint": "prettier --check . && eslint .",
 		"format": "prettier --write .",
 		"test:e2e": "playwright install && playwright test",
-		"test:integration": "TEST_DATABASE_URL=sqlite:///./.tmp/hithero-integration.sqlite python tests/integration/db_helper.py reset && TEST_DATABASE_URL=sqlite:///./.tmp/hithero-integration.sqlite playwright test -c playwright.integration.config.ts",
+		"test:e2e:auth": "playwright test src/routes/login src/routes/register src/routes/forgot src/routes/reset-password src/routes/update-password",
+		"test:e2e:forum": "playwright test src/routes/forum",
+		"test:e2e:profile": "playwright test src/routes/profile src/routes/teacher",
+		"test:e2e:public": "playwright test src/routes/public-pages.e2e.ts src/routes/about/page.svelte.e2e.ts src/routes/homepage-actions.e2e.ts",
+		"test:integration": "PYTHON=${PYTHON:-python3}; TEST_DATABASE_URL=sqlite:///./.tmp/hithero-integration.sqlite $PYTHON tests/integration/db_helper.py reset && TEST_DATABASE_URL=sqlite:///./.tmp/hithero-integration.sqlite PYTHON=$PYTHON playwright test -c playwright.integration.config.ts",
+		"test:integration:one": "INTEGRATION_WORKERS=1 npm run test:integration",
 		"test": "npm run test:e2e"
 	},
 	"devDependencies": {

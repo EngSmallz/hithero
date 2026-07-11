@@ -10,6 +10,7 @@
 	import { getBackendOrigin } from '$lib/api/client';
 	import type { UserRole } from '$lib/api/types';
 	import { routes } from '$lib/routes';
+	import type { ActionData } from './$types';
 
 	type StatusVariant = 'info' | 'success' | 'warning' | 'error';
 	type LoginResponse = {
@@ -25,8 +26,17 @@
 
 	let isSubmitting = $state(false);
 	let status = $state<{ variant: StatusVariant; message: string } | null>(null);
+	let { form } = $props<{ form?: ActionData }>();
 	let redirectPath = $derived(
 		getSafeRedirect(page.url.searchParams.get('redirect'), page.url.origin)
+	);
+	let formStatus = $derived(
+		form?.message
+			? {
+					variant: (form.success ? 'success' : 'error') as StatusVariant,
+					message: form.message
+				}
+			: null
 	);
 
 	function getSafeRedirect(value: string | null, origin: string): string | null {
@@ -115,7 +125,7 @@
 	<div class="mx-auto max-w-md">
 		<section class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
 			<form
-				action={loginEndpoint}
+				action={`${page.url.pathname}${page.url.search}`}
 				method="post"
 				enctype="multipart/form-data"
 				class="space-y-5"
@@ -153,9 +163,13 @@
 				<Button href={routes.register} variant="secondary" class="w-full">Register</Button>
 			</div>
 
-			{#if status}
+			{#if status || formStatus}
 				<div class="mt-5">
-					<Alert variant={status.variant}>{status.message}</Alert>
+					{#if status}
+						<Alert variant={status.variant}>{status.message}</Alert>
+					{:else if formStatus}
+						<Alert variant={formStatus.variant}>{formStatus.message}</Alert>
+					{/if}
 				</div>
 			{/if}
 		</section>

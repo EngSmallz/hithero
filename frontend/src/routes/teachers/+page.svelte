@@ -17,9 +17,21 @@
 	let hasSelectedFilters = $derived(
 		Boolean(selected.state || selected.county || selected.district || selected.school)
 	);
+	let hasPreviousPage = $derived(directory.page > 1);
+	let hasNextPage = $derived(directory.page < directory.total_pages);
 
 	const selectClass =
 		'block min-h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-950 shadow-sm focus:border-green-600 focus:outline-2 focus:outline-green-600';
+
+	function pageHref(page: number): string {
+		const query = Object.entries(selected)
+			.filter(
+				(entry): entry is [string, string] => typeof entry[1] === 'string' && Boolean(entry[1])
+			)
+			.map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
+		query.push(`page=${page}`);
+		return `${routes.teachers}?${query.join('&')}`;
+	}
 </script>
 
 <Seo
@@ -131,6 +143,23 @@
 				>
 					No teachers found for your selection. Please try different criteria.
 				</p>
+			{/if}
+
+			{#if directory.total_pages > 1}
+				<nav
+					aria-label="Teacher directory pages"
+					class="mt-8 flex items-center justify-center gap-4"
+				>
+					{#if hasPreviousPage}
+						<Button href={pageHref(directory.page - 1)} variant="secondary">Previous</Button>
+					{/if}
+					<p class="text-sm font-semibold text-slate-700">
+						Page {directory.page} of {directory.total_pages}
+					</p>
+					{#if hasNextPage}
+						<Button href={pageHref(directory.page + 1)} variant="secondary">Next</Button>
+					{/if}
+				</nav>
 			{/if}
 		</section>
 	</div>

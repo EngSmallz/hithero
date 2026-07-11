@@ -100,6 +100,10 @@ test.describe('/profile/edit', () => {
 			'https://example.com/wishlist'
 		);
 		await expect(page.getByLabel(/^URL ID/)).toHaveValue('avery-adams');
+		await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+			'content',
+			'noindex, nofollow'
+		);
 	});
 
 	test('redirects unauthenticated visitors to login before rendering', async ({ page }) => {

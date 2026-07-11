@@ -4,6 +4,7 @@ const backendPort = Number(process.env.PLAYWRIGHT_BACKEND_PORT ?? 8001);
 const frontendPort = Number(process.env.PLAYWRIGHT_FRONTEND_PORT ?? 4173);
 const backendOrigin = `http://localhost:${backendPort}`;
 const frontendOrigin = `http://localhost:${frontendPort}`;
+const python = process.env.PYTHON ?? 'python3';
 const testDatabaseUrl =
 	process.env.TEST_DATABASE_URL ?? 'sqlite:///./.tmp/hithero-playwright.sqlite';
 const parseWorkers = (value: string | undefined, fallback: number | string) =>
@@ -18,7 +19,7 @@ export default defineConfig({
 	use: { baseURL: frontendOrigin },
 	webServer: [
 		{
-			command: `python -c "import app; app.init_db()" && python -m uvicorn app:app --host 127.0.0.1 --port ${backendPort}`,
+			command: `${python} -c "import app; app.init_db()" && ${python} -m uvicorn app:app --host 127.0.0.1 --port ${backendPort}`,
 			cwd: '..',
 			port: backendPort,
 			env: {

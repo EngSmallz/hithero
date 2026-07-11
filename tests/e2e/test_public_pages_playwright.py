@@ -2,6 +2,7 @@ import os
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.request
 from pathlib import Path
@@ -37,6 +38,7 @@ LEGACY_REDIRECT_CASES = [
     ("/pages/partners.html", "/partners", "Thank You to Our Partners"),
     ("/pages/forgot.html", "/forgot", "Forgot Your Password"),
     ("/pages/terms_conditions.html", "/terms", "Terms and Conditions"),
+    ("/pages/wishlist_setup.html", "/wishlist-setup", "Steps to Setup Wishlist"),
     ("/pages/403.html", "/403", "Forbidden"),
     ("/pages/404.html", "/404", "Page Does Not Exist"),
 ]
@@ -73,6 +75,12 @@ def base_url():
         "SECRET_KEY": "test-secret",
         "PYTHONUNBUFFERED": "1",
     }
+    server_log = tempfile.NamedTemporaryFile(
+        mode="w+",
+        prefix="hithero-public-e2e-",
+        suffix=".log",
+        delete=False,
+    )
     process = subprocess.Popen(
         [
             sys.executable,
@@ -86,7 +94,7 @@ def base_url():
         ],
         cwd=ROOT_DIR,
         env=env,
-        stdout=subprocess.PIPE,
+        stdout=server_log,
         stderr=subprocess.STDOUT,
         text=True,
     )
@@ -96,7 +104,8 @@ def base_url():
     try:
         while time.monotonic() < deadline:
             if process.poll() is not None:
-                output = process.stdout.read() if process.stdout else ""
+                server_log.seek(0)
+                output = server_log.read()
                 raise RuntimeError(f"uvicorn exited before tests started:\n{output}")
             try:
                 with urllib.request.urlopen(f"{url}/", timeout=0.5) as response:
@@ -105,7 +114,8 @@ def base_url():
             except Exception:
                 time.sleep(0.2)
         else:
-            output = process.stdout.read() if process.stdout else ""
+            server_log.seek(0)
+            output = server_log.read()
             raise RuntimeError(f"Timed out waiting for uvicorn:\n{output}")
 
         yield url
@@ -116,6 +126,8 @@ def base_url():
         except subprocess.TimeoutExpired:
             process.kill()
             process.wait(timeout=5)
+        server_log.close()
+        os.unlink(server_log.name)
 
 
 @pytest.fixture(scope="session")

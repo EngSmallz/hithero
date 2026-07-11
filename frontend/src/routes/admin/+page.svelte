@@ -4,7 +4,7 @@
 	import FormField from '$lib/components/FormField.svelte';
 	import PageShell from '$lib/components/PageShell.svelte';
 	import Seo from '$lib/components/Seo.svelte';
-	import { getBackendOrigin } from '$lib/api/client';
+	import { apiFetch } from '$lib/api/client';
 	import { normalizeStringOptions } from '$lib/api/options';
 	import { routes } from '$lib/routes';
 	import type { PageData } from './$types';
@@ -15,7 +15,6 @@
 
 	let { data } = $props<{ data: PageData }>();
 
-	const backendOrigin = getBackendOrigin();
 	const inputClass =
 		'block min-h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-950 shadow-sm focus:border-green-600 focus:outline-2 focus:outline-green-600 disabled:bg-slate-100 disabled:text-slate-500';
 
@@ -43,20 +42,21 @@
 	});
 
 	async function fetchOptions(path: string): Promise<string[]> {
-		const response = await fetch(`${backendOrigin}${path}`, {
-			credentials: 'include'
-		});
-		const body = (await response.json().catch(() => [])) as string[] | ApiMessage;
-
-		if (!response.ok || !Array.isArray(body)) {
-			const message = Array.isArray(body) ? undefined : body.detail || body.message;
-			throw new Error(message || 'Unable to load school choices.');
+		const body = await apiFetch<unknown>(path);
+		if (!Array.isArray(body)) {
+			throw new Error('Unable to load school choices.');
 		}
 
 		return normalizeStringOptions(body);
 	}
 
-	async function populateCounties() {
+	function getSelectValue(event: Event) {
+		const target = event.currentTarget;
+		return target instanceof HTMLSelectElement ? target.value : '';
+	}
+
+	async function populateCounties(event: Event) {
+		selectedState = getSelectValue(event);
 		selectedCounty = '';
 		selectedDistrict = '';
 		counties = [];
@@ -77,7 +77,8 @@
 		}
 	}
 
-	async function populateDistricts() {
+	async function populateDistricts(event: Event) {
+		selectedCounty = getSelectValue(event);
 		selectedDistrict = '';
 		districts = [];
 		schools = [];
@@ -98,7 +99,8 @@
 		}
 	}
 
-	async function populateSchools() {
+	async function populateSchools(event: Event) {
+		selectedDistrict = getSelectValue(event);
 		schools = [];
 
 		if (!selectedState || !selectedCounty || !selectedDistrict) {
@@ -129,16 +131,10 @@
 		reportStatus = { variant: 'info', message: 'Generating teacher report...' };
 
 		try {
-			const response = await fetch(`${backendOrigin}/admin/generate_teacher_report/`, {
+			const body = await apiFetch<ApiMessage>('/admin/generate_teacher_report/', {
 				method: 'POST',
-				body: new FormData(form),
-				credentials: 'include'
+				body: new FormData(form)
 			});
-			const body = (await response.json().catch(() => ({}))) as ApiMessage;
-
-			if (!response.ok) {
-				throw new Error(body.detail || body.message || 'Failed to generate teacher report.');
-			}
 
 			reportStatus = {
 				variant: 'success',
@@ -176,16 +172,10 @@
 		deleteStatus = { variant: 'info', message: 'Deleting user account...' };
 
 		try {
-			const response = await fetch(`${backendOrigin}/profile/delete/`, {
+			const body = await apiFetch<ApiMessage>('/profile/delete/', {
 				method: 'POST',
-				body: formData,
-				credentials: 'include'
+				body: formData
 			});
-			const body = (await response.json().catch(() => ({}))) as ApiMessage;
-
-			if (!response.ok) {
-				throw new Error(body.detail || body.message || 'Failed to delete user.');
-			}
 
 			deleteStatus = {
 				variant: 'success',
@@ -216,6 +206,13 @@
 	intro="Generate teacher contact reports and manage user accounts."
 >
 	<div class="mx-auto grid max-w-5xl gap-8">
+		<noscript>
+			<div class="rounded-md border border-amber-200 bg-amber-50 p-4 text-amber-950" role="alert">
+				Admin report and account deletion tools require JavaScript. Reload this page with JavaScript
+				enabled before submitting admin actions.
+			</div>
+		</noscript>
+
 		<section class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
 			<h2 class="text-3xl font-bold tracking-normal text-green-800">Get Teacher Contact Info</h2>
 			<form class="mt-6 space-y-6" onsubmit={submitTeacherReport}>

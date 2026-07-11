@@ -6,6 +6,7 @@
 	import Seo from '$lib/components/Seo.svelte';
 	import { getBackendOrigin } from '$lib/api/client';
 	import { routes } from '$lib/routes';
+	import type { ActionData } from './$types';
 
 	type StatusVariant = 'info' | 'success' | 'warning' | 'error';
 	type StatusMessage = { variant: StatusVariant; message: string };
@@ -18,6 +19,15 @@
 
 	let isSubmitting = $state(false);
 	let status = $state<StatusMessage | null>(null);
+	let { form } = $props<{ form?: ActionData }>();
+	let formStatus = $derived(
+		form?.message
+			? {
+					variant: (form.success ? 'success' : 'error') as StatusVariant,
+					message: form.message
+				}
+			: null
+	);
 
 	async function submitUpdatePasswordForm(event: SubmitEvent) {
 		event.preventDefault();
@@ -80,7 +90,7 @@
 	<div class="mx-auto max-w-md">
 		<section class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
 			<form
-				action={updatePasswordEndpoint}
+				action={routes.updatePassword}
 				method="post"
 				enctype="multipart/form-data"
 				class="space-y-5"
@@ -124,9 +134,13 @@
 				</Button>
 			</form>
 
-			{#if status}
+			{#if status || formStatus}
 				<div class="mt-5">
-					<Alert variant={status.variant}>{status.message}</Alert>
+					{#if status}
+						<Alert variant={status.variant}>{status.message}</Alert>
+					{:else if formStatus}
+						<Alert variant={formStatus.variant}>{formStatus.message}</Alert>
+					{/if}
 				</div>
 			{/if}
 		</section>

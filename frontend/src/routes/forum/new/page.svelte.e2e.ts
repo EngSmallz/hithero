@@ -21,6 +21,10 @@ test.describe('/forum/new', () => {
 			'href',
 			'/forum'
 		);
+		await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+			'content',
+			'noindex, nofollow'
+		);
 	});
 
 	test('submits a new discussion to FastAPI and opens the created post', async ({
@@ -49,5 +53,31 @@ test.describe('/forum/new', () => {
 		await page.getByRole('button', { name: 'Create Post' }).click();
 
 		await expect(page).toHaveURL('/forum/post?id=501');
+	});
+
+	test.describe('without JavaScript', () => {
+		test.use({ javaScriptEnabled: false });
+
+		test('submits through the SvelteKit fallback instead of exposing backend JSON', async ({
+			page,
+			context
+		}, testInfo) => {
+			await installAuthenticatedSession(context);
+			const uniqueTitle = `No JS classroom discussion ${testInfo.workerIndex}-${Date.now()}`;
+
+			await page.goto('/forum/new', { waitUntil: 'domcontentloaded' });
+			await page.getByLabel(/^Title/).fill(uniqueTitle);
+			await page
+				.getByLabel(/^Content/)
+				.fill('This native submission should stay on a Svelte-owned page.');
+			await page.getByRole('button', { name: 'Create Post' }).click();
+
+			await expect(page).toHaveURL('/forum/new');
+			await expect(page.getByRole('status')).toContainText('Discussion created.');
+			await expect(page.getByText(uniqueTitle)).toBeVisible();
+
+			const openDiscussionLink = page.getByRole('link', { name: 'Open Discussion' });
+			await expect(openDiscussionLink).toHaveAttribute('href', /\/forum\/post\?id=\d+$/);
+		});
 	});
 });

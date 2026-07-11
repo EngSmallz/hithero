@@ -8,7 +8,7 @@ export default defineConfig({
 	testMatch: '**/*.integration.ts',
 	fullyParallel: true,
 	workers: parseWorkers(process.env.INTEGRATION_WORKERS, 2),
-	timeout: 60_000,
+	timeout: 120_000,
 	expect: {
 		timeout: 10_000
 	}

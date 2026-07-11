@@ -3,8 +3,10 @@ import { installAuthenticatedSession } from '$lib/test/session';
 
 const forumPost = {
 	id: 101,
-	title: 'Detailed forum discussion',
-	content: 'This discussion detail was rendered from a mocked forum API response.',
+	title: '<strong>Detailed</strong> forum discussion',
+	content:
+		'<p>This discussion detail was rendered from a <em>mocked forum API response</em>.</p>' +
+		'<p><a href="https://example.test/supplies">Safe classroom link</a></p>',
 	created_at: '2026-06-10T12:00:00',
 	user_id: 7,
 	upvote_count: 3,
@@ -16,7 +18,7 @@ const forumComments = [
 		id: 201,
 		post_id: 101,
 		user_id: 8,
-		content: 'This comment was loaded from the comments endpoint.',
+		content: 'This comment was loaded from the <strong>comments endpoint</strong>.',
 		parent_comment_id: null,
 		created_at: '2026-06-11T12:00:00'
 	},
@@ -46,6 +48,20 @@ async function installPostDetailStubs(page: Page) {
 }
 
 test.describe('/forum/post', () => {
+	test.beforeEach(async ({ context }) => {
+		await installAuthenticatedSession(context);
+	});
+
+	test('redirects unauthenticated visitors to login before rendering', async ({
+		page,
+		context
+	}) => {
+		await context.clearCookies();
+		await page.goto('/forum/post?id=101');
+
+		await expect(page).toHaveURL('/login?redirect=%2Fforum%2Fpost%3Fid%3D101');
+	});
+
 	test('renders mocked backend post detail and comments', async ({ page }) => {
 		await installPostDetailStubs(page);
 
@@ -56,22 +72,31 @@ test.describe('/forum/post', () => {
 			page.getByRole('heading', { level: 2, name: 'Detailed forum discussion' })
 		).toBeVisible();
 		await expect(page.getByText('mocked forum API response')).toBeVisible();
+		await expect(page.locator('.forum-content em')).toHaveText('mocked forum API response');
+		await expect(page.locator('.forum-content a')).toHaveAttribute(
+			'href',
+			'https://example.test/supplies'
+		);
 		await expect(page.getByText('3 upvotes')).toBeVisible();
 		await expect(page.getByText('2 comments', { exact: true })).toBeVisible();
 		await expect(
 			page.getByText('This comment was loaded from the comments endpoint.')
 		).toBeVisible();
+		await expect(page.locator('.forum-content strong')).toHaveText('comments endpoint');
 		await expect(page.getByText('A second read-only comment.')).toBeVisible();
 		await expect(page.getByRole('link', { name: 'Back to Forum' })).toHaveAttribute(
 			'href',
 			'/forum'
 		);
-		await expect(page.getByRole('link', { name: 'Log in' })).toBeVisible();
-		await expect(page.getByRole('button', { name: /Post Comment|Upvote|Downvote/ })).toHaveCount(0);
+		await expect(page.getByRole('button', { name: 'Post Comment' })).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Upvote' })).toBeVisible();
+		await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+			'content',
+			'noindex, nofollow'
+		);
 	});
 
 	test('lets authenticated users vote and post comments', async ({ page }) => {
-		await installAuthenticatedSession(page.context());
 		await installPostDetailStubs(page);
 		await page.route('**/forum/posts/101/vote', async (route) => {
 			await route.fulfill({
@@ -156,6 +181,7 @@ test.describe('/forum/post', () => {
 		const mobileNav = page.getByRole('navigation', { name: 'Mobile primary' });
 		await expect(mobileNav).toBeVisible();
 		await expect(mobileNav.getByRole('link', { name: 'Donate' })).toBeVisible();
-		await expect(mobileNav.getByRole('link', { name: 'Login' })).toBeVisible();
+		await expect(mobileNav.getByRole('link', { name: 'My Page' })).toBeVisible();
+		await expect(mobileNav.getByRole('button', { name: 'Logout' })).toBeVisible();
 	});
 });

@@ -1,4 +1,5 @@
 <script lang="ts">
+	/* eslint-disable svelte/no-at-html-tags */
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
@@ -8,7 +9,7 @@
 	import FormField from '$lib/components/FormField.svelte';
 	import PageShell from '$lib/components/PageShell.svelte';
 	import Seo from '$lib/components/Seo.svelte';
-	import { getBackendOrigin } from '$lib/api/client';
+	import { apiFetch } from '$lib/api/client';
 	import type { BackendProfile } from '$lib/api/types';
 	import { routes } from '$lib/routes';
 	import type { PageData } from './$types';
@@ -32,13 +33,11 @@
 		created_at: string;
 	};
 
-	type ApiMessage = { detail?: string; message?: string };
 	type StatusVariant = 'info' | 'success' | 'warning' | 'error';
 	type StatusMessage = { variant: StatusVariant; message: string };
 
 	let { data } = $props<{ data: PageData }>();
 
-	const backendOrigin = getBackendOrigin();
 	const postId = page.url.searchParams.get('id')?.trim() || '';
 	const inputClass =
 		'block min-h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-950 shadow-sm focus:border-green-600 focus:outline-2 focus:outline-green-600';
@@ -65,11 +64,13 @@
 	let canEditPost = $derived(Boolean(post && currentUserId === post.user_id));
 	let canDeletePost = $derived(Boolean(post && profile?.user_role === 'admin'));
 	let title = $derived(
-		post?.title ? `${post.title} - Homeroom Heroes` : 'Homeroom Heroes - Discussion Detail'
+		post?.title
+			? `${textContent(post.title)} - Homeroom Heroes`
+			: 'Homeroom Heroes - Discussion Detail'
 	);
 	let description = $derived(
 		post?.content
-			? `Read a Homeroom Heroes forum discussion: ${post.content.substring(0, 140)}`
+			? `Read a Homeroom Heroes forum discussion: ${textContent(post.content).substring(0, 140)}`
 			: 'Read a Homeroom Heroes forum discussion.'
 	);
 	let canonicalPath = $derived(
@@ -92,9 +93,7 @@
 
 		status = { variant: 'info', message: 'Loading post details...' };
 		try {
-			post = await fetchJson<ForumPost>(
-				`${backendOrigin}/forum/get_post?post_id=${encodeURIComponent(postId)}`
-			);
+			post = await apiFetch<ForumPost>('/forum/get_post', { query: { post_id: postId } });
 			editTitle = post.title;
 			editContent = post.content;
 			status = null;
@@ -113,7 +112,7 @@
 	async function loadComments(id: number) {
 		commentsStatus = { variant: 'info', message: 'Loading comments...' };
 		try {
-			comments = await fetchJson<ForumComment[]>(`${backendOrigin}/forum/comments/${id}/`);
+			comments = await apiFetch<ForumComment[]>(`/forum/comments/${id}/`);
 			commentsStatus = null;
 		} catch (error) {
 			comments = [];
@@ -130,7 +129,7 @@
 	async function vote(voteType: 1 | -1) {
 		if (!post) return;
 		await runAction(async () => {
-			post = await fetchJson<ForumPost>(`${backendOrigin}/forum/posts/${post?.id}/vote`, {
+			post = await apiFetch<ForumPost>(`/forum/posts/${post?.id}/vote`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ vote_type: voteType })
@@ -142,7 +141,7 @@
 		event.preventDefault();
 		if (!post) return;
 		await runAction(async () => {
-			post = await fetchJson<ForumPost>(`${backendOrigin}/forum/post/${post?.id}/update`, {
+			post = await apiFetch<ForumPost>(`/forum/post/${post?.id}/update`, {
 				method: 'PATCH',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ title: editTitle, content: editContent })
@@ -154,7 +153,7 @@
 	async function deletePost() {
 		if (!post || !window.confirm('Delete this discussion permanently?')) return;
 		await runAction(async () => {
-			await fetchJson<void>(`${backendOrigin}/forum/post/${post?.id}/delete`, {
+			await apiFetch<void>(`/forum/post/${post?.id}/delete`, {
 				method: 'DELETE'
 			});
 			await goto(resolve(routes.forum));
@@ -168,10 +167,10 @@
 		await runAction(async () => {
 			const formData = new FormData();
 			formData.set('content', newComment.trim());
-			const createdComment = await fetchJson<ForumComment>(
-				`${backendOrigin}/forum/posts/${activePost.id}/comment`,
-				{ method: 'POST', body: formData }
-			);
+			const createdComment = await apiFetch<ForumComment>(`/forum/posts/${activePost.id}/comment`, {
+				method: 'POST',
+				body: formData
+			});
 			comments = [createdComment, ...comments];
 			post = { ...activePost, comment_count: (activePost.comment_count || 0) + 1 };
 			newComment = '';
@@ -189,10 +188,10 @@
 		const formData = new FormData();
 		formData.set('content', editingCommentContent.trim());
 		await runAction(async () => {
-			const updated = await fetchJson<ForumComment>(
-				`${backendOrigin}/forum/comment/${commentId}/update`,
-				{ method: 'PATCH', body: formData }
-			);
+			const updated = await apiFetch<ForumComment>(`/forum/comment/${commentId}/update`, {
+				method: 'PATCH',
+				body: formData
+			});
 			comments = comments.map((comment) => (comment.id === commentId ? updated : comment));
 			editingCommentId = null;
 			editingCommentContent = '';
@@ -203,7 +202,7 @@
 		const activePost = post;
 		if (!activePost || !window.confirm('Delete this comment permanently?')) return;
 		await runAction(async () => {
-			await fetchJson<ApiMessage>(`${backendOrigin}/forum/comment/${commentId}/delete`, {
+			await apiFetch<unknown>(`/forum/comment/${commentId}/delete`, {
 				method: 'DELETE'
 			});
 			comments = comments.filter((comment) => comment.id !== commentId);
@@ -230,16 +229,6 @@
 		}
 	}
 
-	async function fetchJson<T>(url: string, init: RequestInit = {}): Promise<T> {
-		const response = await fetch(url, { ...init, credentials: 'include' });
-		if (!response.ok) {
-			const body = (await response.json().catch(() => ({}))) as ApiMessage;
-			throw new Error(body.detail || body.message || response.statusText || 'Request failed.');
-		}
-		if (response.status === 204) return undefined as T;
-		return (await response.json()) as T;
-	}
-
 	function canManageComment(comment: ForumComment): boolean {
 		return profile?.user_role === 'admin' || currentUserId === comment.user_id;
 	}
@@ -255,12 +244,31 @@
 			minute: '2-digit'
 		});
 	}
+
+	function textContent(value?: string | null): string {
+		if (!value) {
+			return '';
+		}
+		if (typeof document === 'undefined') {
+			return value.replace(/<[^>]*>/g, ' ');
+		}
+		const container = document.createElement('div');
+		container.innerHTML = value;
+		return container.textContent || '';
+	}
 </script>
 
 <Seo {title} {description} path={canonicalPath} noindex />
 
 <PageShell eyebrow="Forum" title="Discussion Detail" narrow={false}>
 	<div class="mx-auto max-w-4xl space-y-6">
+		<noscript>
+			<div class="rounded-md border border-amber-200 bg-amber-50 p-4 text-amber-950" role="alert">
+				Voting, commenting, and editing discussions require JavaScript. Reload this page with
+				JavaScript enabled before submitting forum actions.
+			</div>
+		</noscript>
+
 		<Button href={routes.forum} variant="secondary">Back to Forum</Button>
 
 		{#if status}<Alert variant={status.variant}>{status.message}</Alert>{/if}
@@ -273,7 +281,12 @@
 						<FormField id="edit-post-title" label="Discussion title" required>
 							<input id="edit-post-title" class={inputClass} required bind:value={editTitle} />
 						</FormField>
-						<FormField id="edit-post-content" label="Discussion content" required>
+						<FormField
+							id="edit-post-content"
+							label="Discussion content"
+							help="Supported HTML: <b>, <i>, <em>, <strong>, <a>, <p>, and <br>."
+							required
+						>
 							<textarea
 								id="edit-post-content"
 								class={`${inputClass} min-h-40 resize-y`}
@@ -306,8 +319,12 @@
 					</div>
 
 					<div class="pt-6">
-						<h2 class="text-4xl font-extrabold tracking-normal text-green-800">{post.title}</h2>
-						<p class="mt-6 whitespace-pre-wrap text-lg leading-8 text-slate-700">{post.content}</p>
+						<h2 class="text-4xl font-extrabold tracking-normal text-green-800">
+							{@html post.title}
+						</h2>
+						<div class="forum-content mt-6 text-lg leading-8 text-slate-700">
+							{@html post.content}
+						</div>
 					</div>
 
 					{#if isAuthenticated}
@@ -357,7 +374,12 @@
 
 				{#if isAuthenticated}
 					<form class="mt-5 space-y-4" onsubmit={addComment}>
-						<FormField id="new-comment" label="Add a comment" required>
+						<FormField
+							id="new-comment"
+							label="Add a comment"
+							help="Supported HTML: <b>, <i>, <em>, <strong>, <a>, <p>, and <br>."
+							required
+						>
 							<textarea
 								id="new-comment"
 								class={`${inputClass} min-h-28 resize-y`}
@@ -413,9 +435,9 @@
 										</div>
 									</form>
 								{:else}
-									<p class="whitespace-pre-wrap text-sm leading-6 text-slate-700">
-										{comment.content}
-									</p>
+									<div class="forum-content text-sm leading-6 text-slate-700">
+										{@html comment.content}
+									</div>
 									<p class="mt-3 text-xs text-slate-500">
 										Comment by User ID: <span class="font-semibold text-slate-700"
 											>{comment.user_id}</span
@@ -454,3 +476,15 @@
 		{/if}
 	</div>
 </PageShell>
+
+<style>
+	:global(.forum-content p + p) {
+		margin-top: 0.75rem;
+	}
+
+	:global(.forum-content a) {
+		color: var(--color-green-700);
+		font-weight: 600;
+		text-decoration: underline;
+	}
+</style>

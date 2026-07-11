@@ -121,7 +121,7 @@
 	function teacherImage(teacher: FeaturedTeacher): string {
 		return teacher.image_data
 			? `data:image/jpeg;base64,${teacher.image_data}`
-			: '/images/apple.jpg';
+			: new URL('/static/images/apple.jpg', backendOrigin).toString();
 	}
 
 	function promoImageUrl(value: string): string {

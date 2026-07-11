@@ -3,12 +3,11 @@
 	import Button from '$lib/components/Button.svelte';
 	import PageShell from '$lib/components/PageShell.svelte';
 	import Seo from '$lib/components/Seo.svelte';
-	import { getBackendOrigin } from '$lib/api/client';
+	import { apiFetch } from '$lib/api/client';
 	import { routes } from '$lib/routes';
 	import type { PageData } from './$types';
 	import type { ValidationUser } from './+page.server';
 
-	type ApiMessage = { detail?: string; message?: string };
 	type StatusVariant = 'info' | 'success' | 'warning' | 'error';
 	type StatusMessage = { variant: StatusVariant; message: string };
 	type ValidationListResponse = {
@@ -18,7 +17,6 @@
 
 	let { data } = $props<{ data: PageData }>();
 
-	const backendOrigin = getBackendOrigin();
 	const cardClass =
 		'rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:flex sm:items-start sm:justify-between sm:gap-5';
 
@@ -33,20 +31,9 @@
 	});
 
 	async function refreshList() {
-		const response = await fetch(`${backendOrigin}/api/validation_list/`, {
-			credentials: 'include'
-		});
-		const body = (await response.json().catch(() => ({}))) as ValidationListResponse | ApiMessage;
-
-		if (!response.ok) {
-			const message = 'detail' in body ? body.detail || body.message : undefined;
-			throw new Error(message || 'Unable to refresh the validation list.');
-		}
-
-		users = 'new_users' in body ? body.new_users : [];
-		if ('role' in body) {
-			role = body.role;
-		}
+		const body = await apiFetch<ValidationListResponse>('/api/validation_list/');
+		users = body.new_users;
+		role = body.role;
 	}
 
 	async function runUserAction(
@@ -59,15 +46,7 @@
 		status = { variant: 'info', message: 'Updating validation list...' };
 
 		try {
-			const response = await fetch(`${backendOrigin}${path}`, {
-				method: 'POST',
-				credentials: 'include'
-			});
-			const body = (await response.json().catch(() => ({}))) as ApiMessage;
-
-			if (!response.ok) {
-				throw new Error(body.detail || body.message || 'The validation action failed.');
-			}
+			await apiFetch<unknown>(path, { method: 'POST' });
 
 			if (shouldRefresh) {
 				await refreshList();

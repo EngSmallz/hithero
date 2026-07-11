@@ -1,11 +1,12 @@
 <script lang="ts">
+	/* eslint-disable svelte/no-at-html-tags */
 	import { onMount } from 'svelte';
 	import { resolve } from '$app/paths';
 	import Alert from '$lib/components/Alert.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import PageShell from '$lib/components/PageShell.svelte';
 	import Seo from '$lib/components/Seo.svelte';
-	import { getBackendOrigin } from '$lib/api/client';
+	import { apiFetch } from '$lib/api/client';
 	import { routes } from '$lib/routes';
 
 	type ForumPost = {
@@ -17,12 +18,10 @@
 		upvote_count?: number | null;
 		comment_count?: number | null;
 	};
-	type ApiMessage = { detail?: string; message?: string };
 	type SortMode = 'date-newest' | 'date-oldest' | 'upvotes';
 	type StatusVariant = 'info' | 'success' | 'warning' | 'error';
 	type StatusMessage = { variant: StatusVariant; message: string };
 
-	const backendOrigin = getBackendOrigin();
 	const sortOptions: { value: SortMode; label: string }[] = [
 		{ value: 'date-newest', label: 'Date (Newest)' },
 		{ value: 'date-oldest', label: 'Date (Oldest)' },
@@ -39,8 +38,8 @@
 		const normalizedSearch = searchTerm.trim().toLowerCase();
 		const matchingPosts = normalizedSearch
 			? posts.filter((post) => {
-					const title = post.title?.toLowerCase() || '';
-					const content = post.content?.toLowerCase() || '';
+					const title = textContent(post.title).toLowerCase();
+					const content = textContent(post.content).toLowerCase();
 					return title.includes(normalizedSearch) || content.includes(normalizedSearch);
 				})
 			: posts;
@@ -64,17 +63,7 @@
 		status = { variant: 'info', message: 'Loading discussions...' };
 
 		try {
-			const response = await fetch(`${backendOrigin}/forum/get_posts`, {
-				credentials: 'include'
-			});
-			const body = (await response.json().catch(() => [])) as ForumPost[] | ApiMessage;
-
-			if (!response.ok) {
-				const message = !Array.isArray(body) ? body.detail || body.message : undefined;
-				throw new Error(message || `HTTP Error: ${response.status} ${response.statusText}.`);
-			}
-
-			posts = Array.isArray(body) ? body : [];
+			posts = await apiFetch<ForumPost[]>('/forum/get_posts');
 			status = null;
 		} catch (error) {
 			status = {
@@ -141,7 +130,20 @@
 	}
 
 	function excerpt(value: string): string {
-		return value.length > 200 ? `${value.substring(0, 200)}...` : value;
+		const plainText = textContent(value);
+		return plainText.length > 200 ? `${plainText.substring(0, 200)}...` : plainText;
+	}
+
+	function textContent(value?: string | null): string {
+		if (!value) {
+			return '';
+		}
+		if (typeof document === 'undefined') {
+			return value.replace(/<[^>]*>/g, ' ');
+		}
+		const container = document.createElement('div');
+		container.innerHTML = value;
+		return container.textContent || '';
 	}
 </script>
 
@@ -197,7 +199,9 @@
 					class="block rounded-lg border border-slate-200 bg-white p-6 text-slate-950 shadow-sm transition hover:border-green-300 hover:bg-green-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-700"
 				>
 					<div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-						<h2 class="text-2xl font-bold tracking-normal text-green-800">{post.title}</h2>
+						<h2 class="text-2xl font-bold tracking-normal text-green-800">
+							{@html post.title}
+						</h2>
 						<div class="flex gap-2 text-xs font-semibold text-slate-700">
 							<span class="rounded-full bg-slate-100 px-2 py-1">
 								{post.upvote_count || 0}

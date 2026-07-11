@@ -35,11 +35,13 @@ test.describe('/about', () => {
 
 	test('opens mobile navigation', async ({ page }) => {
 		await page.setViewportSize({ width: 390, height: 844 });
-		await page.goto('/about');
+		await page.goto('/about', { waitUntil: 'load' });
+		await page.waitForLoadState('networkidle');
 
 		await page.getByRole('button', { name: 'Open navigation' }).click();
 
 		const mobileNav = page.getByRole('navigation', { name: 'Mobile primary' });
+		await expect(mobileNav).toBeVisible();
 		await expect(mobileNav.getByRole('link', { name: 'Donate' })).toBeVisible();
 		await expect(mobileNav.getByRole('link', { name: 'Contact' })).toBeVisible();
 		await expect(page.getByRole('button', { name: 'Close navigation' })).toBeVisible();

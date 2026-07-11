@@ -4,19 +4,17 @@
 	import FormField from '$lib/components/FormField.svelte';
 	import PageShell from '$lib/components/PageShell.svelte';
 	import Seo from '$lib/components/Seo.svelte';
-	import { getBackendOrigin } from '$lib/api/client';
+	import { apiFetch } from '$lib/api/client';
 	import { normalizeStringOptions } from '$lib/api/options';
 	import { routes } from '$lib/routes';
 	import type { UserRole } from '$lib/api/types';
-	import type { PageData } from './$types';
+	import type { ActionData, PageData } from './$types';
 
 	type StatusVariant = 'info' | 'success' | 'warning' | 'error';
 	type StatusMessage = { variant: StatusVariant; message: string };
 	type ApiMessage = { detail?: string; message?: string; role?: UserRole };
-	let { data } = $props<{ data: PageData }>();
+	let { data, form } = $props<{ data: PageData; form?: ActionData }>();
 
-	const backendOrigin = getBackendOrigin();
-	const createProfileEndpoint = `${backendOrigin}/profile/create_teacher_profile/`;
 	const inputClass =
 		'block min-h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-950 shadow-sm focus:border-green-600 focus:outline-2 focus:outline-green-600';
 
@@ -35,6 +33,14 @@
 	let status = $state<StatusMessage | null>(null);
 	let schoolOptionsStatus = $state<StatusMessage | null>(null);
 	let hasInitializedSchoolOptionsStatus = $state(false);
+	let formStatus = $derived(
+		form?.message
+			? {
+					variant: (form.success ? 'success' : 'error') as StatusVariant,
+					message: form.message
+				}
+			: null
+	);
 
 	let charactersRemaining = $derived(500 - aboutMe.length);
 
@@ -75,13 +81,7 @@
 	}
 
 	async function fetchSchoolOptions(path: string): Promise<string[]> {
-		const response = await fetch(`${backendOrigin}${path}`);
-		const body = (await response.json().catch(() => [])) as unknown;
-
-		if (!response.ok) {
-			throw new Error('School options could not be loaded.');
-		}
-
+		const body = await apiFetch<unknown>(path);
 		return normalizeStringOptions(body);
 	}
 
@@ -157,17 +157,11 @@
 		status = { variant: 'info', message: 'Creating your teacher profile...' };
 
 		try {
-			const response = await fetch(createProfileEndpoint, {
+			const body = await apiFetch<ApiMessage>('/profile/create_teacher_profile/', {
 				method: 'POST',
-				body: new FormData(form),
-				credentials: 'include'
+				body: new FormData(form)
 			});
-			const body = (await response.json().catch(() => ({}))) as ApiMessage;
 			const message = body.detail || body.message;
-
-			if (!response.ok) {
-				throw new Error(message || 'Profile creation failed. Please try again.');
-			}
 
 			const createdProfile = body.role === 'teacher' || body.role === 'admin';
 			hasCreatedProfile = createdProfile;
@@ -190,9 +184,7 @@
 
 	async function openMyPage() {
 		try {
-			await fetch(`${backendOrigin}/profile/myinfo/`, {
-				credentials: 'include'
-			});
+			await apiFetch<unknown>('/profile/myinfo/');
 		} finally {
 			window.location.href = routes.teacher;
 		}
@@ -214,10 +206,14 @@
 >
 	<div class="mx-auto max-w-3xl">
 		<section class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-			{#if hasCreatedProfile}
+			{#if hasCreatedProfile || form?.success}
 				<div class="space-y-5">
-					{#if status}
-						<Alert variant={status.variant}>{status.message}</Alert>
+					{#if status || formStatus}
+						{#if status}
+							<Alert variant={status.variant}>{status.message}</Alert>
+						{:else if formStatus}
+							<Alert variant={formStatus.variant}>{formStatus.message}</Alert>
+						{/if}
 					{/if}
 					<Button onclick={openMyPage} class="w-full sm:w-auto">View My Page</Button>
 				</div>
@@ -229,7 +225,7 @@
 				{/if}
 
 				<form
-					action={createProfileEndpoint}
+					action={routes.profileCreate}
 					method="post"
 					enctype="multipart/form-data"
 					class="space-y-5"
@@ -344,9 +340,13 @@
 					</Button>
 				</form>
 
-				{#if status}
+				{#if status || formStatus}
 					<div class="mt-5">
-						<Alert variant={status.variant}>{status.message}</Alert>
+						{#if status}
+							<Alert variant={status.variant}>{status.message}</Alert>
+						{:else if formStatus}
+							<Alert variant={formStatus.variant}>{formStatus.message}</Alert>
+						{/if}
 					</div>
 				{/if}
 			{/if}

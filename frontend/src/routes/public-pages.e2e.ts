@@ -58,14 +58,6 @@ const publicPages = [
 		robots: 'noindex, nofollow'
 	},
 	{
-		path: '/forum',
-		title: 'Homeroom Heroes - Forum Discussions',
-		canonical: 'https://www.helpteachers.net/forum',
-		heading: "The Teachers' Lounge",
-		description: /teacher forum discussions/,
-		robots: 'noindex, nofollow'
-	},
-	{
 		path: '/partners',
 		title: 'Homeroom Heroes - Sponsors and Thank You',
 		canonical: 'https://www.helpteachers.net/partners',
@@ -106,6 +98,22 @@ test.describe('static public pages', () => {
 				'href',
 				pageSpec.canonical
 			);
+			await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
+				'content',
+				pageSpec.title
+			);
+			await expect(page.locator('meta[property="og:description"]')).toHaveAttribute(
+				'content',
+				pageSpec.description
+			);
+			await expect(page.locator('meta[property="og:url"]')).toHaveAttribute(
+				'content',
+				pageSpec.canonical
+			);
+			await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
+				'content',
+				'https://www.helpteachers.net/images/logo_transparent.png'
+			);
 			if (pageSpec.robots) {
 				await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
 					'content',
@@ -115,6 +123,22 @@ test.describe('static public pages', () => {
 				await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
 			}
 			await expect(page.locator('body')).not.toContainText('/pages/');
+		});
+	}
+
+	for (const errorSpec of [
+		{ path: '/403', status: 403, heading: 'Forbidden' },
+		{ path: '/404', status: 404, heading: 'Page Does Not Exist' }
+	]) {
+		test(`${errorSpec.path} renders noindex error metadata`, async ({ page }) => {
+			const response = await page.goto(errorSpec.path, { waitUntil: 'domcontentloaded' });
+
+			expect(response?.status()).toBe(errorSpec.status);
+			await expect(page.getByRole('heading', { level: 1, name: errorSpec.heading })).toBeVisible();
+			await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+				'content',
+				'noindex, nofollow'
+			);
 		});
 	}
 });

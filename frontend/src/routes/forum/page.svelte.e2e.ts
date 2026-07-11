@@ -1,10 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
+import { installAuthenticatedSession } from '$lib/test/session';
 
 const forumPosts = [
 	{
 		id: 101,
-		title: 'Newest discussion',
-		content: 'This discussion was rendered from a mocked forum API response.',
+		title: '<strong>Newest</strong> discussion',
+		content: 'This discussion was rendered from a <em>mocked forum API response</em>.',
 		created_at: '2026-06-10T12:00:00',
 		user_id: 7,
 		upvote_count: 3,
@@ -44,6 +45,20 @@ function postCards(page: Page) {
 }
 
 test.describe('/forum', () => {
+	test.beforeEach(async ({ context }) => {
+		await installAuthenticatedSession(context);
+	});
+
+	test('redirects unauthenticated visitors to login before rendering', async ({
+		page,
+		context
+	}) => {
+		await context.clearCookies();
+		await page.goto('/forum');
+
+		await expect(page).toHaveURL('/login?redirect=%2Fforum');
+	});
+
 	test('renders mocked backend forum posts', async ({ page }) => {
 		await installForumPostsStub(page);
 
@@ -57,9 +72,14 @@ test.describe('/forum', () => {
 			'/forum/post?id=101'
 		);
 		await expect(page.getByText('mocked forum API response')).toBeVisible();
+		await expect(page.locator('#posts-container strong')).toHaveText('Newest');
 		await expect(page.getByRole('link', { name: '+ New Post' })).toHaveAttribute(
 			'href',
 			'/forum/new'
+		);
+		await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+			'content',
+			'noindex, nofollow'
 		);
 	});
 
@@ -129,7 +149,8 @@ test.describe('/forum', () => {
 		const mobileNav = page.getByRole('navigation', { name: 'Mobile primary' });
 		await expect(mobileNav).toBeVisible();
 		await expect(mobileNav.getByRole('link', { name: 'Donate' })).toBeVisible();
-		await expect(mobileNav.getByRole('link', { name: 'Login' })).toBeVisible();
+		await expect(mobileNav.getByRole('link', { name: 'My Page' })).toBeVisible();
+		await expect(mobileNav.getByRole('button', { name: 'Logout' })).toBeVisible();
 	});
 
 	test('shows backend errors without hiding the page', async ({ page }) => {

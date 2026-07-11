@@ -52,6 +52,9 @@ export type TeacherDirectoryResponse = {
 	teachers: TeacherSummary[];
 	filters: TeacherDirectoryFilters;
 	total: number;
+	page: number;
+	page_size: number;
+	total_pages: number;
 	applied_filters: {
 		state?: string | null;
 		county?: string | null;

@@ -75,4 +75,29 @@ test.describe('/register', () => {
 
 		await expect(page.getByRole('combobox', { name: /^County/ })).toContainText('King');
 	});
+
+	test('renders reCAPTCHA after client-side navigation from contact', async ({ page }) => {
+		await page.route('https://www.google.com/recaptcha/api.js?render=explicit', async (route) => {
+			await route.fulfill({
+				contentType: 'application/javascript',
+				body: `
+					window.grecaptcha = {
+						render: (container) => {
+							container.dataset.recaptchaRendered = 'true';
+							return 1;
+						},
+						getResponse: () => 'test-token',
+						reset: () => {}
+					};
+				`
+			});
+		});
+
+		await page.goto('/contact', { waitUntil: 'domcontentloaded' });
+		await expect(page.locator('.g-recaptcha')).toHaveAttribute('data-recaptcha-rendered', 'true');
+
+		await page.getByRole('link', { name: 'Sign Up' }).click();
+		await expect(page).toHaveURL('/register');
+		await expect(page.locator('.g-recaptcha')).toHaveAttribute('data-recaptcha-rendered', 'true');
+	});
 });

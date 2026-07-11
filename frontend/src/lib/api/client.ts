@@ -25,6 +25,14 @@ export class ApiError extends Error {
 	}
 }
 
+export function apiErrorMessage(body: ApiErrorBody | string | null, fallback: string): string {
+	if (typeof body === 'string') {
+		return body || fallback;
+	}
+
+	return body?.detail || body?.message || fallback;
+}
+
 export function getBackendOrigin(): string {
 	return env.PUBLIC_BACKEND_ORIGIN || DEFAULT_BACKEND_ORIGIN;
 }
@@ -61,8 +69,8 @@ export async function apiFetch<T>(path: string, options: ApiRequestOptions = {})
 
 	if (!response.ok) {
 		const body = await readErrorBody(response);
-		const detail = typeof body === 'object' && body?.detail ? body.detail : response.statusText;
-		throw new ApiError(detail, response.status, requestUrl, body);
+		const message = apiErrorMessage(body, response.statusText || 'Request failed.');
+		throw new ApiError(message, response.status, requestUrl, body);
 	}
 
 	if (response.status === 204) {

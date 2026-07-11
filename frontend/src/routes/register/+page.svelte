@@ -1,16 +1,3 @@
-<script lang="ts" module>
-	type Grecaptcha = {
-		getResponse: () => string;
-		reset: () => void;
-	};
-
-	declare global {
-		interface Window {
-			grecaptcha?: Grecaptcha;
-		}
-	}
-</script>
-
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { resolve } from '$app/paths';
@@ -21,14 +8,15 @@
 	import Seo from '$lib/components/Seo.svelte';
 	import { getBackendOrigin } from '$lib/api/client';
 	import { normalizeStringOptions } from '$lib/api/options';
+	import { getRecaptchaResponse, renderRecaptcha, resetRecaptcha } from '$lib/recaptcha';
 	import { routes } from '$lib/routes';
-	import type { PageData } from './$types';
+	import type { ActionData, PageData } from './$types';
 
 	type StatusVariant = 'info' | 'success' | 'warning' | 'error';
 	type StatusMessage = { variant: StatusVariant; message: string };
 	type ApiMessage = { detail?: string; message?: string };
 
-	let { data } = $props<{ data: PageData }>();
+	let { data, form } = $props<{ data: PageData; form?: ActionData }>();
 
 	const backendOrigin = getBackendOrigin();
 	const registrationEndpoint = `${backendOrigin}/profile/register/`;
@@ -50,6 +38,16 @@
 	let status = $state<StatusMessage | null>(null);
 	let schoolOptionsStatus = $state<StatusMessage | null>(null);
 	let hasInitializedSchoolOptionsStatus = $state(false);
+	let recaptchaContainer = $state<HTMLElement | null>(null);
+	let recaptchaWidgetId = $state<number | null>(null);
+	let formStatus = $derived(
+		form?.message
+			? {
+					variant: (form.success ? 'success' : 'error') as StatusVariant,
+					message: form.message
+				}
+			: null
+	);
 
 	$effect(() => {
 		if (hasInitializedSchoolOptionsStatus) {
@@ -67,16 +65,26 @@
 	});
 
 	onMount(() => {
-		if (document.querySelector('script[data-recaptcha-script]')) {
-			return;
+		let mounted = true;
+		if (recaptchaContainer) {
+			void renderRecaptcha(recaptchaContainer, recaptchaSiteKey)
+				.then((widgetId) => {
+					if (mounted) {
+						recaptchaWidgetId = widgetId;
+					}
+				})
+				.catch((error) => {
+					status = {
+						variant: 'error',
+						message: error instanceof Error ? error.message : 'reCAPTCHA could not be loaded.'
+					};
+				});
 		}
 
-		const script = document.createElement('script');
-		script.src = 'https://www.google.com/recaptcha/api.js';
-		script.async = true;
-		script.defer = true;
-		script.dataset.recaptchaScript = 'true';
-		document.head.appendChild(script);
+		return () => {
+			mounted = false;
+			resetRecaptcha(recaptchaWidgetId);
+		};
 	});
 
 	function resetCountySelection() {
@@ -182,7 +190,7 @@
 		const formData = new FormData(form);
 		const password = String(formData.get('password') ?? '');
 		const confirmPassword = String(formData.get('confirm_password') ?? '');
-		const recaptchaResponse = window.grecaptcha?.getResponse() ?? '';
+		const recaptchaResponse = getRecaptchaResponse(recaptchaWidgetId);
 
 		if (password !== confirmPassword) {
 			status = {
@@ -238,7 +246,7 @@
 				message: error instanceof Error ? error.message : 'Registration failed. Please try again.'
 			};
 		} finally {
-			window.grecaptcha?.reset();
+			resetRecaptcha(recaptchaWidgetId);
 			isSubmitting = false;
 		}
 	}
@@ -278,7 +286,7 @@
 			{/if}
 
 			<form
-				action={registrationEndpoint}
+				action={routes.register}
 				method="post"
 				enctype="multipart/form-data"
 				class="mt-7 space-y-5"
@@ -414,7 +422,11 @@
 				</div>
 
 				<div class="min-h-20">
-					<div class="g-recaptcha" data-sitekey={recaptchaSiteKey}></div>
+					<div
+						bind:this={recaptchaContainer}
+						class="g-recaptcha"
+						data-sitekey={recaptchaSiteKey}
+					></div>
 				</div>
 
 				<div class="flex flex-col gap-3 sm:flex-row">
@@ -425,9 +437,13 @@
 				</div>
 			</form>
 
-			{#if status}
+			{#if status || formStatus}
 				<div class="mt-5">
-					<Alert variant={status.variant}>{status.message}</Alert>
+					{#if status}
+						<Alert variant={status.variant}>{status.message}</Alert>
+					{:else if formStatus}
+						<Alert variant={formStatus.variant}>{formStatus.message}</Alert>
+					{/if}
 				</div>
 			{/if}
 		</section>

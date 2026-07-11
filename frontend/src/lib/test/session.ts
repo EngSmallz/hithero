@@ -6,6 +6,7 @@ export async function installAuthenticatedSession(
 	context: BrowserContext,
 	role: UserRole = 'teacher'
 ) {
+	const python = process.env.PYTHON ?? 'python3';
 	const payload = JSON.stringify({
 		user_id: 12,
 		user_role: role,
@@ -17,7 +18,7 @@ export async function installAuthenticatedSession(
 		'from itsdangerous import TimestampSigner',
 		'print(TimestampSigner("test-secret").sign(b64encode(sys.argv[1].encode())).decode())'
 	].join(';');
-	const value = execFileSync('python', ['-c', script, payload], { encoding: 'utf8' }).trim();
+	const value = execFileSync(python, ['-c', script, payload], { encoding: 'utf8' }).trim();
 
 	await context.addCookies([
 		{

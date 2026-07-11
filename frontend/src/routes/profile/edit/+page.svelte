@@ -5,9 +5,10 @@
 	import FormField from '$lib/components/FormField.svelte';
 	import PageShell from '$lib/components/PageShell.svelte';
 	import Seo from '$lib/components/Seo.svelte';
-	import { getBackendOrigin } from '$lib/api/client';
+	import { apiFetch } from '$lib/api/client';
 	import { normalizeStringOptions } from '$lib/api/options';
 	import { routes } from '$lib/routes';
+	import type { ActionData } from './$types';
 
 	type StatusVariant = 'info' | 'success' | 'warning' | 'error';
 	type StatusMessage = { variant: StatusVariant; message: string };
@@ -29,8 +30,8 @@
 		wishlist_url?: string | null;
 		about_me?: string | null;
 	};
+	let { form } = $props<{ form?: ActionData }>();
 
-	const backendOrigin = getBackendOrigin();
 	const inputClass =
 		'block min-h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-950 shadow-sm focus:border-green-600 focus:outline-2 focus:outline-green-600';
 
@@ -39,6 +40,14 @@
 	let isSubmitting = $state(false);
 	let status = $state<StatusMessage | null>(null);
 	let schoolOptionsStatus = $state<StatusMessage | null>(null);
+	let formStatus = $derived(
+		form?.message
+			? {
+					variant: (form.success ? 'success' : 'error') as StatusVariant,
+					message: form.message
+				}
+			: null
+	);
 
 	let teacherName = $state('');
 	let aboutMe = $state('');
@@ -80,15 +89,7 @@
 	}
 
 	async function loadTeacherProfile() {
-		const myInfoResponse = await fetch(`${backendOrigin}/profile/myinfo/`, {
-			credentials: 'include'
-		});
-
-		if (!myInfoResponse.ok) {
-			throw new Error(await readResponseMessage(myInfoResponse));
-		}
-
-		const myInfo = (await myInfoResponse.json().catch(() => ({}))) as MyInfoResponse;
+		const myInfo = await apiFetch<MyInfoResponse>('/profile/myinfo/');
 		if (myInfo.message && !myInfo.teacher) {
 			throw new Error(myInfo.message);
 		}
@@ -101,11 +102,8 @@
 
 		await loadDependentSchoolOptions();
 
-		const teacherInfoResponse = await fetch(`${backendOrigin}/api/get_teacher_info/`, {
-			credentials: 'include'
-		});
-		if (teacherInfoResponse.ok) {
-			const teacherInfo = (await teacherInfoResponse.json()) as TeacherProfile;
+		try {
+			const teacherInfo = await apiFetch<TeacherProfile>('/api/get_teacher_info/');
 			teacherName = teacherInfo.name || teacherName;
 			aboutMe = teacherInfo.about_me || '';
 			wishlist = teacherInfo.wishlist_url || '';
@@ -114,6 +112,8 @@
 			selectedDistrict = teacherInfo.district || selectedDistrict;
 			selectedSchool = teacherInfo.school || selectedSchool;
 			await loadDependentSchoolOptions();
+		} catch {
+			// The profile form can still render from myinfo if the public teacher payload is unavailable.
 		}
 
 		await loadTeacherUrlId();
@@ -121,13 +121,7 @@
 
 	async function loadTeacherUrlId() {
 		try {
-			const response = await fetch(`${backendOrigin}/api/teacher_url/`, {
-				credentials: 'include'
-			});
-			if (!response.ok) {
-				return;
-			}
-			const body = (await response.json().catch(() => ({}))) as ApiMessage;
+			const body = await apiFetch<ApiMessage>('/api/teacher_url/');
 			urlId = body.url?.split('/teacher/').pop() || '';
 		} catch (error) {
 			console.error('Error loading teacher URL ID:', error);
@@ -263,15 +257,7 @@
 	}
 
 	async function fetchSchoolOptions(path: string): Promise<string[]> {
-		const response = await fetch(`${backendOrigin}${path}`, {
-			credentials: 'include'
-		});
-		const body = (await response.json().catch(() => [])) as unknown;
-
-		if (!response.ok) {
-			throw new Error('School options could not be loaded.');
-		}
-
+		const body = await apiFetch<unknown>(path);
 		return normalizeStringOptions(body);
 	}
 
@@ -291,17 +277,11 @@
 		status = { variant: 'info', message: 'Submitting your update...' };
 
 		try {
-			const response = await fetch(`${backendOrigin}${endpoint}`, {
+			const body = await apiFetch<ApiMessage>(endpoint, {
 				method: 'POST',
-				body: new FormData(form),
-				credentials: 'include'
+				body: new FormData(form)
 			});
-			const body = (await response.json().catch(() => ({}))) as ApiMessage;
 			const message = body.detail || body.message;
-
-			if (!response.ok) {
-				throw new Error(message || 'Update failed. Please try again.');
-			}
 
 			status = {
 				variant: 'success',
@@ -317,11 +297,6 @@
 			isSubmitting = false;
 		}
 	}
-
-	async function readResponseMessage(response: Response): Promise<string> {
-		const body = (await response.json().catch(() => ({}))) as ApiMessage;
-		return body.detail || body.message || response.statusText || 'Request failed.';
-	}
 </script>
 
 <Seo
@@ -334,9 +309,13 @@
 <PageShell eyebrow="Teacher Profile" title="Edit Teacher Profile" narrow>
 	<div class="mx-auto max-w-2xl">
 		<section class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-			{#if status}
+			{#if status || formStatus}
 				<div class="mb-6">
-					<Alert variant={status.variant}>{status.message}</Alert>
+					{#if status}
+						<Alert variant={status.variant}>{status.message}</Alert>
+					{:else if formStatus}
+						<Alert variant={formStatus.variant}>{formStatus.message}</Alert>
+					{/if}
 				</div>
 			{/if}
 
@@ -351,7 +330,7 @@
 			{:else}
 				<div class="space-y-8">
 					<form
-						action={`${backendOrigin}/profile/update_teacher_name/`}
+						action="?/updateName"
 						method="post"
 						enctype="multipart/form-data"
 						class="space-y-4"
@@ -375,7 +354,7 @@
 					<hr class="border-slate-200" />
 
 					<form
-						action={`${backendOrigin}/profile/update_teacher_school/`}
+						action="?/updateSchool"
 						method="post"
 						enctype="multipart/form-data"
 						class="space-y-4"
@@ -460,7 +439,7 @@
 					<hr class="border-slate-200" />
 
 					<form
-						action={`${backendOrigin}/profile/update_info/`}
+						action="?/updateInfo"
 						method="post"
 						enctype="multipart/form-data"
 						class="space-y-4"
@@ -488,7 +467,7 @@
 					<hr class="border-slate-200" />
 
 					<form
-						action={`${backendOrigin}/profile/update_wishlist/`}
+						action="?/updateWishlist"
 						method="post"
 						enctype="multipart/form-data"
 						class="space-y-4"
@@ -526,7 +505,7 @@
 					<hr class="border-slate-200" />
 
 					<form
-						action={`${backendOrigin}/profile/update_url_id/`}
+						action="?/updateUrlId"
 						method="post"
 						enctype="multipart/form-data"
 						class="space-y-4"

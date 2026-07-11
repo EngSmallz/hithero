@@ -17,16 +17,44 @@ async function addSelectOption(page: Page, label: RegExp, value: string) {
 	}, value);
 }
 
+async function routeSchoolChoices(page: Page) {
+	await page.route('**/api/index_counties/Washington', async (route) => {
+		await route.fulfill({
+			contentType: 'application/json',
+			body: JSON.stringify(['King'])
+		});
+	});
+	await page.route('**/api/index_districts/Washington/King', async (route) => {
+		await route.fulfill({
+			contentType: 'application/json',
+			body: JSON.stringify(['Seattle Public Schools'])
+		});
+	});
+	await page.route(
+		'**/api/index_schools/Washington/King/Seattle%20Public%20Schools',
+		async (route) => {
+			await route.fulfill({
+				contentType: 'application/json',
+				body: JSON.stringify(['Evergreen Elementary'])
+			});
+		}
+	);
+}
+
 async function addReportSelections(page: Page) {
 	await addSelectOption(page, /^State/, 'Washington');
 	await page.getByRole('combobox', { name: /^State/ }).selectOption('Washington');
-	await addSelectOption(page, /^County/, 'King');
+	await expect(page.getByRole('combobox', { name: /^County/ })).toContainText('King');
 	await page.getByRole('combobox', { name: /^County/ }).selectOption('King');
-	await addSelectOption(page, /^School District/, 'Seattle Public Schools');
+	await expect(page.getByRole('combobox', { name: /^School District/ })).toContainText(
+		'Seattle Public Schools'
+	);
 	await page
 		.getByRole('combobox', { name: /^School District/ })
 		.selectOption('Seattle Public Schools');
-	await addSelectOption(page, /^School$/, 'Evergreen Elementary');
+	await expect(page.getByRole('combobox', { name: /^School$/ })).toContainText(
+		'Evergreen Elementary'
+	);
 	await page.getByRole('combobox', { name: /^School$/ }).selectOption('Evergreen Elementary');
 }
 
@@ -63,29 +91,10 @@ test.describe('/admin', () => {
 
 	test('loads dependent school choices from FastAPI as filters change', async ({ page }) => {
 		await installAdminSession(page);
-		await page.route('**/api/index_counties/Washington', async (route) => {
-			await route.fulfill({
-				contentType: 'application/json',
-				body: JSON.stringify(['King'])
-			});
-		});
-		await page.route('**/api/index_districts/Washington/King', async (route) => {
-			await route.fulfill({
-				contentType: 'application/json',
-				body: JSON.stringify(['Seattle Public Schools'])
-			});
-		});
-		await page.route(
-			'**/api/index_schools/Washington/King/Seattle%20Public%20Schools',
-			async (route) => {
-				await route.fulfill({
-					contentType: 'application/json',
-					body: JSON.stringify(['Evergreen Elementary'])
-				});
-			}
-		);
+		await routeSchoolChoices(page);
 
 		await page.goto('/admin', { waitUntil: 'domcontentloaded' });
+		await page.waitForLoadState('networkidle');
 		await addSelectOption(page, /^State/, 'Washington');
 
 		await page.getByRole('combobox', { name: /^State/ }).selectOption('Washington');
@@ -104,6 +113,7 @@ test.describe('/admin', () => {
 
 	test('submits teacher report generation and shows backend message', async ({ page }) => {
 		await installAdminSession(page);
+		await routeSchoolChoices(page);
 		await page.route('**/admin/generate_teacher_report/', async (route) => {
 			await route.fulfill({
 				contentType: 'application/json',

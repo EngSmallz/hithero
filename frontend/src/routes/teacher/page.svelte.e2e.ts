@@ -70,6 +70,10 @@ test.describe('/teacher', () => {
 		);
 		await expect(page.getByRole('button', { name: 'Share Page' })).toBeVisible();
 		await expect(page.getByRole('link', { name: 'Edit Info' })).toHaveCount(0);
+		await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+			'content',
+			'noindex, nofollow'
+		);
 	});
 
 	test('shows owner-only controls for the matching teacher', async ({ page }) => {

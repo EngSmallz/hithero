@@ -1,16 +1,3 @@
-<script lang="ts" module>
-	type Grecaptcha = {
-		getResponse: () => string;
-		reset: () => void;
-	};
-
-	declare global {
-		interface Window {
-			grecaptcha?: Grecaptcha;
-		}
-	}
-</script>
-
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Alert from '$lib/components/Alert.svelte';
@@ -19,7 +6,9 @@
 	import PageShell from '$lib/components/PageShell.svelte';
 	import Seo from '$lib/components/Seo.svelte';
 	import { getBackendOrigin } from '$lib/api/client';
+	import { getRecaptchaResponse, renderRecaptcha, resetRecaptcha } from '$lib/recaptcha';
 	import { routes } from '$lib/routes';
+	import type { ActionData } from './$types';
 
 	type StatusVariant = 'info' | 'success' | 'warning' | 'error';
 
@@ -54,18 +43,39 @@
 	let isSubmitting = $state(false);
 	let status = $state<{ variant: StatusVariant; message: string } | null>(null);
 	let charactersRemaining = $derived(250 - message.length);
+	let recaptchaContainer = $state<HTMLElement | null>(null);
+	let recaptchaWidgetId = $state<number | null>(null);
+	let { form } = $props<{ form?: ActionData }>();
+	let formStatus = $derived(
+		form?.message
+			? {
+					variant: (form.success ? 'success' : 'error') as StatusVariant,
+					message: form.message
+				}
+			: null
+	);
 
 	onMount(() => {
-		if (document.querySelector('script[data-recaptcha-script]')) {
-			return;
+		let mounted = true;
+		if (recaptchaContainer) {
+			void renderRecaptcha(recaptchaContainer, recaptchaSiteKey)
+				.then((widgetId) => {
+					if (mounted) {
+						recaptchaWidgetId = widgetId;
+					}
+				})
+				.catch((error) => {
+					status = {
+						variant: 'error',
+						message: error instanceof Error ? error.message : 'reCAPTCHA could not be loaded.'
+					};
+				});
 		}
 
-		const script = document.createElement('script');
-		script.src = 'https://www.google.com/recaptcha/api.js';
-		script.async = true;
-		script.defer = true;
-		script.dataset.recaptchaScript = 'true';
-		document.head.appendChild(script);
+		return () => {
+			mounted = false;
+			resetRecaptcha(recaptchaWidgetId);
+		};
 	});
 
 	async function submitContactForm(event: SubmitEvent) {
@@ -76,7 +86,7 @@
 			return;
 		}
 
-		const recaptchaResponse = window.grecaptcha?.getResponse() ?? '';
+		const recaptchaResponse = getRecaptchaResponse(recaptchaWidgetId);
 
 		if (!recaptchaResponse) {
 			status = {
@@ -118,7 +128,7 @@
 				message: error instanceof Error ? error.message : 'An error occurred. Please try again.'
 			};
 		} finally {
-			window.grecaptcha?.reset();
+			resetRecaptcha(recaptchaWidgetId);
 			isSubmitting = false;
 		}
 	}
@@ -171,7 +181,7 @@
 			</p>
 
 			<form
-				action={contactEndpoint}
+				action={routes.contact}
 				method="post"
 				enctype="multipart/form-data"
 				class="mt-6 space-y-5"
@@ -225,7 +235,11 @@
 				</FormField>
 
 				<div class="min-h-20">
-					<div class="g-recaptcha" data-sitekey={recaptchaSiteKey}></div>
+					<div
+						bind:this={recaptchaContainer}
+						class="g-recaptcha"
+						data-sitekey={recaptchaSiteKey}
+					></div>
 				</div>
 
 				<Button type="submit" disabled={isSubmitting} class="w-full">
@@ -233,9 +247,13 @@
 				</Button>
 			</form>
 
-			{#if status}
+			{#if status || formStatus}
 				<div class="mt-5">
-					<Alert variant={status.variant}>{status.message}</Alert>
+					{#if status}
+						<Alert variant={status.variant}>{status.message}</Alert>
+					{:else if formStatus}
+						<Alert variant={formStatus.variant}>{formStatus.message}</Alert>
+					{/if}
 				</div>
 			{/if}
 		</section>

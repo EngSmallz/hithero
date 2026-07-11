@@ -21,6 +21,7 @@ test.describe('/forgot', () => {
 	test('opens mobile navigation', async ({ page }) => {
 		await page.setViewportSize({ width: 390, height: 844 });
 		await page.goto('/forgot', { waitUntil: 'domcontentloaded' });
+		await page.waitForLoadState('networkidle');
 
 		await page.getByRole('button', { name: 'Open navigation' }).click();
 
@@ -39,6 +40,7 @@ test.describe('/forgot', () => {
 		});
 
 		await page.goto('/forgot', { waitUntil: 'domcontentloaded' });
+		await page.waitForLoadState('networkidle');
 		await page.getByLabel(/^Email/).fill('unknown@example.test');
 		await page.getByRole('button', { name: 'Submit' }).click();
 
@@ -57,6 +59,7 @@ test.describe('/forgot', () => {
 		});
 
 		await page.goto('/forgot', { waitUntil: 'domcontentloaded' });
+		await page.waitForLoadState('networkidle');
 		await page.getByLabel(/^Email/).fill('teacher@example.test');
 		await page.getByRole('button', { name: 'Submit' }).click();
 
