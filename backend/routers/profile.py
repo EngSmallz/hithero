@@ -20,6 +20,7 @@ from backend.services.profile_mutations import (
 )
 from backend.services.profile_auth import ProfileAuthService
 from backend.services.profile_password import ProfilePasswordService
+from backend.services.profile_password import InvalidResetToken, PasswordMismatch
 from backend.services.profile_reads import ProfileReadService
 
 
@@ -50,6 +51,7 @@ def create_profile_router(
         teacher_model=teacher_model,
         registered_user_model=registered_user_model,
         pending_user_model=pending_user_model,
+        reset_token_model=reset_token_model,
     )
     profile_auth_service = ProfileAuthService(profile_repository)
     profile_password_service = ProfilePasswordService(profile_repository)
@@ -406,28 +408,18 @@ def create_profile_router(
         request: Request,
         email: str = Form(...),
     ):
-        db = session_factory()
         try:
-            user = db.execute(
-                select(registered_user_model.id).where(
-                    cast(registered_user_model.email, String)
-                    == cast(email, String)
-                )
-            ).fetchone()
-            if user:
-                token = secrets.token_urlsafe(32)
-                expires_at = (
-                    datetime.datetime.utcnow()
-                    + datetime.timedelta(hours=1)
-                )
-                db.add(
-                    reset_token_model(
-                        email=email,
-                        token=token,
-                        expires_at=expires_at,
-                    )
-                )
-                db.commit()
+            token = secrets.token_urlsafe(32)
+            expires_at = (
+                datetime.datetime.utcnow()
+                + datetime.timedelta(hours=1)
+            )
+            user_exists = profile_password_service.create_reset_token(
+                email,
+                token=token,
+                expires_at=expires_at,
+            )
+            if user_exists:
                 reset_link = (
                     "https://www.helpteachers.net/reset-password"
                     f"?token={token}"
@@ -464,11 +456,8 @@ def create_profile_router(
                 }
             )
         except Exception as exc:
-            db.rollback()
             logger.error(f"Internal Server Error: {str(exc)}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
-        finally:
-            db.close()
 
     @router.post("/profile/reset_password/")
     async def reset_password(
@@ -476,39 +465,13 @@ def create_profile_router(
         new_password: str = Form(...),
         confirm_password: str = Form(...),
     ):
-        db = session_factory()
         try:
-            if new_password != confirm_password:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Passwords do not match.",
-                )
-            reset = (
-                db.query(reset_token_model)
-                .filter(
-                    reset_token_model.token == token,
-                    reset_token_model.used == 0,
-                    reset_token_model.expires_at
-                    > datetime.datetime.utcnow(),
-                )
-                .first()
+            profile_password_service.reset_password(
+                token,
+                new_password,
+                confirm_password,
+                now=datetime.datetime.utcnow(),
             )
-            if not reset:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Invalid or expired reset token.",
-                )
-
-            db.execute(
-                update(registered_user_model)
-                .where(
-                    cast(registered_user_model.email, String)
-                    == cast(reset.email, String)
-                )
-                .values(password=sha256_crypt.hash(new_password))
-            )
-            reset.used = 1
-            db.commit()
             return JSONResponse(
                 content={
                     "message": (
@@ -516,14 +479,15 @@ def create_profile_router(
                     )
                 }
             )
+        except PasswordMismatch as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        except InvalidResetToken as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
         except HTTPException:
             raise
         except Exception as exc:
-            db.rollback()
             logger.error(f"Internal Server Error: {str(exc)}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
-        finally:
-            db.close()
 
     @router.get("/api/teacher_url/")
     async def get_teacher_url(request: Request):

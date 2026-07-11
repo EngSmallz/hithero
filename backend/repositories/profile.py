@@ -11,11 +11,13 @@ class ProfileRepository:
         teacher_model,
         registered_user_model=None,
         pending_user_model=None,
+        reset_token_model=None,
     ):
         self._session_factory = session_factory
         self._teacher_model = teacher_model
         self._registered_user_model = registered_user_model
         self._pending_user_model = pending_user_model
+        self._reset_token_model = reset_token_model
 
     def _context_conditions(self, context):
         model_fields = {
@@ -97,6 +99,60 @@ class ProfileRepository:
                 update(self._registered_user_model)
                 .where(self._registered_user_model.id == user_id)
                 .values(password=password_hash)
+            )
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
+        finally:
+            db.close()
+
+    def create_reset_token(self, *, email, token, expires_at):
+        db = self._session_factory()
+        try:
+            db.add(
+                self._reset_token_model(
+                    email=email,
+                    token=token,
+                    expires_at=expires_at,
+                )
+            )
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
+        finally:
+            db.close()
+
+    def get_valid_reset_token(self, token, *, now):
+        db = self._session_factory()
+        try:
+            result = db.execute(
+                select(self._reset_token_model).where(
+                    self._reset_token_model.token == token,
+                    self._reset_token_model.used == 0,
+                    self._reset_token_model.expires_at > now,
+                )
+            ).fetchone()
+            return result[0] if result else None
+        finally:
+            db.close()
+
+    def consume_reset_token(self, token, email, password_hash):
+        db = self._session_factory()
+        try:
+            db.execute(
+                update(self._registered_user_model)
+                .where(
+                    cast(self._registered_user_model.email, String)
+                    == cast(email, String)
+                )
+                .values(password=password_hash)
+            )
+            db.execute(
+                update(self._reset_token_model)
+                .where(self._reset_token_model.token == token)
+                .values(used=1)
             )
             db.commit()
         except Exception:
