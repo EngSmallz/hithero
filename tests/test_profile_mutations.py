@@ -439,6 +439,7 @@ def test_create_teacher_profile_api_preserves_success_and_allocation_contract(
     finally:
         db.close()
 
+    app_module.app.state.limiter._storage.reset()
     client = TestClient(app_module.app)
     response = client.post(
         "/profile/login/",
@@ -487,6 +488,7 @@ def test_update_url_id_api_preserves_validation_collision_and_success_contracts(
     app_module,
 ):
     seed_url_id_profiles(app_module)
+    app_module.app.state.limiter._storage.reset()
     client = TestClient(app_module.app)
     login_url_id_user(client)
 

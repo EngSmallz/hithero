@@ -108,6 +108,7 @@ def test_admin_delete_account_api_preserves_auth_secret_and_success_contract(
     finally:
         db.close()
 
+    app_module.app.state.limiter._storage.reset()
     monkeypatch.setenv("admin_secret", "test-admin-secret")
     client = TestClient(app_module.app)
     login = client.post(

@@ -5,6 +5,9 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, Form, HTTPException, Path, Request, Response, status
 from sqlalchemy import desc
 
+from backend.repositories.forum import ForumRepository
+from backend.services.forum import ForumService
+
 
 def create_forum_router(
     *,
@@ -24,6 +27,11 @@ def create_forum_router(
     model_to_dict,
 ):
     router = APIRouter(prefix="/forum")
+    forum_repository = ForumRepository(
+        session_factory=session_factory,
+        post_model=post_model,
+    )
+    forum_service = ForumService(forum_repository)
 
     @contextmanager
     def forum_session():
@@ -74,23 +82,19 @@ def create_forum_router(
         if not user_id:
             raise HTTPException(status_code=401, detail="You must be logged in to post.")
 
-        with forum_session() as db:
-            try:
-                new_post = post_model(
-                    title=sanitize(title),
-                    content=sanitize(content),
-                    user_id=user_id,
-                )
-                db.add(new_post)
-                db.commit()
-                db.refresh(new_post)
-            except Exception as exc:
-                rollback_session(db)
-                print(f"Database error during post creation: {exc}")
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Could not create post due to a server error.",
-                )
+        try:
+            new_post = forum_service.create_post(
+                title=title,
+                content=content,
+                user_id=user_id,
+                sanitize=sanitize,
+            )
+        except Exception as exc:
+            print(f"Database error during post creation: {exc}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Could not create post due to a server error.",
+            )
         return serialize(new_post)
 
     @router.get("/get_posts")
