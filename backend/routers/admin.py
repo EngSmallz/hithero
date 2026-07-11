@@ -1,4 +1,5 @@
 import os
+import tempfile
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from sqlalchemy import String, cast, delete, insert, select, update
@@ -35,6 +36,31 @@ def create_admin_router(
             }
             for row in rows
         ]
+
+    def require_teacher_scope(db, request, role, user_email):
+        if role == "admin":
+            return
+
+        pending_user = db.execute(
+            select(pending_user_model).where(
+                cast(pending_user_model.email, String)
+                == cast(user_email, String)
+            )
+        ).fetchone()
+        teacher = db.execute(
+            select(teacher_model).where(
+                teacher_model.regUserID == get_current_id(request)
+            )
+        ).fetchone()
+        if not pending_user or not teacher or (
+            pending_user[0].state != teacher[0].state
+            or pending_user[0].county != teacher[0].county
+            or pending_user[0].district != teacher[0].district
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="You can only moderate teachers in your own district.",
+            )
 
     @router.post("/validation/validate_user/{user_email}")
     async def move_user(
@@ -196,6 +222,7 @@ def create_admin_router(
     @router.post("/validation/report_user/{user_email}")
     async def report_user(
         user_email: str,
+        request: Request,
         role: str = Depends(get_current_role),
     ):
         if role not in ("admin", "teacher"):
@@ -203,6 +230,7 @@ def create_admin_router(
 
         db = session_factory()
         try:
+            require_teacher_scope(db, request, role, user_email)
             db.execute(
                 update(pending_user_model)
                 .where(
@@ -223,6 +251,7 @@ def create_admin_router(
     @router.post("/validation/emailed_user/{user_email}")
     async def emailed_user(
         user_email: str,
+        request: Request,
         role: str = Depends(get_current_role),
     ):
         if role not in ("admin", "teacher"):
@@ -230,6 +259,7 @@ def create_admin_router(
 
         db = session_factory()
         try:
+            require_teacher_scope(db, request, role, user_email)
             db.execute(
                 update(pending_user_model)
                 .where(
@@ -307,20 +337,27 @@ def create_admin_router(
                     f"{user.get('email', 'N/A')}\t{user.get('phone', 'N/A')}"
                 )
 
-            file_path = os.path.join("./", "teacher_report.txt")
-            with open(file_path, "w") as temp_file:
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                prefix="teacher-report-",
+                suffix=".txt",
+                delete=False,
+            ) as temp_file:
                 temp_file.write("\n".join(data))
+                file_path = temp_file.name
 
-            send_attachment(
-                recipient_email="homeroom.heroes.main@gmail.com",
-                subject="Teacher Report",
-                message="Please find the attached teacher report.",
-                attachment_path=file_path,
-            )
             try:
-                os.remove(file_path)
-            except OSError:
-                logger.error("Failed to delete temporary report file.")
+                send_attachment(
+                    recipient_email="homeroom.heroes.main@gmail.com",
+                    subject="Teacher Report",
+                    message="Please find the attached teacher report.",
+                    attachment_path=file_path,
+                )
+            finally:
+                try:
+                    os.remove(file_path)
+                except OSError:
+                    logger.error("Failed to delete temporary report file.")
             return {"message": "Teacher report saved and sent via email."}
         except Exception as exc:
             logger.error(f"Report generation error: {str(exc)}")
@@ -334,7 +371,6 @@ def create_admin_router(
         admin_secret_input: str = Form(...),
         current_role: str = Depends(get_current_role),
     ):
-        db = session_factory()
         if not current_role or current_role != "admin":
             raise HTTPException(
                 status_code=403,
@@ -347,6 +383,7 @@ def create_admin_router(
                 detail="Invalid administrator secret provided.",
             )
 
+        db = session_factory()
         try:
             user_id_result = db.execute(
                 select(registered_user_model.id).where(

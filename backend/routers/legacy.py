@@ -45,6 +45,7 @@ LEGACY_PUBLIC_PAGE_REDIRECTS = {
     "/pages/login.html": "/login",
     "/pages/forgot.html": "/forgot",
     "/pages/terms_conditions.html": "/terms",
+    "/pages/wishlist_setup.html": "/wishlist-setup",
     "/pages/403.html": "/403",
     "/pages/404.html": "/404",
 }
@@ -122,10 +123,12 @@ def create_legacy_router(
 
     for legacy_path, clean_path in LEGACY_PUBLIC_PAGE_REDIRECTS.items():
         async def legacy_public_page_redirect(
-            _request: Request,
+            request: Request,
             clean_path: str = clean_path,
         ):
-            return RedirectResponse(url=clean_path, status_code=307)
+            query = request.url.query
+            destination = f"{clean_path}?{query}" if query else clean_path
+            return RedirectResponse(url=destination, status_code=307)
 
         router.add_api_route(
             legacy_path,
@@ -195,6 +198,8 @@ def create_legacy_router(
             return RedirectResponse(url="/teacher")
         except Exception:
             return RedirectResponse(url="/404")
+        finally:
+            db.close()
 
     @router.get("/promo/get_promo_info/")
     async def get_promo_info(request: Request):

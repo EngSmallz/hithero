@@ -282,6 +282,8 @@ def create_profile_router(
                 "about_me": teacher.about_me,
                 "image_data": image_data,
             }
+        except HTTPException:
+            raise
         except Exception as exc:
             logger.error(f"Internal Server Error: {str(exc)}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
@@ -595,6 +597,8 @@ def create_profile_router(
                         "message": "Access granted",
                     }
             raise HTTPException(status_code=403, detail="No access")
+        except HTTPException:
+            raise
         except Exception as exc:
             logger.error(f"Internal Server Error: {str(exc)}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
@@ -750,8 +754,12 @@ def create_profile_router(
                     detail="No matching teacher found",
                 )
             return {"url": "www.HelpTeachers.net/teacher/" + token[0]}
+        except HTTPException:
+            raise
         except Exception as exc:
             logger.error(f"Internal Server Error: {str(exc)}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
+        finally:
+            db.close()
 
     return router

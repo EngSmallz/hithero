@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, Request, Form, Depends
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 import os, logging, datetime, base64, mimetypes, requests, threading
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,8 +10,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from passlib.hash import sha256_crypt
 from sqlalchemy import create_engine, Column, Integer, String, func, LargeBinary, DateTime, ForeignKey, UniqueConstraint, select, cast
 from sqlalchemy.engine import make_url
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session, relationship
+from sqlalchemy.orm import declarative_base, sessionmaker, Session, relationship
 from sqlalchemy.pool import StaticPool
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import select, cast, delete, insert, update
@@ -56,7 +55,7 @@ except ImportError:
 
     class _BleachFallback:
         @staticmethod
-        def clean(value, tags=None, attributes=None, strip=False):
+        def clean(value, tags=None, attributes=None, strip=False, protocols=None):
             return html.escape(value or "")
 
     bleach = _BleachFallback()
@@ -132,9 +131,10 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.openapi_url = None
 app.redoc_url = None
 
-###content cleanup and formatting for forum
+# Forum formatting is intentionally limited to a small, sanitized HTML subset.
 ALLOWED_TAGS = ["b", "i", "em", "strong", "a", "p", "br"]
 ALLOWED_ATTRS = {"a": ["href"]}
+ALLOWED_PROTOCOLS = ["http", "https", "mailto"]
 
 # Determine the path to the directory
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -336,6 +336,8 @@ class CreatePostRequest(BaseModel):
 
 class PostDisplay(BaseModel):
     """Schema for returning post data."""
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     title: str
     content: str
@@ -343,9 +345,6 @@ class PostDisplay(BaseModel):
     created_at: datetime.datetime
     upvote_count: int
     comment_count: int
-
-    class Config:
-        from_attributes = True
 
 class VoteInput(BaseModel):
     """Defines the expected input structure for posting a vote."""
@@ -369,6 +368,9 @@ class TeacherDirectoryResponse(BaseModel):
     teachers: List[TeacherDirectorySummary]
     filters: TeacherDirectoryFilters
     total: int
+    page: int
+    page_size: int
+    total_pages: int
     applied_filters: dict[str, Optional[str]]
 
 class TeacherProfileResponse(BaseModel):
@@ -1043,6 +1045,8 @@ async def get_random_teacher(request: Request):
         if hasattr(request, "session"):
             set_teacher_session(request, teacher)
         return data
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Internal Server Error: {str(e)}") 
         raise HTTPException(status_code=500, detail="Internal Server Error")
@@ -1123,6 +1127,7 @@ app.include_router(
         clean_html=bleach.clean,
         allowed_tags=ALLOWED_TAGS,
         allowed_attrs=ALLOWED_ATTRS,
+        allowed_protocols=ALLOWED_PROTOCOLS,
         model_to_dict=model_to_dict,
     )
 )

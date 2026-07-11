@@ -80,6 +80,21 @@ EXPECTED_SITEMAP_LOCS = {
     "https://www.helpteachers.net/partners",
 }
 
+PRIVATE_OR_NOINDEX_CANONICAL_LOCS = {
+    "https://www.helpteachers.net/reset-password",
+    "https://www.helpteachers.net/update-password",
+    "https://www.helpteachers.net/forum",
+    "https://www.helpteachers.net/forum/new",
+    "https://www.helpteachers.net/forum/post",
+    "https://www.helpteachers.net/teacher",
+    "https://www.helpteachers.net/profile/create",
+    "https://www.helpteachers.net/profile/edit",
+    "https://www.helpteachers.net/validation",
+    "https://www.helpteachers.net/admin",
+    "https://www.helpteachers.net/403",
+    "https://www.helpteachers.net/404",
+}
+
 REMOVED_LEGACY_PUBLIC_LINKS = {
     "homepage.html": (
         "/pages/homepage.html",
@@ -511,13 +526,45 @@ def test_static_javascript_no_longer_uses_migrated_legacy_page_urls():
             assert target not in source, f"Did not expect migrated target {target!r} in {script_path}"
 
 
-def test_sitemap_uses_clean_canonical_urls():
-    sitemap_path = ROOT_DIR / "static" / "sitemap.xml"
+def read_sitemap_locs(sitemap_path):
     root = ElementTree.parse(sitemap_path).getroot()
     namespace = {"sm": "http://www.sitemaps.org/schemas/sitemap/0.9"}
 
-    locs = {element.text for element in root.findall(".//sm:loc", namespace)}
+    return {element.text for element in root.findall(".//sm:loc", namespace)}
+
+
+@pytest.mark.parametrize(
+    "sitemap_path",
+    [
+        ROOT_DIR / "static" / "sitemap.xml",
+        ROOT_DIR / "frontend" / "static" / "sitemap.xml",
+    ],
+)
+def test_sitemap_uses_clean_canonical_urls(sitemap_path):
+    locs = read_sitemap_locs(sitemap_path)
 
     assert locs == EXPECTED_SITEMAP_LOCS
     assert all("/pages/" not in loc for loc in locs)
     assert all(not loc.endswith(".html") for loc in locs)
+    assert locs.isdisjoint(PRIVATE_OR_NOINDEX_CANONICAL_LOCS)
+
+
+def test_frontend_and_backend_sitemaps_match():
+    assert read_sitemap_locs(ROOT_DIR / "frontend" / "static" / "sitemap.xml") == read_sitemap_locs(
+        ROOT_DIR / "static" / "sitemap.xml"
+    )
+
+
+@pytest.mark.parametrize(
+    "robots_path",
+    [
+        ROOT_DIR / "static" / "robots.txt",
+        ROOT_DIR / "frontend" / "static" / "robots.txt",
+    ],
+)
+def test_robots_files_reference_canonical_sitemap(robots_path):
+    source = robots_path.read_text(encoding="utf-8")
+
+    assert "User-agent: *" in source
+    assert "Sitemap: https://www.helpteachers.net/sitemap.xml" in source
+    assert "/pages/" not in source

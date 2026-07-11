@@ -2,7 +2,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Form, HTTPException
 from fastapi.responses import JSONResponse
-from sqlalchemy import String, cast, select
+from sqlalchemy import String, cast, func, select
 
 from backend.services.teachers import serialize_teacher_profile, serialize_teacher_summary
 
@@ -41,15 +41,21 @@ def create_teacher_router(
         county: Optional[str] = None,
         district: Optional[str] = None,
         school: Optional[str] = None,
-        limit: int = 100,
+        page: int = 1,
+        page_size: int = 24,
     ):
         state = _clean_optional_filter(state)
         county = _clean_optional_filter(county)
         district = _clean_optional_filter(district)
         school = _clean_optional_filter(school)
-        limit = max(1, min(limit, 500))
+        page = max(1, page)
+        page_size = max(1, min(page_size, 100))
 
-        conditions = []
+        conditions = [
+            teacher_model.name.is_not(None),
+            teacher_model.url_id.is_not(None),
+            cast(teacher_model.url_id, String) != "",
+        ]
         if state:
             conditions.append(cast(teacher_model.state, String) == state)
         if county:
@@ -59,14 +65,21 @@ def create_teacher_router(
         if school:
             conditions.append(cast(teacher_model.school, String) == school)
 
-        teacher_query = select(teacher_model).where(
-            teacher_model.name.is_not(None),
-            teacher_model.url_id.is_not(None),
-            cast(teacher_model.url_id, String) != "",
+        total = db.execute(
+            select(func.count()).select_from(teacher_model).where(*conditions)
+        ).scalar_one()
+        total_pages = (total + page_size - 1) // page_size if total else 0
+        if total_pages:
+            page = min(page, total_pages)
+        offset = (page - 1) * page_size
+
+        teacher_query = (
+            select(teacher_model)
+            .where(*conditions)
+            .order_by(cast(teacher_model.name, String))
+            .offset(offset)
+            .limit(page_size)
         )
-        for condition in conditions:
-            teacher_query = teacher_query.where(condition)
-        teacher_query = teacher_query.order_by(cast(teacher_model.name, String)).limit(limit)
 
         teachers = db.execute(teacher_query).scalars().all()
 
@@ -92,7 +105,10 @@ def create_teacher_router(
                     db, teacher_model.school, *school_conditions
                 ),
             },
-            "total": len(teachers),
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": total_pages,
             "applied_filters": {
                 "state": state,
                 "county": county,
@@ -242,7 +258,8 @@ def create_teacher_router(
         county: Optional[str] = None,
         district: Optional[str] = None,
         school: Optional[str] = None,
-        limit: int = 100,
+        page: int = 1,
+        page_size: int = 24,
     ):
         db = session_factory()
         try:
@@ -252,7 +269,8 @@ def create_teacher_router(
                 county=county,
                 district=district,
                 school=school,
-                limit=limit,
+                page=page,
+                page_size=page_size,
             )
         finally:
             db.close()

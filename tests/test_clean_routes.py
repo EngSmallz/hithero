@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from tests.conftest import normalize_text, read_page
+from tests.conftest import PAGES_DIR, normalize_text, read_page
 
 
 CLEAN_ROUTE_CASES = [
@@ -39,6 +39,7 @@ LEGACY_REDIRECT_CASES = [
     ("/pages/login.html", "/login"),
     ("/pages/forgot.html", "/forgot"),
     ("/pages/terms_conditions.html", "/terms"),
+    ("/pages/wishlist_setup.html", "/wishlist-setup"),
     ("/pages/403.html", "/403"),
     ("/pages/404.html", "/404"),
 ]
@@ -46,7 +47,6 @@ LEGACY_REDIRECT_CASES = [
 LEGACY_DIRECT_CASES = [
     ("/pages/update_password.html", "update_password.html", "Update Your Password"),
     ("/pages/reset_password.html", "reset_password.html", "Reset Your Password"),
-    ("/pages/wishlist_setup.html", "wishlist_setup.html", "Steps to Setup Wishlist"),
     ("/pages/forum.html", "forum.html", "The Teachers' Lounge"),
     ("/pages/create_post.html", "create_post.html", "Start a New Discussion"),
     ("/pages/post.html", "post.html", "Discussion Detail"),
@@ -56,6 +56,19 @@ LEGACY_DIRECT_CASES = [
     ("/pages/validation.html", "validation.html", "How Validation Works"),
     ("/pages/admin.html", "admin.html", "Delete User Account (Admin)"),
 ]
+
+
+def test_every_legacy_page_has_cleanup_classification():
+    classified_paths = {
+        route_path.removeprefix("/pages/")
+        for route_path, _expected_location in LEGACY_REDIRECT_CASES
+    } | {
+        route_path.removeprefix("/pages/")
+        for route_path, _page_name, _expected_text in LEGACY_DIRECT_CASES
+    }
+    actual_pages = {path.name for path in PAGES_DIR.glob("*.html")}
+
+    assert classified_paths == actual_pages
 
 
 def test_clean_route_aliases_serve_expected_pages(app_module):
@@ -105,6 +118,18 @@ def test_redirect_ready_legacy_public_pages_redirect_head_to_clean_aliases(app_m
         assert response.status_code == 307, route_path
         assert response.headers["location"] == expected_location
         assert response.content == b""
+
+
+def test_redirect_ready_legacy_public_pages_preserve_query_strings(app_module):
+    client = TestClient(app_module.app)
+
+    response = client.get(
+        "/pages/login.html?redirect=%2Fadmin&campaign=summer",
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 307
+    assert response.headers["location"] == "/login?redirect=%2Fadmin&campaign=summer"
 
 
 def test_deferred_legacy_and_private_pages_still_serve_directly(app_module):

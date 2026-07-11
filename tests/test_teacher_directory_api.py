@@ -118,6 +118,24 @@ def test_teacher_directory_api_returns_empty_list_for_no_matches(app_module):
     assert body["applied_filters"]["state"] == "AK"
 
 
+def test_teacher_directory_api_paginates_without_truncating_total(app_module):
+    seed_teacher_directory(app_module)
+    client = TestClient(app_module.app)
+
+    response = client.get(
+        "/api/teachers/",
+        params={"page": 2, "page_size": 2},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 3
+    assert body["page"] == 2
+    assert body["page_size"] == 2
+    assert body["total_pages"] == 2
+    assert [teacher["name"] for teacher in body["teachers"]] == ["Carla Cruz"]
+
+
 def test_teacher_directory_api_skips_profiles_without_shareable_urls(app_module):
     seed_teacher_directory(app_module)
     db = app_module.SessionLocal()
@@ -172,3 +190,32 @@ def test_public_teacher_profile_api_returns_404_for_unknown_url_id(app_module):
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Teacher not found"
+
+
+def test_session_selected_teacher_endpoints_preserve_not_found_and_forbidden_statuses(
+    app_module,
+):
+    seed_teacher_directory(app_module)
+    client = TestClient(app_module.app)
+
+    teacher_info = client.get("/api/get_teacher_info/")
+    teacher_url = client.get("/api/teacher_url/")
+    edit_access = client.get("/api/check_access_teacher/")
+
+    assert teacher_info.status_code == 404
+    assert teacher_url.status_code == 404
+    assert edit_access.status_code == 403
+
+
+def test_random_teacher_preserves_not_found_status(app_module):
+    app_module.init_db()
+    db = app_module.SessionLocal()
+    try:
+        db.execute(delete(app_module.TeacherList))
+        db.commit()
+    finally:
+        db.close()
+
+    response = TestClient(app_module.app).get("/api/random_teacher/")
+
+    assert response.status_code == 404
