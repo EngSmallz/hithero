@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from backend.core.settings import BackendSettings
+from backend.core.errors import BadRequestError
 from backend.main import create_app
 
 
@@ -56,3 +57,23 @@ def test_csrf_middleware_does_not_block_safe_reads():
     )
 
     assert response.status_code == 200
+
+
+def test_domain_errors_use_one_stable_http_mapping():
+    application = create_app(
+        BackendSettings(
+            app_env="test",
+            secret_key="test-secret",
+            cors_allow_origins=(),
+            session_https_only=False,
+        )
+    )
+
+    @application.get("/typed-error")
+    def typed_error():
+        raise BadRequestError("Invalid typed request")
+
+    response = TestClient(application).get("/typed-error")
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Invalid typed request"}

@@ -5,6 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
 from backend.core.csrf import CSRFMiddleware
+from backend.core.errors import DomainError, domain_error_handler
 from backend.core.settings import BackendSettings
 
 try:
@@ -64,6 +65,7 @@ def create_app(settings: BackendSettings | None = None):
     limiter = Limiter(key_func=get_remote_address)
     application.state.limiter = limiter
     application.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    application.add_exception_handler(DomainError, domain_error_handler)
     application.mount("/static", StaticFiles(directory=settings.static_dir), name="static")
     return application
 

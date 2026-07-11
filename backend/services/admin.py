@@ -1,12 +1,15 @@
-class UserAccountNotFound(ValueError):
+from backend.core.errors import ForbiddenError, NotFoundError
+
+
+class UserAccountNotFound(NotFoundError):
     """Raised when an administrator targets an unknown registered account."""
 
 
-class PendingUserNotFound(ValueError):
+class PendingUserNotFound(NotFoundError):
     """Raised when an administrator targets an unknown pending user."""
 
 
-class ValidationScopeForbidden(ValueError):
+class ValidationScopeForbidden(ForbiddenError):
     """Raised when a teacher validates outside their district scope."""
 
 

@@ -1,11 +1,13 @@
 from passlib.hash import sha256_crypt
 
+from backend.core.errors import BadRequestError
 
-class PasswordMismatch(ValueError):
+
+class PasswordMismatch(BadRequestError):
     """Raised when reset password confirmation values differ."""
 
 
-class InvalidResetToken(ValueError):
+class InvalidResetToken(BadRequestError):
     """Raised when a reset token is absent, expired, or already used."""
 
 

@@ -1,6 +1,8 @@
 import re
 import secrets
 
+from backend.core.errors import BadRequestError, ConflictError
+
 
 URL_ID_PATTERN = re.compile(r"^[a-zA-Z0-9_-]{3,50}$")
 INVALID_URL_ID_MESSAGE = (
@@ -9,19 +11,19 @@ INVALID_URL_ID_MESSAGE = (
 )
 
 
-class InvalidTeacherUrlId(ValueError):
+class InvalidTeacherUrlId(BadRequestError):
     """Raised when a teacher URL ID violates the legacy format contract."""
 
 
-class TeacherUrlIdConflict(ValueError):
+class TeacherUrlIdConflict(ConflictError):
     """Raised when a teacher URL ID is already assigned to a profile."""
 
 
-class TeacherImageTooLarge(ValueError):
+class TeacherImageTooLarge(BadRequestError):
     """Raised when an uploaded teacher image exceeds the configured limit."""
 
 
-class InvalidTeacherImage(ValueError):
+class InvalidTeacherImage(BadRequestError):
     """Raised when an uploaded teacher image has an unsupported MIME type."""
 
 
