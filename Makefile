@@ -3,8 +3,9 @@ DEV_DATABASE_URL ?= sqlite:///./.local/hithero-dev.sqlite
 TEST_DATABASE_URL ?= sqlite:///./.tmp/hithero-test.sqlite
 PYTEST_WORKERS ?= auto
 PYTEST_E2E_WORKERS ?= 2
+FRONTEND_NPM ?= npm --prefix frontend
 
-.PHONY: install-dev dev-backend dev-frontend init-test-db test-static test-static-db test-e2e test
+.PHONY: install-dev dev-backend dev-frontend init-test-db test-static test-static-db test-e2e test-forum-api test-teachers-api test-frontend-integration-one test
 
 install-dev:
 	python -m pip install -r requirements.txt -r requirements-dev.txt
@@ -27,5 +28,14 @@ test-static-db:
 
 test-e2e:
 	APP_ENV=test SECRET_KEY=test-secret PYTHONPATH=tests/stubs PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p xdist -n $(PYTEST_E2E_WORKERS) tests/e2e
+
+test-forum-api:
+	APP_ENV=test SECRET_KEY=test-secret PYTHONPATH=tests/stubs PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest tests/test_forum_formatting.py tests/test_forum_session_cleanup.py
+
+test-teachers-api:
+	APP_ENV=test SECRET_KEY=test-secret PYTHONPATH=tests/stubs PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest tests/test_teacher_directory_api.py
+
+test-frontend-integration-one:
+	INTEGRATION_WORKERS=1 $(FRONTEND_NPM) run test:integration
 
 test: test-static test-e2e

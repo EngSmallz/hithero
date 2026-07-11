@@ -17,26 +17,37 @@ Install runtime and test dependencies, then install the Chromium browser used by
 make install-dev
 ```
 
-Run the static and import regression tests with:
+Run the canonical modernization gate from the repository root before merge or release:
+
+```bash
+scripts/run-all-tests.sh
+```
+
+For faster local feedback while iterating, run:
+
+```bash
+scripts/run-all-tests.sh --quick
+```
+
+The full gate runs frontend format/check/lint first, prebuilds the SvelteKit app when both browser suites are selected, and then runs the slow suites in parallel. The legacy pytest browser smoke suite uses one internal worker inside that already-parallel gate by default; override `PYTEST_E2E_WORKERS` if you need to stress it directly. Logs for parallel suites are written to `.tmp/test-logs/<timestamp>/`.
+
+Useful focused commands are still available while developing:
 
 ```bash
 make test-static
-```
-
-Run the browser smoke tests with:
-
-```bash
 make test-e2e
+npm --prefix frontend run check
+npm --prefix frontend run test:e2e:forum
+npm --prefix frontend run test:integration
 ```
 
-The e2e tests start a local Uvicorn server on `127.0.0.1` by default. If your environment requires a different bind or browser URL host, override them with `E2E_BIND_HOST`, `E2E_CLIENT_HOST`, and optionally `E2E_PORT`.
-
-Run the full regression baseline with:
-
-```bash
-make test
-```
+The legacy e2e tests start a local Uvicorn server on `127.0.0.1` by default. If your environment requires a different bind or browser URL host, override them with `E2E_BIND_HOST`, `E2E_CLIENT_HOST`, and optionally `E2E_PORT`.
 
 The test commands set `APP_ENV=test`, which imports the FastAPI app with an isolated SQLite database URL and skips automatic table creation. In test mode the app does not require the SQL Server `pyodbc` driver to be importable.
 
 The Makefile also sets `PYTHONPATH=tests/stubs`. That path contains a test-only `readline` stub because the local Python 3.13 build used for this project segfaults when pytest imports the system readline extension during startup. The stub is not used by the application runtime.
+
+Deployment topology, required environment variables, cookie/CORS expectations, and reverse-proxy assumptions are documented in `docs/deployment-topology.md`.
+
+For a manual SQLite-backed local test stack, including the test email and
+reCAPTCHA behavior, see [local-test-README.md](local-test-README.md).

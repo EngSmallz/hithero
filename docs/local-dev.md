@@ -21,6 +21,7 @@ make dev-frontend
 
 The frontend reads `PUBLIC_BACKEND_ORIGIN`, defaulting to `http://localhost:8000`.
 Routes that are not migrated yet can redirect to the backend during development.
+Production topology, cookie/CORS expectations, and reverse-proxy assumptions are documented in `docs/deployment-topology.md`.
 
 Local and test backend runs allow SvelteKit dev origins by default:
 
