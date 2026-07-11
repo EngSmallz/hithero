@@ -47,6 +47,28 @@ def test_teacher_session_writer_preserves_legacy_directory_context():
     }
 
 
+def test_establish_user_session_replaces_pre_auth_session_state():
+    request = RequestStub(
+        {
+            "state": "old-state",
+            "user_id": 7,
+        }
+    )
+    user = type(
+        "User",
+        (),
+        {"email": "teacher@example.test", "role": "teacher", "id": 42},
+    )()
+
+    auth.establish_user_session(request, user)
+
+    assert request.session == {
+        "user_email": "teacher@example.test",
+        "user_role": "teacher",
+        "user_id": 42,
+    }
+
+
 def test_app_reexports_auth_helpers_for_router_compatibility():
     assert app.get_current_id is auth.get_current_id
     assert app.get_current_role is auth.get_current_role

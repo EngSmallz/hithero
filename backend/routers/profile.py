@@ -8,6 +8,7 @@ from passlib.hash import sha256_crypt
 from sqlalchemy import String, cast, insert, select, update
 
 from backend.repositories.profile import ProfileRepository
+from backend.core.auth import establish_user_session
 from backend.services.profile_mutations import (
     IMAGE_TOO_LARGE_MESSAGE,
     INVALID_URL_ID_MESSAGE,
@@ -109,9 +110,7 @@ def create_profile_router(
         try:
             user = profile_auth_service.authenticate_user(email, password)
             if user:
-                request.session["user_email"] = email
-                request.session["user_role"] = user.role
-                request.session["user_id"] = user.id
+                establish_user_session(request, user)
                 return JSONResponse(
                     content={
                         "message": f"Login successful as {user.role}",

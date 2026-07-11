@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
+from backend.core.csrf import CSRFMiddleware
 from backend.core.settings import BackendSettings
 
 try:
@@ -53,6 +54,11 @@ def create_app(settings: BackendSettings | None = None):
         allow_credentials=True,
         allow_methods=["GET", "POST", "PATCH", "DELETE"],
         allow_headers=["*"],
+    )
+    application.add_middleware(
+        CSRFMiddleware,
+        app_env=settings.app_env,
+        allowed_origins=settings.cors_allow_origins,
     )
 
     limiter = Limiter(key_func=get_remote_address)
