@@ -1,6 +1,6 @@
 # Backend Completion Plan
 
-**Status: B0 complete; B1 package boundaries complete; B2 teacher-directory slice complete (2026-07-11).**
+**Status: B0 complete; B1 package boundaries complete; B2 directory and initial profile slices complete (2026-07-11).**
 
 The baseline route inventory, contract snapshot, and full-gate evidence are
 recorded in [`docs/backend-baseline-contracts.md`](backend-baseline-contracts.md)

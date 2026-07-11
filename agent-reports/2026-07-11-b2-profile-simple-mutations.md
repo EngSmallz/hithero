@@ -26,9 +26,9 @@ Results:
 
 - Focused profile/directory/contract tests: 17 passed.
 - Backend static suite: 181 passed.
-- The last accumulated full parallel gate remains green at
-  `.tmp/test-logs/20260711-003807/`; browser/integration suites were not
-  rerun for this isolated mutation slice.
+- Canonical full parallel gate passed at
+  `.tmp/test-logs/20260711-010628/`: Python static 181, frontend Playwright
+  97, frontend integration 16, and legacy pytest E2E 38.
 
 ## Known issues
 
