@@ -1,12 +1,13 @@
-from sqlalchemy import String, cast, select, update
+from sqlalchemy import String, cast, insert, select, update
 
 
 class ProfileRepository:
     """Persistence operations for teacher identity/profile lookups."""
 
-    def __init__(self, *, session_factory, teacher_model):
+    def __init__(self, *, session_factory, teacher_model, registered_user_model=None):
         self._session_factory = session_factory
         self._teacher_model = teacher_model
+        self._registered_user_model = registered_user_model
 
     def _context_conditions(self, context):
         model_fields = {
@@ -73,6 +74,46 @@ class ProfileRepository:
 
     def update_teacher_url_id(self, user_id, url_id):
         self._update_teacher(user_id, url_id=url_id)
+
+    def get_profile_create_count(self, user_id):
+        db = self._session_factory()
+        try:
+            return db.execute(
+                select(self._registered_user_model.createCount).where(
+                    self._registered_user_model.id == user_id
+                )
+            ).scalar()
+        finally:
+            db.close()
+
+    def create_teacher_profile(self, user_id, *, name, state, county, district,
+                               school, about_me, wishlist_url, url_id):
+        db = self._session_factory()
+        try:
+            db.execute(
+                insert(self._teacher_model).values(
+                    name=name,
+                    state=state,
+                    county=county,
+                    district=district,
+                    school=school,
+                    regUserID=user_id,
+                    about_me=about_me,
+                    wishlist_url=wishlist_url,
+                    url_id=url_id,
+                )
+            )
+            db.execute(
+                update(self._registered_user_model)
+                .where(self._registered_user_model.id == user_id)
+                .values(createCount=self._registered_user_model.createCount + 1)
+            )
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
+        finally:
+            db.close()
 
     def _update_teacher(self, user_id, **values):
         db = self._session_factory()

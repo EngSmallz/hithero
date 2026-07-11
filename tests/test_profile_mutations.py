@@ -29,6 +29,13 @@ class RecordingRepository:
     def update_teacher_url_id(self, user_id, url_id):
         self.url_id_update = (user_id, url_id)
 
+    def get_profile_create_count(self, user_id):
+        self.create_count_user_id = user_id
+        return getattr(self, "create_count", 0)
+
+    def create_teacher_profile(self, user_id, **values):
+        self.profile_create = (user_id, values)
+
 
 def test_profile_mutation_service_passes_school_update_as_one_use_case():
     repository = RecordingRepository()
@@ -99,6 +106,98 @@ def test_profile_mutation_service_rejects_teacher_url_id_collision():
     assert not hasattr(repository, "url_id_update")
 
 
+def test_profile_mutation_service_allocates_url_id_and_preserves_affiliate_link(
+    monkeypatch,
+):
+    repository = RecordingRepository()
+    monkeypatch.setattr(
+        "backend.services.profile_mutations.secrets.randbelow",
+        lambda _limit: 1234,
+    )
+    service = ProfileMutationService(repository)
+
+    created = service.create_teacher_profile(
+        42,
+        "teacher",
+        "teacher@example.test",
+        name="Example Teacher",
+        state="WA",
+        county="King",
+        district="Seattle Public Schools",
+        school="Lincoln High School",
+        about_me="Science supplies",
+        wishlist="https://example.test/list",
+    )
+
+    assert created is True
+    assert repository.create_count_user_id == 42
+    assert repository.profile_create == (
+        42,
+        {
+            "name": "Example Teacher",
+            "state": "WA",
+            "county": "King",
+            "district": "Seattle Public Schools",
+            "school": "Lincoln High School",
+            "about_me": "Science supplies",
+            "wishlist_url": "https://example.test/list&tag=h0mer00mher0-20",
+            "url_id": "teacher1234",
+        },
+    )
+
+
+def test_profile_mutation_service_retries_colliding_allocated_url_id(monkeypatch):
+    repository = RecordingRepository()
+    existing_url_ids = {"teacher1234"}
+    repository.get_teacher_by_url_id = lambda url_id: (
+        object() if url_id in existing_url_ids else None
+    )
+    random_values = iter([1234, 5678])
+    monkeypatch.setattr(
+        "backend.services.profile_mutations.secrets.randbelow",
+        lambda _limit: next(random_values),
+    )
+    service = ProfileMutationService(repository)
+
+    created = service.create_teacher_profile(
+        42,
+        "teacher",
+        "teacher@example.test",
+        name="Example Teacher",
+        state="WA",
+        county="King",
+        district="Seattle Public Schools",
+        school="Lincoln High School",
+        about_me="Science supplies",
+        wishlist="https://example.test/list",
+    )
+
+    assert created is True
+    assert repository.profile_create[1]["url_id"] == "teacher5678"
+
+
+def test_profile_mutation_service_preserves_existing_profile_guard():
+    repository = RecordingRepository()
+    repository.create_count = 1
+    service = ProfileMutationService(repository)
+
+    created = service.create_teacher_profile(
+        42,
+        "teacher",
+        "teacher@example.test",
+        name="Example Teacher",
+        state="WA",
+        county="King",
+        district="Seattle Public Schools",
+        school="Lincoln High School",
+        about_me="Science supplies",
+        wishlist="https://example.test/list",
+    )
+
+    assert created is False
+    assert not hasattr(repository, "profile_create")
+
+
 class FailingSession:
     def __init__(self):
         self.rollback_called = False
@@ -143,6 +242,31 @@ def test_profile_repository_rolls_back_and_closes_failed_url_id_update():
 
     with pytest.raises(RuntimeError, match="write failed"):
         repository.update_teacher_url_id(42, "new-teacher")
+
+    assert session.rollback_called is True
+    assert session.closed is True
+
+
+def test_profile_repository_rolls_back_and_closes_failed_profile_creation():
+    session = FailingSession()
+    repository = ProfileRepository(
+        session_factory=lambda: session,
+        teacher_model=TeacherList,
+        registered_user_model=object(),
+    )
+
+    with pytest.raises(RuntimeError, match="write failed"):
+        repository.create_teacher_profile(
+            42,
+            name="Example Teacher",
+            state="WA",
+            county="King",
+            district="Seattle Public Schools",
+            school="Lincoln High School",
+            about_me="Science supplies",
+            wishlist_url="https://example.test/list&tag=h0mer00mher0-20",
+            url_id="teacher1234",
+        )
 
     assert session.rollback_called is True
     assert session.closed is True
@@ -200,6 +324,71 @@ def login_url_id_user(client):
     )
     assert response.status_code == 200
     assert response.json()["role"] == "teacher"
+
+
+def test_create_teacher_profile_api_preserves_success_and_allocation_contract(
+    app_module,
+):
+    app_module.init_db()
+    db = app_module.SessionLocal()
+    try:
+        db.execute(delete(app_module.TeacherList))
+        db.execute(delete(app_module.RegisteredUsers))
+        db.add(
+            app_module.RegisteredUsers(
+                email="profile-create@example.test",
+                phone_number="555-0143",
+                password=app_module.sha256_crypt.hash("test-password"),
+                role="teacher",
+                createCount=0,
+            )
+        )
+        db.commit()
+    finally:
+        db.close()
+
+    client = TestClient(app_module.app)
+    response = client.post(
+        "/profile/login/",
+        data={
+            "email": "profile-create@example.test",
+            "password": "test-password",
+        },
+    )
+    assert response.status_code == 200
+
+    created = client.post(
+        "/profile/create_teacher_profile/",
+        data={
+            "name": "Created Teacher",
+            "state": "WA",
+            "county": "King",
+            "district": "Seattle Public Schools",
+            "school": "Lincoln High School",
+            "aboutMe": "Science supplies",
+            "wishlist": "https://example.test/list",
+        },
+    )
+    assert created.status_code == 200
+    assert created.json() == {
+        "message": "Teacher created successfully",
+        "role": "teacher",
+    }
+
+    db = app_module.SessionLocal()
+    try:
+        teacher = db.query(app_module.TeacherList).filter_by(
+            name="Created Teacher"
+        ).one()
+        user = db.query(app_module.RegisteredUsers).filter_by(
+            email="profile-create@example.test"
+        ).one()
+        assert teacher.regUserID == user.id
+        assert teacher.url_id.startswith("profile-create")
+        assert teacher.wishlist_url == "https://example.test/list&tag=h0mer00mher0-20"
+        assert user.createCount == 1
+    finally:
+        db.close()
 
 
 def test_update_url_id_api_preserves_validation_collision_and_success_contracts(

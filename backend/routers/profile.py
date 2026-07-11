@@ -42,6 +42,7 @@ def create_profile_router(
     profile_repository = ProfileRepository(
         session_factory=session_factory,
         teacher_model=teacher_model,
+        registered_user_model=registered_user_model,
     )
     profile_read_service = ProfileReadService(profile_repository)
     profile_mutation_service = ProfileMutationService(profile_repository)
@@ -176,62 +177,31 @@ def create_profile_router(
         user_id: int = Depends(get_current_id),
         role: str = Depends(get_current_role),
     ):
-        db = session_factory()
         try:
             if not role:
                 return {"message": "No user logged in."}
-
-            create_count = db.execute(
-                select(registered_user_model.createCount).where(
-                    registered_user_model.id == user_id
-                )
-            ).scalar()
-            if create_count != 0 and role != "admin":
+            created = profile_mutation_service.create_teacher_profile(
+                user_id,
+                role,
+                get_current_email(request),
+                name=name,
+                state=state,
+                county=county,
+                district=district,
+                school=school,
+                about_me=aboutMe,
+                wishlist=wishlist,
+            )
+            if not created:
                 return {
                     "message": (
                         "Unable to create new profile. Profile already created."
                     )
                 }
-
-            affiliate_link = wishlist + "&tag=h0mer00mher0-20"
-            email = get_current_email(request)
-            first_part_email = email.split("@")[0]
-            auto_url_id = f"{first_part_email}{secrets.randbelow(9999)}"
-            while db.execute(
-                select(teacher_model).where(
-                    cast(teacher_model.url_id, String)
-                    == cast(auto_url_id, String)
-                )
-            ).first():
-                auto_url_id = f"{first_part_email}{secrets.randbelow(9999)}"
-
-            db.execute(
-                insert(teacher_model).values(
-                    name=name,
-                    state=state,
-                    county=county,
-                    district=district,
-                    school=school,
-                    regUserID=user_id,
-                    about_me=aboutMe,
-                    wishlist_url=affiliate_link,
-                    url_id=auto_url_id,
-                )
-            )
-            db.execute(
-                update(registered_user_model)
-                .where(registered_user_model.id == user_id)
-                .values(
-                    createCount=registered_user_model.createCount + 1
-                )
-            )
-            db.commit()
             return {"message": "Teacher created successfully", "role": role}
         except Exception as exc:
             logger.error(f"Internal Server Error: {str(exc)}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
-        finally:
-            db.close()
 
     @router.get("/api/profile/")
     async def get_user_profile(
