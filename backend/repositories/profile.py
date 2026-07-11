@@ -79,6 +79,32 @@ class ProfileRepository:
         finally:
             db.close()
 
+    def get_password_hash(self, user_id):
+        db = self._session_factory()
+        try:
+            return db.execute(
+                select(self._registered_user_model.password).where(
+                    self._registered_user_model.id == user_id
+                )
+            ).scalar()
+        finally:
+            db.close()
+
+    def update_password(self, user_id, password_hash):
+        db = self._session_factory()
+        try:
+            db.execute(
+                update(self._registered_user_model)
+                .where(self._registered_user_model.id == user_id)
+                .values(password=password_hash)
+            )
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
+        finally:
+            db.close()
+
     def create_pending_user(
         self,
         *,

@@ -19,6 +19,7 @@ from backend.services.profile_mutations import (
     TeacherUrlIdConflict,
 )
 from backend.services.profile_auth import ProfileAuthService
+from backend.services.profile_password import ProfilePasswordService
 from backend.services.profile_reads import ProfileReadService
 
 
@@ -51,6 +52,7 @@ def create_profile_router(
         pending_user_model=pending_user_model,
     )
     profile_auth_service = ProfileAuthService(profile_repository)
+    profile_password_service = ProfilePasswordService(profile_repository)
     profile_read_service = ProfileReadService(profile_repository)
     profile_mutation_service = ProfileMutationService(profile_repository)
 
@@ -367,37 +369,16 @@ def create_profile_router(
         new_password: str = Form(...),
         new_password_confirmed: str = Form(...),
     ):
-        db = session_factory()
         try:
-            if new_password != new_password_confirmed:
-                return {"message": "New passwords do not match."}
-
-            old_password_hash = db.execute(
-                select(registered_user_model.password).where(
-                    registered_user_model.id == user_id
-                )
-            ).scalar()
-            if (
-                not old_password_hash
-                or not sha256_crypt.verify(old_password, old_password_hash)
-            ):
-                return {"message": "Invalid old password"}
-
-            db.execute(
-                update(registered_user_model)
-                .where(registered_user_model.id == user_id)
-                .values(password=sha256_crypt.hash(new_password))
+            return profile_password_service.update_password(
+                user_id,
+                old_password,
+                new_password,
+                new_password_confirmed,
             )
-            db.commit()
-            return {
-                "status": "success",
-                "message": "Password updated successfully",
-            }
         except Exception as exc:
             logger.error(f"Internal Server Error: {str(exc)}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
-        finally:
-            db.close()
 
     @router.get("/api/check_access_teacher/")
     async def check_access_teacher(
