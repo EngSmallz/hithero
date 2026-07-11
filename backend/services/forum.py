@@ -10,3 +10,36 @@ class ForumService:
             content=sanitize(content),
             user_id=user_id,
         )
+
+    def create_comment(
+        self,
+        *,
+        post_id,
+        user_id,
+        content,
+        parent_comment_id,
+        sanitize,
+    ):
+        result, missing = self._repository.create_comment(
+            post_id=post_id,
+            user_id=user_id,
+            content=sanitize(content),
+            parent_comment_id=parent_comment_id,
+        )
+        if missing == "post":
+            raise LookupError(f"Post with ID {post_id} not found.")
+        if missing == "parent":
+            raise LookupError(
+                f"Parent comment with ID {parent_comment_id} not found."
+            )
+        return result
+
+    def record_vote(self, *, post_id, user_id, vote_type):
+        post = self._repository.record_vote(
+            post_id=post_id,
+            user_id=user_id,
+            vote_type=vote_type,
+        )
+        if post is None:
+            raise LookupError(f"Post with ID {post_id} not found.")
+        return post

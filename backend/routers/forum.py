@@ -30,6 +30,8 @@ def create_forum_router(
     forum_repository = ForumRepository(
         session_factory=session_factory,
         post_model=post_model,
+        comment_model=comment_model,
+        vote_model=vote_model,
     )
     forum_service = ForumService(forum_repository)
 
@@ -139,61 +141,22 @@ def create_forum_router(
         if not user_id:
             raise HTTPException(status_code=401, detail="You must be logged in to post.")
 
-        with forum_session() as db:
-            try:
-                vote_type = vote_data.vote_type
-                if vote_type not in (1, -1):
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="Invalid vote type. Must be 1 (upvote) or -1 (downvote).",
-                    )
-
-                post = db.query(post_model).filter(post_model.id == post_id).first()
-                if not post:
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND,
-                        detail=f"Post with ID {post_id} not found.",
-                    )
-
-                existing_vote = (
-                    db.query(vote_model)
-                    .filter(
-                        vote_model.post_id == post_id,
-                        vote_model.user_id == user_id,
-                    )
-                    .first()
-                )
-
-                if existing_vote:
-                    if existing_vote.vote_type == vote_type:
-                        db.delete(existing_vote)
-                        post.upvote_count -= vote_type
-                    else:
-                        old_vote_value = existing_vote.vote_type
-                        existing_vote.vote_type = vote_type
-                        post.upvote_count += vote_type - old_vote_value
-                else:
-                    db.add(
-                        vote_model(
-                            post_id=post_id,
-                            user_id=user_id,
-                            vote_type=vote_type,
-                        )
-                    )
-                    post.upvote_count += vote_type
-
-                db.commit()
-                db.refresh(post)
-            except HTTPException:
-                rollback_session(db)
-                raise
-            except Exception as exc:
-                rollback_session(db)
-                print(f"Database error during voting operation on post {post_id}: {exc}")
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="A server error prevented the vote from being recorded.",
-                )
+        try:
+            post = forum_service.record_vote(
+                post_id=post_id,
+                user_id=user_id,
+                vote_type=vote_data.vote_type,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+        except LookupError as exc:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+        except Exception as exc:
+            print(f"Database error during voting operation on post {post_id}: {exc}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="A server error prevented the vote from being recorded.",
+            )
         return serialize(post)
 
     @router.post(
@@ -211,47 +174,22 @@ def create_forum_router(
         if not user_id:
             raise HTTPException(status_code=401, detail="You must be logged in to post.")
 
-        with forum_session() as db:
-            try:
-                post = db.query(post_model).filter(post_model.id == post_id).first()
-                if not post:
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND,
-                        detail=f"Post with ID {post_id} not found.",
-                    )
-
-                if parent_comment_id:
-                    parent_comment = (
-                        db.query(comment_model)
-                        .filter(comment_model.id == parent_comment_id)
-                        .first()
-                    )
-                    if not parent_comment:
-                        raise HTTPException(
-                            status_code=status.HTTP_404_NOT_FOUND,
-                            detail=f"Parent comment with ID {parent_comment_id} not found.",
-                        )
-
-                new_comment = comment_model(
-                    post_id=post_id,
-                    user_id=user_id,
-                    content=sanitize(content),
-                    parent_comment_id=parent_comment_id,
-                )
-                db.add(new_comment)
-                post.comment_count += 1
-                db.commit()
-                db.refresh(new_comment)
-            except HTTPException:
-                rollback_session(db)
-                raise
-            except Exception as exc:
-                rollback_session(db)
-                print(f"Database error during comment creation on post {post_id}: {exc}")
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Could not create comment due to a server error.",
-                )
+        try:
+            new_comment = forum_service.create_comment(
+                post_id=post_id,
+                user_id=user_id,
+                content=content,
+                parent_comment_id=parent_comment_id,
+                sanitize=sanitize,
+            )
+        except LookupError as exc:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+        except Exception as exc:
+            print(f"Database error during comment creation on post {post_id}: {exc}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Could not create comment due to a server error.",
+            )
         return serialize(new_comment)
 
     @router.get("/comments/{post_id}/")
