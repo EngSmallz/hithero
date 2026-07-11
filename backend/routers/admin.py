@@ -4,6 +4,9 @@ import tempfile
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from sqlalchemy import String, cast, delete, insert, select, update
 
+from backend.repositories.admin import AdminRepository
+from backend.services.admin import AdminService, UserAccountNotFound
+
 
 def create_admin_router(
     *,
@@ -21,6 +24,12 @@ def create_admin_router(
     get_admin_secret,
 ):
     router = APIRouter()
+    account_repository = AdminRepository(
+        session_factory=session_factory,
+        registered_user_model=registered_user_model,
+        teacher_model=teacher_model,
+    )
+    admin_service = AdminService(account_repository)
 
     def serialize_pending_users(rows):
         return [
@@ -383,52 +392,20 @@ def create_admin_router(
                 detail="Invalid administrator secret provided.",
             )
 
-        db = session_factory()
         try:
-            user_id_result = db.execute(
-                select(registered_user_model.id).where(
-                    cast(registered_user_model.email, String)
-                    == cast(target_email, String)
-                )
-            ).fetchone()
-            if not user_id_result:
-                raise HTTPException(
-                    status_code=404,
-                    detail=(
-                        f"User account linked to '{target_email}' not found."
-                    ),
-                )
-
-            target_user_id = user_id_result[0]
-            db.execute(
-                delete(teacher_model).where(
-                    teacher_model.regUserID == target_user_id
-                )
-            )
-            db.execute(
-                delete(registered_user_model).where(
-                    cast(registered_user_model.email, String)
-                    == cast(target_email, String)
-                )
-            )
-            db.commit()
+            message = admin_service.delete_user_account(target_email)
             return {
-                "message": (
-                    "Successfully deleted account and associated data for "
-                    f"target user: {target_email}."
-                )
+                "message": message
             }
+        except UserAccountNotFound:
+            raise HTTPException(
+                status_code=404,
+                detail=f"User account linked to '{target_email}' not found.",
+            )
         except HTTPException:
             raise
         except Exception as exc:
-            db.rollback()
-            print(
-                "Error during administrative account deletion for "
-                f"{target_email}: {str(exc)}"
-            )
             logger.error(f"Internal Server Error: {str(exc)}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
-        finally:
-            db.close()
 
     return router
