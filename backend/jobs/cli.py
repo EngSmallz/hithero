@@ -11,9 +11,9 @@ def main():
     )
     args = parser.parse_args()
 
-    import app
+    from backend.main import legacy_jobs
 
-    job = getattr(app, f"{args.job}_job")
+    job = getattr(legacy_jobs, f"{args.job}_job")
     result = run_one_shot_job(args.job, job)
     if not result.succeeded:
         raise SystemExit(1)

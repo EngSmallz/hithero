@@ -1,4 +1,4 @@
-from sqlalchemy import String, cast, func, select
+from sqlalchemy import String, cast, func, or_, select
 
 
 class TeacherDirectoryRepository:
@@ -15,6 +15,9 @@ class TeacherDirectoryRepository:
             self._teacher_model.url_id.is_not(None),
             cast(self._teacher_model.url_id, String) != "",
         ]
+        pending = getattr(self._teacher_model, "school_change_pending", None)
+        if pending is not None:
+            conditions.append(or_(pending.is_(None), pending == 0))
         if state:
             conditions.append(cast(self._teacher_model.state, String) == state)
         if county:
@@ -73,6 +76,21 @@ class TeacherDirectoryRepository:
         finally:
             db.close()
 
+    def list_public_teacher_url_ids(self):
+        """Return stable, shareable URL IDs for all public teacher profiles."""
+        db = self._session_factory()
+        try:
+            url_id = cast(self._teacher_model.url_id, String)
+            query = (
+                select(url_id)
+                .where(*self._public_teacher_conditions())
+                .distinct()
+                .order_by(url_id)
+            )
+            return db.execute(query).scalars().all()
+        finally:
+            db.close()
+
     def directory_filters(self, *, state=None, county=None, district=None):
         db = self._session_factory()
         try:
@@ -112,7 +130,8 @@ class TeacherDirectoryRepository:
         try:
             return db.execute(
                 select(self._teacher_model).where(
-                    cast(self._teacher_model.url_id, String) == url_id
+                    *self._public_teacher_conditions(),
+                    cast(self._teacher_model.url_id, String) == url_id,
                 )
             ).scalar_one_or_none()
         finally:
@@ -224,16 +243,13 @@ class TeacherDirectoryRepository:
         db = self._session_factory()
         try:
             query = select(self._teacher_model.name, self._teacher_model.url_id).where(
-                cast(self._teacher_model.state, String) == state
-            )
-            if county:
-                query = query.where(cast(self._teacher_model.county, String) == county)
-            if district:
-                query = query.where(
-                    cast(self._teacher_model.district, String) == district
+                *self._public_teacher_conditions(
+                    state=state,
+                    county=county,
+                    district=district,
+                    school=school,
                 )
-            if school:
-                query = query.where(cast(self._teacher_model.school, String) == school)
+            )
             return db.execute(query).fetchall()
         finally:
             db.close()

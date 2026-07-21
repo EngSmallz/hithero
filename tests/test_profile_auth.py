@@ -149,6 +149,25 @@ def test_registration_api_preserves_recaptcha_and_pending_user_contract(
     finally:
         db.close()
 
+
+def test_logout_preserves_browser_redirect_and_returns_json_to_api_clients(app_module):
+    client = TestClient(app_module.app)
+
+    api_response = client.post(
+        "/profile/logout/",
+        headers={"accept": "application/json"},
+    )
+    browser_response = client.post(
+        "/profile/logout/",
+        headers={"accept": "text/html"},
+        follow_redirects=False,
+    )
+
+    assert api_response.status_code == 200
+    assert api_response.json() == {"message": "Logged out successfully."}
+    assert browser_response.status_code == 303
+    assert browser_response.headers["location"] == "/"
+
     response = TestClient(app_module.app).post(
         "/profile/register/",
         data={

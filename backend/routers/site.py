@@ -1,54 +1,17 @@
+"""Site-level public endpoints that are not part of the legacy page layer."""
+
 import base64
+import hashlib
 import os
+from urllib.parse import quote
+from xml.etree import ElementTree
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from sqlalchemy import String, cast, select
 
+from backend.repositories.teachers import TeacherDirectoryRepository
 
-PUBLIC_PAGE_ALIASES = {
-    "/": "homepage.html",
-    "/home": "homepage.html",
-    "/about": "about.html",
-    "/contact": "contact.html",
-    "/partners": "partners.html",
-    "/register": "register.html",
-    "/login": "login.html",
-    "/forgot": "forgot.html",
-    "/update-password": "update_password.html",
-    "/reset-password": "reset_password.html",
-    "/wishlist-setup": "wishlist_setup.html",
-    "/terms": "terms_conditions.html",
-    "/teachers": "index.html",
-    "/403": "403.html",
-    "/404": "404.html",
-}
-
-PRIVATE_PAGE_ALIASES = {
-    "/forum": "forum.html",
-    "/forum/new": "create_post.html",
-    "/forum/post": "post.html",
-    "/teacher": "teacher.html",
-    "/validation": "validation.html",
-    "/admin": "admin.html",
-    "/profile/create": "create.html",
-    "/profile/edit": "edit_teacher.html",
-}
-
-LEGACY_PUBLIC_PAGE_REDIRECTS = {
-    "/pages/homepage.html": "/",
-    "/pages/index.html": "/teachers",
-    "/pages/about.html": "/about",
-    "/pages/contact.html": "/contact",
-    "/pages/partners.html": "/partners",
-    "/pages/register.html": "/register",
-    "/pages/login.html": "/login",
-    "/pages/forgot.html": "/forgot",
-    "/pages/terms_conditions.html": "/terms",
-    "/pages/wishlist_setup.html": "/wishlist-setup",
-    "/pages/403.html": "/403",
-    "/pages/404.html": "/404",
-}
 
 PROMO_IMAGE_MAPPING = {
     "seattlewolf": "images/partners/1007TheWolf.png",
@@ -57,27 +20,61 @@ PROMO_IMAGE_MAPPING = {
     "coastal": "images/partners/Coastal.png",
 }
 
-PAGE_ROUTE_METHODS = ["GET", "HEAD"]
+SITEMAP_NAMESPACE = "http://www.sitemaps.org/schemas/sitemap/0.9"
+SITEMAP_CACHE_CONTROL = "public, max-age=300, stale-while-revalidate=60"
+SITEMAP_STATIC_URLS = (
+    "https://www.helpteachers.net/",
+    "https://www.helpteachers.net/teachers",
+    "https://www.helpteachers.net/about",
+    "https://www.helpteachers.net/contact",
+	"https://www.helpteachers.net/terms",
+    "https://www.helpteachers.net/partners",
+)
 
 
-def serve_page(pages_dir, page_name: str, status_code: int = 200):
-    return FileResponse(
-        os.path.join(pages_dir, page_name),
-        status_code=status_code,
+def _build_sitemap_xml(teacher_url_ids):
+    """Build a deterministic sitemap without unverifiable modification dates."""
+    ElementTree.register_namespace("", SITEMAP_NAMESPACE)
+    root = ElementTree.Element(f"{{{SITEMAP_NAMESPACE}}}urlset")
+    locations = list(SITEMAP_STATIC_URLS)
+    locations.extend(
+        f"https://www.helpteachers.net/teacher/{quote(url_id, safe='-._~')}"
+        for url_id in teacher_url_ids
     )
+    for location in locations:
+        url = ElementTree.SubElement(root, f"{{{SITEMAP_NAMESPACE}}}url")
+        ElementTree.SubElement(url, f"{{{SITEMAP_NAMESPACE}}}loc").text = location
+    return ElementTree.tostring(root, encoding="utf-8", xml_declaration=True)
 
 
-def create_legacy_router(
+def _sitemap_response(request: Request, content: bytes):
+    etag = f'"{hashlib.sha256(content).hexdigest()}"'
+    headers = {
+        "Cache-Control": SITEMAP_CACHE_CONTROL,
+        "ETag": etag,
+    }
+    if request.headers.get("if-none-match") == etag:
+        return Response(status_code=304, headers=headers)
+    return Response(content=content, media_type="application/xml", headers=headers)
+
+
+def create_site_router(
     *,
     session_factory,
+    school_model,
     teacher_model,
     spotlight_model,
     set_teacher_session,
     logger,
-    pages_dir="pages",
     static_dir="static",
 ):
+    """Register public assets, promotion flows, and external teacher links."""
     router = APIRouter()
+    teacher_directory_repository = TeacherDirectoryRepository(
+        session_factory=session_factory,
+        school_model=school_model,
+        teacher_model=teacher_model,
+    )
 
     @router.get("/ads.txt", include_in_schema=False)
     async def get_ads_txt():
@@ -87,55 +84,11 @@ def create_legacy_router(
         )
 
     @router.get("/sitemap.xml", include_in_schema=False)
-    async def get_sitemap_xml():
-        return FileResponse(
-            os.path.join(static_dir, "sitemap.xml"),
-            media_type="application/xml",
+    async def get_sitemap_xml(request: Request):
+        content = _build_sitemap_xml(
+            teacher_directory_repository.list_public_teacher_url_ids(),
         )
-
-    for route_path, page_name in PUBLIC_PAGE_ALIASES.items():
-        async def public_page_alias(
-            _request: Request,
-            page_name: str = page_name,
-        ):
-            return serve_page(pages_dir, page_name)
-
-        router.add_api_route(
-            route_path,
-            public_page_alias,
-            methods=PAGE_ROUTE_METHODS,
-            include_in_schema=False,
-        )
-
-    for route_path, page_name in PRIVATE_PAGE_ALIASES.items():
-        async def private_page_alias(
-            _request: Request,
-            page_name: str = page_name,
-        ):
-            return serve_page(pages_dir, page_name)
-
-        router.add_api_route(
-            route_path,
-            private_page_alias,
-            methods=PAGE_ROUTE_METHODS,
-            include_in_schema=False,
-        )
-
-    for legacy_path, clean_path in LEGACY_PUBLIC_PAGE_REDIRECTS.items():
-        async def legacy_public_page_redirect(
-            request: Request,
-            clean_path: str = clean_path,
-        ):
-            query = request.url.query
-            destination = f"{clean_path}?{query}" if query else clean_path
-            return RedirectResponse(url=destination, status_code=307)
-
-        router.add_api_route(
-            legacy_path,
-            legacy_public_page_redirect,
-            methods=PAGE_ROUTE_METHODS,
-            include_in_schema=False,
-        )
+        return _sitemap_response(request, content)
 
     @router.get("/spotlight/{token}")
     async def get_spotlight_info(request: Request, token: str):
@@ -144,8 +97,8 @@ def create_legacy_router(
             spotlight_info = db.execute(
                 select(spotlight_model).where(
                     cast(spotlight_model.token, String)
-                    == cast(token, String)
-                )
+                    == cast(token, String),
+                ),
             ).fetchone()
             if not spotlight_info:
                 raise HTTPException(
@@ -159,6 +112,25 @@ def create_legacy_router(
                 if data.image_data
                 else None
             )
+            teacher_row = db.execute(
+                select(teacher_model).where(
+                    cast(teacher_model.name, String) == cast(data.name, String),
+                    cast(teacher_model.state, String)
+                    == cast(data.state, String),
+                    cast(teacher_model.county, String)
+                    == cast(data.county, String),
+                    cast(teacher_model.district, String)
+                    == cast(data.district, String),
+                    cast(teacher_model.school, String)
+                    == cast(data.school, String),
+                    teacher_model.school_change_pending == 0,
+                ),
+            ).fetchone()
+            if not teacher_row:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Spotlight teacher is not currently public.",
+                )
             request.session["state"] = data.state
             request.session["county"] = data.county
             if data.district:
@@ -173,9 +145,12 @@ def create_legacy_router(
                 "school": data.school,
                 "name": data.name,
                 "image_data": image_data,
+                "url_id": teacher_row[0].url_id,
             }
+        except HTTPException:
+            raise
         except Exception as exc:
-            logger.error(f"Internal Server Error: {str(exc)}")
+            logger.error("Internal Server Error: %s", exc)
             raise HTTPException(
                 status_code=500,
                 detail="Internal server error",
@@ -185,18 +160,24 @@ def create_legacy_router(
 
     @router.get("/teacher/{url_id}")
     async def get_teacher_info(url_id: str, request: Request):
+        """Preserve externally shared teacher URLs during the page migration."""
         db = session_factory()
         try:
             teacher_info = db.execute(
                 select(teacher_model).where(
-                    cast(teacher_model.url_id, String) == url_id
-                )
+                    cast(teacher_model.url_id, String) == url_id,
+                    teacher_model.school_change_pending == 0,
+                ),
             ).fetchone()
             if not teacher_info:
                 return RedirectResponse(url="/404")
             set_teacher_session(request, teacher_info[0])
             return RedirectResponse(url="/teacher")
         except Exception:
+            logger.exception(
+                "Legacy teacher session bridge failed",
+                extra={"url_id": url_id},
+            )
             return RedirectResponse(url="/404")
         finally:
             db.close()
@@ -205,19 +186,13 @@ def create_legacy_router(
     async def get_promo_info(request: Request):
         return JSONResponse(
             content={
-                "promo_image_url": request.session.pop(
-                    "promo_image_url",
-                    None,
-                ),
+                "promo_image_url": request.session.pop("promo_image_url", None),
                 "promo_title": request.session.pop("promo_title", None),
-            }
+            },
         )
 
     @router.get("/{token}")
-    async def get_promotional_page_with_hero(
-        request: Request,
-        token: str,
-    ):
+    async def get_promotional_page_with_hero(request: Request, token: str):
         relative_image_path = PROMO_IMAGE_MAPPING.get(token.lower())
         if not relative_image_path:
             relative_image_path = PROMO_IMAGE_MAPPING.get("default")
@@ -235,7 +210,7 @@ def create_legacy_router(
             if token != "default":
                 default_relative_path = PROMO_IMAGE_MAPPING.get("default")
                 if default_relative_path and os.path.exists(
-                    os.path.join(static_dir, default_relative_path)
+                    os.path.join(static_dir, default_relative_path),
                 ):
                     relative_image_path = default_relative_path
                 else:
@@ -252,23 +227,8 @@ def create_legacy_router(
                     detail="Default promotional image file not found.",
                 )
 
-        request.session["promo_image_url"] = (
-            f"/static/{relative_image_path}"
-        )
-        request.session["promo_title"] = (
-            "Working together to serve our communities!"
-        )
+        request.session["promo_image_url"] = f"/static/{relative_image_path}"
+        request.session["promo_title"] = "Working together to serve our communities!"
         return RedirectResponse(url="/")
 
     return router
-
-
-def register_legacy_error_handlers(app, *, pages_dir="pages"):
-    async def not_found(_request: Request, _exc: HTTPException):
-        return serve_page(pages_dir, "404.html", status_code=404)
-
-    async def forbidden(_request: Request, _exc: HTTPException):
-        return serve_page(pages_dir, "403.html", status_code=403)
-
-    app.add_exception_handler(404, not_found)
-    app.add_exception_handler(403, forbidden)

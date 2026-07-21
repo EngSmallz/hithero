@@ -10,6 +10,8 @@ LOCAL_CORS_ORIGINS = (
     "http://localhost:5174",
     "http://127.0.0.1:5174",
 )
+SESSION_MAX_AGE_SECONDS = 14 * 24 * 60 * 60
+SESSION_SAME_SITE = "lax"
 
 
 def get_cors_allow_origins(app_env: str, environ=None):
@@ -42,7 +44,10 @@ class BackendSettings:
     secret_key: str | None
     cors_allow_origins: tuple[str, ...]
     session_https_only: bool
+    session_max_age_seconds: int = SESSION_MAX_AGE_SECONDS
+    session_same_site: str = SESSION_SAME_SITE
     static_dir: str = "static"
+    provider_timeout_seconds: float = 10.0
 
     @classmethod
     def from_environment(cls):
@@ -52,4 +57,7 @@ class BackendSettings:
             secret_key=os.getenv("SECRET_KEY"),
             cors_allow_origins=tuple(get_cors_allow_origins(app_env)),
             session_https_only=session_cookie_https_only(app_env),
+            provider_timeout_seconds=float(
+                os.getenv("PROVIDER_TIMEOUT_SECONDS", "10")
+            ),
         )

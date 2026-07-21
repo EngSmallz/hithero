@@ -1,10 +1,16 @@
 import html
+import logging
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Path, Request, Response, status
 
 from backend.repositories.forum import ForumRepository
+from backend.core.errors import ForbiddenError
+from backend.core.policies import require_admin, require_authenticated_user
 from backend.services.forum import ForumService
+
+
+logger = logging.getLogger(__name__)
 
 
 def create_forum_router(
@@ -65,8 +71,10 @@ def create_forum_router(
         content: str = Form(...),
         user_id: int = Depends(get_current_id),
     ):
-        if not user_id:
-            raise HTTPException(status_code=401, detail="You must be logged in to post.")
+        user_id = require_authenticated_user(
+            user_id,
+            detail="You must be logged in to post.",
+        )
 
         try:
             new_post = forum_service.create_post(
@@ -76,7 +84,7 @@ def create_forum_router(
                 sanitize=sanitize,
             )
         except Exception as exc:
-            print(f"Database error during post creation: {exc}")
+            logger.exception("Database error during post creation")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Could not create post due to a server error.",
@@ -95,7 +103,7 @@ def create_forum_router(
                 for post in forum_service.get_posts()
             ]
         except Exception as exc:
-            print(f"Database error during post retrieval: {exc}")
+            logger.exception("Database error during post retrieval")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Could not retrieve posts due to a server error.",
@@ -113,7 +121,7 @@ def create_forum_router(
         except LookupError as exc:
             raise HTTPException(status_code=404, detail=str(exc))
         except Exception as exc:
-            print(f"Database error during single post retrieval (ID: {post_id}): {exc}")
+            logger.exception("Database error during single post retrieval", extra={"post_id": post_id})
             raise HTTPException(
                 status_code=500,
                 detail="Could not retrieve post due to a server error.",
@@ -125,8 +133,10 @@ def create_forum_router(
         vote_data: vote_input_model,
         user_id: int = Depends(get_current_id),
     ):
-        if not user_id:
-            raise HTTPException(status_code=401, detail="You must be logged in to post.")
+        user_id = require_authenticated_user(
+            user_id,
+            detail="You must be logged in to post.",
+        )
 
         try:
             post = forum_service.record_vote(
@@ -139,7 +149,7 @@ def create_forum_router(
         except LookupError as exc:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
         except Exception as exc:
-            print(f"Database error during voting operation on post {post_id}: {exc}")
+            logger.exception("Database error during voting operation", extra={"post_id": post_id})
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="A server error prevented the vote from being recorded.",
@@ -158,8 +168,10 @@ def create_forum_router(
         parent_comment_id: Optional[int] = Form(None),
         user_id: int = Depends(get_current_id),
     ):
-        if not user_id:
-            raise HTTPException(status_code=401, detail="You must be logged in to post.")
+        user_id = require_authenticated_user(
+            user_id,
+            detail="You must be logged in to post.",
+        )
 
         try:
             new_comment = forum_service.create_comment(
@@ -172,7 +184,7 @@ def create_forum_router(
         except LookupError as exc:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
         except Exception as exc:
-            print(f"Database error during comment creation on post {post_id}: {exc}")
+            logger.exception("Database error during comment creation", extra={"post_id": post_id})
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Could not create comment due to a server error.",
@@ -194,7 +206,7 @@ def create_forum_router(
         except LookupError as exc:
             raise HTTPException(status_code=404, detail=str(exc))
         except Exception as exc:
-            print(f"Database error during comment retrieval on post {post_id}: {exc}")
+            logger.exception("Database error during comment retrieval", extra={"post_id": post_id})
             raise HTTPException(
                 status_code=500,
                 detail="Could not retrieve comments due to a server error.",
@@ -205,15 +217,19 @@ def create_forum_router(
         post_id: int,
         role: str = Depends(get_current_role),
     ):
+        require_admin(
+            role,
+            detail="Access denied: Only administrators can delete posts.",
+        )
         try:
             forum_service.delete_post(post_id=post_id, role=role)
             return Response(status_code=status.HTTP_204_NO_CONTENT)
         except LookupError as exc:
             raise HTTPException(status_code=404, detail=str(exc))
-        except PermissionError as exc:
+        except (PermissionError, ForbiddenError) as exc:
             raise HTTPException(status_code=403, detail=str(exc))
         except Exception as exc:
-            print(f"Database error during post deletion (ID: {post_id}): {exc}")
+            logger.exception("Database error during post deletion", extra={"post_id": post_id})
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Could not delete post due to a server error.",
@@ -225,6 +241,7 @@ def create_forum_router(
         current_user_id: int = Depends(get_current_id),
         role: str = Depends(get_current_role),
     ):
+        current_user_id = require_authenticated_user(current_user_id)
         try:
             forum_service.delete_comment(
                 comment_id=comment_id,
@@ -234,10 +251,13 @@ def create_forum_router(
             return {"detail": f"Comment ID {comment_id} successfully deleted."}
         except LookupError as exc:
             raise HTTPException(status_code=404, detail=str(exc))
-        except PermissionError as exc:
+        except (PermissionError, ForbiddenError) as exc:
             raise HTTPException(status_code=403, detail=str(exc))
         except Exception as exc:
-            print(f"Database error during comment deletion (ID: {comment_id}): {exc}")
+            logger.exception(
+                "Database error during comment deletion",
+                extra={"comment_id": comment_id},
+            )
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Could not delete comment due to a server error.",
@@ -249,6 +269,7 @@ def create_forum_router(
         post_data: post_update_model,
         user_id: int = Depends(get_current_id),
     ):
+        user_id = require_authenticated_user(user_id)
         try:
             post = forum_service.update_post(
                 post_id=post_id,
@@ -260,9 +281,10 @@ def create_forum_router(
             return serialize(post)
         except LookupError as exc:
             raise HTTPException(status_code=404, detail=str(exc))
-        except PermissionError as exc:
+        except (PermissionError, ForbiddenError) as exc:
             raise HTTPException(status_code=403, detail=str(exc))
         except Exception:
+            logger.exception("Internal server error during post update", extra={"post_id": post_id})
             raise HTTPException(
                 status_code=500,
                 detail="Internal server error during post update.",
@@ -274,6 +296,7 @@ def create_forum_router(
         content: str = Form(...),
         user_id: int = Depends(get_current_id),
     ):
+        user_id = require_authenticated_user(user_id)
         try:
             comment = forum_service.update_comment(
                 comment_id=comment_id,
@@ -284,9 +307,13 @@ def create_forum_router(
             return serialize(comment)
         except LookupError as exc:
             raise HTTPException(status_code=404, detail=str(exc))
-        except PermissionError as exc:
+        except (PermissionError, ForbiddenError) as exc:
             raise HTTPException(status_code=403, detail=str(exc))
         except Exception:
+            logger.exception(
+                "Internal server error during comment update",
+                extra={"comment_id": comment_id},
+            )
             raise HTTPException(
                 status_code=500,
                 detail="Internal server error during comment update.",

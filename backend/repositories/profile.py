@@ -1,4 +1,6 @@
-from sqlalchemy import String, cast, insert, select, update
+from contextlib import contextmanager
+
+from sqlalchemy import String, cast, func, insert, select, update
 
 
 class ProfileRepository:
@@ -12,12 +14,29 @@ class ProfileRepository:
         registered_user_model=None,
         pending_user_model=None,
         reset_token_model=None,
+        school_model=None,
+        school_change_model=None,
     ):
         self._session_factory = session_factory
         self._teacher_model = teacher_model
         self._registered_user_model = registered_user_model
         self._pending_user_model = pending_user_model
         self._reset_token_model = reset_token_model
+        self._school_model = school_model
+        self._school_change_model = school_change_model
+
+    @contextmanager
+    def transaction(self):
+        """Yield one session for a multi-step profile use case."""
+        db = self._session_factory()
+        try:
+            yield db
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
+        finally:
+            db.close()
 
     def _context_conditions(self, context):
         model_fields = {
@@ -43,8 +62,10 @@ class ProfileRepository:
         finally:
             db.close()
 
-    def get_teacher_by_user_id(self, user_id):
-        db = self._session_factory()
+    def get_teacher_by_user_id(self, user_id, *, db=None):
+        owns_session = db is None
+        if owns_session:
+            db = self._session_factory()
         try:
             result = db.execute(
                 select(self._teacher_model).where(
@@ -53,7 +74,8 @@ class ProfileRepository:
             ).fetchone()
             return result[0] if result else None
         finally:
-            db.close()
+            if owns_session:
+                db.close()
 
     def get_registered_user_by_email(self, email):
         db = self._session_factory()
@@ -67,6 +89,36 @@ class ProfileRepository:
             return result[0] if result else None
         finally:
             db.close()
+
+    def get_verified_registration(self, user_id, *, db=None):
+        """Return the registration snapshot approved for a user, if present."""
+        fields = (
+            "registration_name",
+            "registration_state",
+            "registration_county",
+            "registration_district",
+            "registration_school",
+        )
+        if not all(hasattr(self._registered_user_model, field) for field in fields):
+            return None
+
+        owns_session = db is None
+        if owns_session:
+            db = self._session_factory()
+        try:
+            columns = [getattr(self._registered_user_model, field) for field in fields]
+            result = db.execute(
+                select(*columns).where(self._registered_user_model.id == user_id)
+            ).fetchone()
+            if not result:
+                return None
+            values = dict(zip(fields, result))
+            if not all(values.values()):
+                return None
+            return values
+        finally:
+            if owns_session:
+                db.close()
 
     def get_pending_user_by_email(self, email):
         db = self._session_factory()
@@ -206,6 +258,96 @@ class ProfileRepository:
             school=school,
         )
 
+    def school_exists(self, *, state, county, district, school, db=None):
+        if self._school_model is None:
+            return False
+        owns_session = db is None
+        if owns_session:
+            db = self._session_factory()
+        try:
+            return (
+                db.execute(
+                    select(self._school_model.id).where(
+                        cast(self._school_model.state, String) == state,
+                        cast(self._school_model.county, String) == county,
+                        cast(self._school_model.district, String) == district,
+                        cast(self._school_model.school_name, String) == school,
+                    )
+                ).first()
+                is not None
+            )
+        finally:
+            if owns_session:
+                db.close()
+
+    def get_pending_school_change(self, user_id, *, db=None):
+        if self._school_change_model is None:
+            return None
+        owns_session = db is None
+        if owns_session:
+            db = self._session_factory()
+        try:
+            return db.execute(
+                select(self._school_change_model)
+                .where(
+                    self._school_change_model.user_id == user_id,
+                    cast(self._school_change_model.status, String) == "pending",
+                )
+                .order_by(self._school_change_model.id.desc())
+            ).scalars().first()
+        finally:
+            if owns_session:
+                db.close()
+
+    def create_school_change_request(
+        self,
+        user_id,
+        *,
+        old_state,
+        old_county,
+        old_district,
+        old_school,
+        proposed_state,
+        proposed_county,
+        proposed_district,
+        proposed_school,
+        db=None,
+    ):
+        if self._school_change_model is None:
+            raise RuntimeError("School change persistence is not configured")
+        owns_session = db is None
+        if owns_session:
+            db = self._session_factory()
+        try:
+            request = self._school_change_model(
+                user_id=user_id,
+                old_state=old_state,
+                old_county=old_county,
+                old_district=old_district,
+                old_school=old_school,
+                proposed_state=proposed_state,
+                proposed_county=proposed_county,
+                proposed_district=proposed_district,
+                proposed_school=proposed_school,
+                status="pending",
+            )
+            db.add(request)
+            db.execute(
+                update(self._teacher_model)
+                .where(self._teacher_model.regUserID == user_id)
+                .values(school_change_pending=1)
+            )
+            if owns_session:
+                db.commit()
+            return request
+        except Exception:
+            if owns_session:
+                db.rollback()
+            raise
+        finally:
+            if owns_session:
+                db.close()
+
     def update_teacher_name(self, user_id, name):
         self._update_teacher(user_id, name=name)
 
@@ -215,8 +357,10 @@ class ProfileRepository:
     def update_teacher_about_me(self, user_id, about_me):
         self._update_teacher(user_id, about_me=about_me)
 
-    def get_teacher_by_url_id(self, url_id):
-        db = self._session_factory()
+    def get_teacher_by_url_id(self, url_id, *, db=None):
+        owns_session = db is None
+        if owns_session:
+            db = self._session_factory()
         try:
             result = db.execute(
                 select(self._teacher_model).where(
@@ -225,7 +369,8 @@ class ProfileRepository:
             ).fetchone()
             return result[0] if result else None
         finally:
-            db.close()
+            if owns_session:
+                db.close()
 
     def update_teacher_url_id(self, user_id, url_id):
         self._update_teacher(user_id, url_id=url_id)
@@ -233,20 +378,28 @@ class ProfileRepository:
     def update_teacher_image(self, user_id, image_bytes):
         self._update_teacher(user_id, image_data=image_bytes)
 
-    def get_profile_create_count(self, user_id):
-        db = self._session_factory()
+    def get_profile_create_count(self, user_id, *, db=None):
+        owns_session = db is None
+        if owns_session:
+            db = self._session_factory()
         try:
-            return db.execute(
+            count = db.execute(
                 select(self._registered_user_model.createCount).where(
                     self._registered_user_model.id == user_id
                 )
             ).scalar()
+            # Accounts approved before createCount was initialized should be
+            # treated as eligible for their first profile.
+            return 0 if count is None else count
         finally:
-            db.close()
+            if owns_session:
+                db.close()
 
     def create_teacher_profile(self, user_id, *, name, state, county, district,
-                               school, about_me, wishlist_url, url_id):
-        db = self._session_factory()
+                               school, about_me, wishlist_url, url_id, db=None):
+        owns_session = db is None
+        if owns_session:
+            db = self._session_factory()
         try:
             db.execute(
                 insert(self._teacher_model).values(
@@ -264,14 +417,22 @@ class ProfileRepository:
             db.execute(
                 update(self._registered_user_model)
                 .where(self._registered_user_model.id == user_id)
-                .values(createCount=self._registered_user_model.createCount + 1)
+                .values(
+                    createCount=func.coalesce(
+                        self._registered_user_model.createCount, 0
+                    )
+                    + 1
+                )
             )
-            db.commit()
+            if owns_session:
+                db.commit()
         except Exception:
-            db.rollback()
+            if owns_session:
+                db.rollback()
             raise
         finally:
-            db.close()
+            if owns_session:
+                db.close()
 
     def _update_teacher(self, user_id, **values):
         db = self._session_factory()

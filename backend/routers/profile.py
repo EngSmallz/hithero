@@ -13,11 +13,22 @@ from backend.services.profile_mutations import (
     IMAGE_TOO_LARGE_MESSAGE,
     INVALID_URL_ID_MESSAGE,
     INVALID_IMAGE_MESSAGE,
+    INVALID_WISHLIST_URL_MESSAGE,
+    InvalidWishlistUrl,
     InvalidTeacherImage,
     InvalidTeacherUrlId,
+    InvalidSchoolChange,
     ProfileMutationService,
+    SchoolChangeAlreadyPending,
+    SchoolChangeConfirmationRequired,
+    SchoolVerificationRequired,
     TeacherImageTooLarge,
     TeacherUrlIdConflict,
+)
+from backend.core.policies import (
+    require_authenticated_user,
+    require_profile_owner,
+    require_teacher_or_admin,
 )
 from backend.services.profile_auth import ProfileAuthService
 from backend.services.profile_password import ProfilePasswordService
@@ -44,6 +55,9 @@ def create_profile_router(
     limiter,
     detect_file_type,
     max_file_size,
+    school_model,
+    school_change_model,
+    profile_response_model,
     logger,
 ):
     router = APIRouter()
@@ -53,6 +67,8 @@ def create_profile_router(
         registered_user_model=registered_user_model,
         pending_user_model=pending_user_model,
         reset_token_model=reset_token_model,
+        school_model=school_model,
+        school_change_model=school_change_model,
     )
     profile_auth_service = ProfileAuthService(profile_repository)
     profile_password_service = ProfilePasswordService(profile_repository)
@@ -93,8 +109,14 @@ def create_profile_router(
                 school=school,
             )
             if send_email:
-                send_registration_email(email)
+                if not send_registration_email(email):
+                    raise HTTPException(
+                        status_code=502,
+                        detail="Registration email provider is temporarily unavailable.",
+                    )
             return {"message": message}
+        except HTTPException:
+            raise
         except Exception as exc:
             logger.error(f"Registration error: {str(exc)}")
             return {
@@ -129,6 +151,8 @@ def create_profile_router(
             del request.session["user_id"]
             del request.session["user_role"]
             del request.session["user_email"]
+        if "application/json" in request.headers.get("accept", ""):
+            return {"message": "Logged out successfully."}
         return RedirectResponse(url="/", status_code=303)
 
     @router.post("/profile/create_teacher_profile/")
@@ -144,9 +168,13 @@ def create_profile_router(
         user_id: int = Depends(get_current_id),
         role: str = Depends(get_current_role),
     ):
+        user_id = require_authenticated_user(
+            user_id,
+            detail="You must be logged in to create a teacher profile.",
+        )
+        require_teacher_or_admin(role, detail="Permission denied.")
+        require_profile_owner(user_id, detail="Permission denied.")
         try:
-            if not role:
-                return {"message": "No user logged in."}
             created = profile_mutation_service.create_teacher_profile(
                 user_id,
                 role,
@@ -166,6 +194,10 @@ def create_profile_router(
                     )
                 }
             return {"message": "Teacher created successfully", "role": role}
+        except SchoolVerificationRequired as exc:
+            raise HTTPException(status_code=409, detail=str(exc))
+        except InvalidWishlistUrl:
+            raise HTTPException(status_code=400, detail=INVALID_WISHLIST_URL_MESSAGE)
         except Exception as exc:
             logger.error(f"Internal Server Error: {str(exc)}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
@@ -177,14 +209,32 @@ def create_profile_router(
         user_id: str = Depends(get_current_id),
     ):
         if email:
+            profile_prefill = None
+            if user_id:
+                profile_prefill = profile_read_service.get_verified_registration(
+                    int(user_id)
+                )
             return JSONResponse(
                 content={
                     "user_id": user_id,
                     "user_role": role,
                     "user_email": email,
+                    "profile_prefill": profile_prefill,
                 }
             )
         raise HTTPException(status_code=404, detail="No user logged in.")
+
+    @router.get("/api/current_teacher/", response_model=profile_response_model)
+    async def get_current_teacher(
+        user_id: int = Depends(get_current_id),
+        role: str = Depends(get_current_role),
+    ):
+        require_teacher_or_admin(role, detail="Permission denied.")
+        require_profile_owner(user_id, detail="Permission denied.")
+        teacher = profile_read_service.get_current_teacher(user_id)
+        if teacher is None:
+            raise HTTPException(status_code=404, detail="Teacher not found")
+        return teacher
 
     @router.get("/api/get_teacher_info/")
     async def get_teacher_info(request: Request):
@@ -211,9 +261,9 @@ def create_profile_router(
         user_id: int = Depends(get_current_id),
         role: str = Depends(get_current_role),
     ):
+        require_teacher_or_admin(role, detail="Permission denied.")
+        require_profile_owner(user_id, detail="Permission denied.")
         try:
-            if not role:
-                raise HTTPException(status_code=403, detail="Permission denied.")
             profile_mutation_service.update_teacher_about_me(user_id, aboutMe)
             return {"message": "Info updated."}
         except Exception as exc:
@@ -230,12 +280,12 @@ def create_profile_router(
         user_id: int = Depends(get_current_id),
         role: str = Depends(get_current_role),
     ):
+        require_teacher_or_admin(
+            role,
+            detail="Permission denied. Not logged in.",
+        )
+        require_profile_owner(user_id, detail="Permission denied. Not logged in.")
         try:
-            if not role:
-                raise HTTPException(
-                    status_code=403,
-                    detail="Permission denied. Not logged in.",
-                )
             profile_mutation_service.update_teacher_school(
                 user_id,
                 state=state,
@@ -248,6 +298,44 @@ def create_profile_router(
                     "message": "School information updated successfully."
                 }
             )
+        except SchoolVerificationRequired as exc:
+            raise HTTPException(status_code=409, detail=str(exc))
+        except Exception as exc:
+            logger.error(f"Internal Server Error: {str(exc)}")
+            raise HTTPException(status_code=500, detail="Internal Server Error")
+
+    @router.post("/profile/request_school_change/")
+    async def request_school_change(
+        request: Request,
+        state: str = Form(...),
+        county: str = Form(...),
+        district: str = Form(...),
+        school: str = Form(...),
+        confirm_school_change: str = Form("false"),
+        user_id: int = Depends(get_current_id),
+        role: str = Depends(get_current_role),
+    ):
+        require_teacher_or_admin(
+            role,
+            detail="Permission denied. Not logged in.",
+        )
+        require_profile_owner(user_id, detail="Permission denied. Not logged in.")
+        try:
+            profile_mutation_service.request_teacher_school_change(
+                user_id,
+                state=state,
+                county=county,
+                district=district,
+                school=school,
+                confirmed=confirm_school_change.lower() == "true",
+            )
+            return {"message": "School change submitted for reapproval."}
+        except SchoolChangeConfirmationRequired as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        except (InvalidSchoolChange, SchoolChangeAlreadyPending) as exc:
+            raise HTTPException(status_code=409, detail=str(exc))
+        except SchoolVerificationRequired as exc:
+            raise HTTPException(status_code=409, detail=str(exc))
         except Exception as exc:
             logger.error(f"Internal Server Error: {str(exc)}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
@@ -259,9 +347,9 @@ def create_profile_router(
         user_id: int = Depends(get_current_id),
         role: str = Depends(get_current_role),
     ):
+        require_teacher_or_admin(role, detail="Permission denied.")
+        require_profile_owner(user_id, detail="Permission denied.")
         try:
-            if not role:
-                raise HTTPException(status_code=403, detail="Permission denied.")
             profile_mutation_service.update_teacher_name(user_id, teacher)
             return {"message": "Name updated."}
         except Exception as exc:
@@ -275,11 +363,13 @@ def create_profile_router(
         user_id: int = Depends(get_current_id),
         role: str = Depends(get_current_role),
     ):
+        require_teacher_or_admin(role, detail="Permission denied.")
+        require_profile_owner(user_id, detail="Permission denied.")
         try:
-            if not role:
-                raise HTTPException(status_code=403, detail="Permission denied.")
             profile_mutation_service.update_teacher_wishlist(user_id, wishlist)
             return {"message": "Wishlist updated."}
+        except InvalidWishlistUrl:
+            raise HTTPException(status_code=400, detail=INVALID_WISHLIST_URL_MESSAGE)
         except Exception as exc:
             logger.error(f"Internal Server Error: {str(exc)}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
@@ -291,9 +381,9 @@ def create_profile_router(
         user_id: int = Depends(get_current_id),
         role: str = Depends(get_current_role),
     ):
+        require_teacher_or_admin(role, detail="Permission denied.")
+        require_profile_owner(user_id, detail="Permission denied.")
         try:
-            if not role:
-                raise HTTPException(status_code=403, detail="Permission denied.")
             profile_mutation_service.update_teacher_url_id(user_id, url_id)
             return {"message": "URL ID updated successfully."}
         except InvalidTeacherUrlId:
@@ -313,6 +403,8 @@ def create_profile_router(
         image: UploadFile = Form(...),
         user_id: int = Depends(get_current_id),
     ):
+        require_teacher_or_admin(role, detail="Permission denied.")
+        require_profile_owner(user_id, detail="Permission denied.")
         try:
             image_bytes = await image.read()
             updated = profile_mutation_service.update_teacher_image(
@@ -341,6 +433,8 @@ def create_profile_router(
         request: Request,
         user_id: int = Depends(get_current_id),
     ):
+        user_id = require_authenticated_user(user_id)
+        require_profile_owner(user_id)
         try:
             teacher_data = profile_read_service.get_myinfo(user_id)
             if teacher_data:
@@ -362,6 +456,8 @@ def create_profile_router(
         new_password: str = Form(...),
         new_password_confirmed: str = Form(...),
     ):
+        user_id = require_authenticated_user(user_id)
+        require_profile_owner(user_id)
         try:
             return profile_password_service.update_password(
                 user_id,
@@ -379,6 +475,7 @@ def create_profile_router(
         user_id: int = Depends(get_current_id),
         role: str = Depends(get_current_role),
     ):
+        require_teacher_or_admin(role, detail="No access")
         try:
             context = {
                 field: get_index_cookie(field, request)
@@ -424,7 +521,7 @@ def create_profile_router(
                         "If you did not request this, you can ignore this email."
                     ),
                 }
-                send_email(
+                sent = send_email(
                     email,
                     "Password Reset Request",
                     render_email_template(
@@ -436,6 +533,11 @@ def create_profile_router(
                         f"{reset_link}\n\nExpires in 1 hour."
                     ),
                 )
+                if not sent:
+                    raise HTTPException(
+                        status_code=502,
+                        detail="Password reset email provider is temporarily unavailable.",
+                    )
             else:
                 time.sleep(1)
             return JSONResponse(
@@ -446,6 +548,8 @@ def create_profile_router(
                     )
                 }
             )
+        except HTTPException:
+            raise
         except Exception as exc:
             logger.error(f"Internal Server Error: {str(exc)}")
             raise HTTPException(status_code=500, detail="Internal Server Error")

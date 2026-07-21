@@ -298,7 +298,6 @@ def test_validate_user_api_preserves_scope_and_promotion_contract(app_module):
         db.commit()
     finally:
         db.close()
-
     app_module.app.state.limiter._storage.reset()
     client = TestClient(app_module.app)
     login = client.post(
@@ -321,8 +320,159 @@ def test_validate_user_api_preserves_scope_and_promotion_contract(app_module):
         assert db.query(app_module.NewUsers).filter_by(
             email="pending-validation@example.test"
         ).first() is None
-        assert db.query(app_module.RegisteredUsers).filter_by(
+        registered = db.query(app_module.RegisteredUsers).filter_by(
             email="pending-validation@example.test"
         ).one()
+        assert registered.createCount == 0
+        assert registered.registration_name == "Pending Teacher"
+        assert registered.registration_state == "WA"
+        assert registered.registration_county == "King"
+        assert registered.registration_district == "Seattle Public Schools"
+        assert registered.registration_school == "Roosevelt High School"
+    finally:
+        db.close()
+
+
+def test_admin_validation_list_serializes_pending_model_rows(app_module):
+    app_module.init_db()
+    db = app_module.SessionLocal()
+    try:
+        db.execute(delete(app_module.TeacherList))
+        db.execute(delete(app_module.RegisteredUsers))
+        db.execute(delete(app_module.NewUsers))
+        db.add(
+            app_module.RegisteredUsers(
+                email="validation-admin@example.test",
+                phone_number="555-0198",
+                password=app_module.sha256_crypt.hash("admin-password"),
+                role="admin",
+                createCount=0,
+            )
+        )
+        db.add(
+            app_module.NewUsers(
+                name="Pending Admin List Teacher",
+                email="pending-admin-list@example.test",
+                state="WA",
+                county="King",
+                district="Seattle Public Schools",
+                school="Roosevelt High School",
+                phone_number="555-0199",
+                password=app_module.sha256_crypt.hash("pending-password"),
+                role="teacher",
+                report=0,
+                emailed=0,
+            )
+        )
+        db.commit()
+    finally:
+        db.close()
+
+    app_module.app.state.limiter._storage.reset()
+    client = TestClient(app_module.app)
+    assert client.post(
+        "/profile/login/",
+        data={
+            "email": "validation-admin@example.test",
+            "password": "admin-password",
+        },
+    ).status_code == 200
+
+    response = client.get("/api/validation_list/")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "new_users": [
+            {
+                "name": "Pending Admin List Teacher",
+                "email": "pending-admin-list@example.test",
+                "state": "WA",
+                "district": "Seattle Public Schools",
+                "school": "Roosevelt High School",
+                "phone_number": "555-0199",
+                "report": 0,
+                "emailed": 0,
+            }
+        ],
+        "role": "admin",
+        "school_changes": [],
+    }
+
+
+@pytest.mark.parametrize(
+    "path",
+    (
+        "/validation/validate_user/out-of-district@example.test",
+        "/validation/report_user/out-of-district@example.test",
+        "/validation/emailed_user/out-of-district@example.test",
+    ),
+)
+def test_teacher_validation_mutations_reject_wrong_district(app_module, path):
+    app_module.init_db()
+    db = app_module.SessionLocal()
+    try:
+        db.execute(delete(app_module.TeacherList))
+        db.execute(delete(app_module.RegisteredUsers))
+        db.execute(delete(app_module.NewUsers))
+        validator = app_module.RegisteredUsers(
+            email="district-validator@example.test",
+            phone_number="555-0196",
+            password=app_module.sha256_crypt.hash("validator-password"),
+            role="teacher",
+            createCount=1,
+        )
+        db.add(validator)
+        db.flush()
+        db.add(
+            app_module.TeacherList(
+                name="District Validator",
+                state="WA",
+                county="King",
+                district="Seattle Public Schools",
+                school="Lincoln High School",
+                regUserID=validator.id,
+                url_id="district-validator",
+            )
+        )
+        db.add(
+            app_module.NewUsers(
+                name="Out of District Teacher",
+                email="out-of-district@example.test",
+                state="WA",
+                county="Pierce",
+                district="Tacoma Public Schools",
+                school="Stadium High School",
+                phone_number="555-0197",
+                password=app_module.sha256_crypt.hash("pending-password"),
+                role="teacher",
+                report=0,
+                emailed=0,
+            )
+        )
+        db.commit()
+    finally:
+        db.close()
+
+    app_module.app.state.limiter._storage.reset()
+    client = TestClient(app_module.app)
+    assert client.post(
+        "/profile/login/",
+        data={
+            "email": "district-validator@example.test",
+            "password": "validator-password",
+        },
+    ).status_code == 200
+
+    response = client.post(path)
+
+    assert response.status_code == 403
+
+    db = app_module.SessionLocal()
+    try:
+        pending = db.query(app_module.NewUsers).filter_by(
+            email="out-of-district@example.test"
+        ).one()
+        assert pending.report == 0
+        assert pending.emailed == 0
     finally:
         db.close()

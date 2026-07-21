@@ -192,6 +192,7 @@ def test_update_password_api_preserves_authenticated_response_contract(app_modul
     finally:
         db.close()
 
+    app_module.app.state.limiter._storage.reset()
     client = TestClient(app_module.app)
     login = client.post(
         "/profile/login/",

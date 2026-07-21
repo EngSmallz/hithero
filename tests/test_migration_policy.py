@@ -5,10 +5,11 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_production_startup_does_not_use_create_all_implicitly():
-    source = (ROOT / "app.py").read_text(encoding="utf-8")
+    source = (ROOT / "backend/main.py").read_text(encoding="utf-8")
 
-    assert 'if APP_ENV in LOCAL_APP_ENVS:' in source
-    assert 'if APP_ENV != "test":' not in source
+    assert 'if settings.app_env in LOCAL_APP_ENVS:' in source
+    assert "Base.metadata.create_all(bind=database_resources.engine)" in source
+    assert 'if settings.app_env != "test":' not in source
 
 
 def test_baseline_migration_and_runbook_are_present():

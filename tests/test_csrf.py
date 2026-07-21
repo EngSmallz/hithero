@@ -50,6 +50,29 @@ def test_csrf_middleware_accepts_configured_origin_and_same_origin_referer():
     assert referer_response.status_code == 200
 
 
+def test_csrf_middleware_uses_public_origin_not_untrusted_proxy_host_headers():
+    client = TestClient(make_production_app())
+
+    valid_proxy_response = client.post(
+        "/profile/test-mutation",
+        headers={
+            "Origin": "https://www.helpteachers.net",
+            "X-Forwarded-Host": "internal-api.example",
+            "X-Forwarded-Proto": "http",
+        },
+    )
+    proxy_only_response = client.post(
+        "/profile/test-mutation",
+        headers={
+            "X-Forwarded-Host": "www.helpteachers.net",
+            "X-Forwarded-Proto": "https",
+        },
+    )
+
+    assert valid_proxy_response.status_code == 200
+    assert proxy_only_response.status_code == 403
+
+
 def test_csrf_middleware_does_not_block_safe_reads():
     response = TestClient(make_production_app()).get(
         "/profile/test-read",
@@ -69,11 +92,11 @@ def test_domain_errors_use_one_stable_http_mapping():
         )
     )
 
-    @application.get("/typed-error")
+    @application.get("/test/typed-error")
     def typed_error():
         raise BadRequestError("Invalid typed request")
 
-    response = TestClient(application).get("/typed-error")
+    response = TestClient(application).get("/test/typed-error")
 
     assert response.status_code == 400
     assert response.json() == {"detail": "Invalid typed request"}

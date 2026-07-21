@@ -39,6 +39,14 @@ class RegisteredUsers(Base):
     password = Column(String)
     role = Column(String)
     createCount = Column(Integer)
+    # Snapshot of the registration details approved by an administrator.
+    # These values seed the first profile and protect school changes from
+    # being made without a separate verification workflow.
+    registration_name = Column(String)
+    registration_state = Column(String)
+    registration_county = Column(String)
+    registration_district = Column(String)
+    registration_school = Column(String)
 
 
 class TeacherList(Base):
@@ -55,6 +63,28 @@ class TeacherList(Base):
     about_me = Column(String)
     image_data = Column(LargeBinary)
     url_id = Column(String)
+    # A pending school change removes this profile from public surfaces until
+    # the proposed school is approved by an administrator or validator.
+    school_change_pending = Column(Integer, default=0, server_default="0", nullable=False)
+
+
+class SchoolChangeRequest(Base):
+    __tablename__ = "school_change_requests"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, nullable=False)
+    old_state = Column(String, nullable=False)
+    old_county = Column(String, nullable=False)
+    old_district = Column(String, nullable=False)
+    old_school = Column(String, nullable=False)
+    proposed_state = Column(String, nullable=False)
+    proposed_county = Column(String, nullable=False)
+    proposed_district = Column(String, nullable=False)
+    proposed_school = Column(String, nullable=False)
+    status = Column(String, nullable=False, default="pending", server_default="pending")
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    reviewed_at = Column(DateTime)
+    reviewed_by = Column(Integer)
 
 
 class Spotlight(Base):
@@ -121,6 +151,7 @@ __all__ = [
     "PostVote",
     "RegisteredUsers",
     "School",
+    "SchoolChangeRequest",
     "Spotlight",
     "TeacherList",
 ]

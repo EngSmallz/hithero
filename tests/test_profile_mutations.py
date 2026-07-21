@@ -1,3 +1,5 @@
+from contextlib import contextmanager
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import delete
@@ -5,15 +7,21 @@ from sqlalchemy import delete
 from backend.db.models import TeacherList
 from backend.repositories.profile import ProfileRepository
 from backend.services.profile_mutations import (
+    InvalidWishlistUrl,
     InvalidTeacherImage,
     InvalidTeacherUrlId,
     ProfileMutationService,
+    SchoolVerificationRequired,
     TeacherImageTooLarge,
     TeacherUrlIdConflict,
 )
 
 
 class RecordingRepository:
+    @contextmanager
+    def transaction(self):
+        yield object()
+
     def update_teacher_school(self, user_id, **values):
         self.user_id = user_id
         self.values = values
@@ -27,7 +35,7 @@ class RecordingRepository:
     def update_teacher_wishlist(self, user_id, wishlist_url):
         self.wishlist_update = (user_id, wishlist_url)
 
-    def get_teacher_by_url_id(self, url_id):
+    def get_teacher_by_url_id(self, url_id, **_values):
         self.url_id_lookup = url_id
         return getattr(self, "existing_teacher", None)
 
@@ -37,11 +45,12 @@ class RecordingRepository:
     def update_teacher_image(self, user_id, image_bytes):
         self.image_update = (user_id, image_bytes)
 
-    def get_profile_create_count(self, user_id):
+    def get_profile_create_count(self, user_id, **_values):
         self.create_count_user_id = user_id
         return getattr(self, "create_count", 0)
 
     def create_teacher_profile(self, user_id, **values):
+        values.pop("db", None)
         self.profile_create = (user_id, values)
 
 
@@ -76,8 +85,31 @@ def test_profile_mutation_service_preserves_name_and_wishlist_updates():
     assert repository.name_update == (42, "Updated Teacher")
     assert repository.wishlist_update == (
         42,
-        "https://example.test/list&tag=h0mer00mher0-20",
+        "https://example.test/list",
     )
+
+
+def test_profile_mutation_service_strips_wishlist_query_before_storage():
+    repository = RecordingRepository()
+    service = ProfileMutationService(repository)
+
+    service.update_teacher_wishlist(
+        42,
+        "www.amazon.com/hz/wishlist/ls/ABC?ref_=wl_share",
+    )
+
+    assert repository.wishlist_update == (
+        42,
+        "https://www.amazon.com/hz/wishlist/ls/ABC",
+    )
+
+
+def test_profile_mutation_service_rejects_invalid_wishlist_url():
+    repository = RecordingRepository()
+    service = ProfileMutationService(repository)
+
+    with pytest.raises(InvalidWishlistUrl):
+        service.update_teacher_wishlist(42, "not a URL")
 
 
 def test_profile_mutation_service_preserves_about_me_update():
@@ -160,7 +192,7 @@ def test_profile_mutation_service_allocates_url_id_and_preserves_affiliate_link(
             "district": "Seattle Public Schools",
             "school": "Lincoln High School",
             "about_me": "Science supplies",
-            "wishlist_url": "https://example.test/list&tag=h0mer00mher0-20",
+            "wishlist_url": "https://example.test/list",
             "url_id": "teacher1234",
         },
     )
@@ -169,7 +201,7 @@ def test_profile_mutation_service_allocates_url_id_and_preserves_affiliate_link(
 def test_profile_mutation_service_retries_colliding_allocated_url_id(monkeypatch):
     repository = RecordingRepository()
     existing_url_ids = {"teacher1234"}
-    repository.get_teacher_by_url_id = lambda url_id: (
+    repository.get_teacher_by_url_id = lambda url_id, **_values: (
         object() if url_id in existing_url_ids else None
     )
     random_values = iter([1234, 5678])
@@ -215,6 +247,34 @@ def test_profile_mutation_service_preserves_existing_profile_guard():
     )
 
     assert created is False
+    assert not hasattr(repository, "profile_create")
+
+
+def test_profile_mutation_service_enforces_verified_school_details(monkeypatch):
+    repository = RecordingRepository()
+    repository.get_verified_registration = lambda _user_id, **_values: {
+        "registration_name": "Approved Teacher",
+        "registration_state": "WA",
+        "registration_county": "King",
+        "registration_district": "Seattle Public Schools",
+        "registration_school": "Lincoln High School",
+    }
+    service = ProfileMutationService(repository)
+
+    with pytest.raises(SchoolVerificationRequired):
+        service.create_teacher_profile(
+            42,
+            "teacher",
+            "teacher@example.test",
+            name="Approved Teacher",
+            state="WA",
+            county="King",
+            district="Seattle Public Schools",
+            school="Roosevelt High School",
+            about_me="Science supplies",
+            wishlist="https://example.test/list",
+        )
+
     assert not hasattr(repository, "profile_create")
 
 
@@ -304,6 +364,98 @@ class FailingSession:
 
     def close(self):
         self.closed = True
+
+
+class ProfileCreateResult:
+    def scalar(self):
+        return 0
+
+    def fetchone(self):
+        return None
+
+
+class ProfileCreateSession:
+    def __init__(self, *, fail_on_execute=None):
+        self.execute_count = 0
+        self.commit_count = 0
+        self.rollback_count = 0
+        self.close_count = 0
+        self.fail_on_execute = fail_on_execute
+
+    def execute(self, _query):
+        self.execute_count += 1
+        if self.execute_count == self.fail_on_execute:
+            raise RuntimeError("profile insert failed")
+        return ProfileCreateResult()
+
+    def commit(self):
+        self.commit_count += 1
+
+    def rollback(self):
+        self.rollback_count += 1
+
+    def close(self):
+        self.close_count += 1
+
+
+def test_profile_creation_uses_one_transaction_and_rolls_back_all_writes(
+    app_module,
+):
+    session = ProfileCreateSession(fail_on_execute=4)
+    repository = ProfileRepository(
+        session_factory=lambda: session,
+        teacher_model=TeacherList,
+        registered_user_model=app_module.RegisteredUsers,
+    )
+    service = ProfileMutationService(repository)
+
+    with pytest.raises(RuntimeError, match="profile insert failed"):
+        service.create_teacher_profile(
+            42,
+            "teacher",
+            "teacher@example.test",
+            name="Example Teacher",
+            state="WA",
+            county="King",
+            district="Seattle Public Schools",
+            school="Lincoln High School",
+            about_me="Science supplies",
+            wishlist="https://example.test/list",
+        )
+
+    assert session.execute_count == 4
+    assert session.commit_count == 0
+    assert session.rollback_count == 1
+    assert session.close_count == 1
+
+
+def test_profile_creation_commits_once_and_closes_on_success(app_module):
+    session = ProfileCreateSession()
+    repository = ProfileRepository(
+        session_factory=lambda: session,
+        teacher_model=TeacherList,
+        registered_user_model=app_module.RegisteredUsers,
+    )
+    service = ProfileMutationService(repository)
+
+    created = service.create_teacher_profile(
+        42,
+        "teacher",
+        "teacher@example.test",
+        name="Example Teacher",
+        state="WA",
+        county="King",
+        district="Seattle Public Schools",
+        school="Lincoln High School",
+        about_me="Science supplies",
+        wishlist="https://example.test/list",
+    )
+
+    assert created is True
+    assert session.execute_count == 5
+    assert session.commit_count == 1
+    assert session.rollback_count == 0
+    assert session.close_count == 1
 
 
 def test_profile_repository_rolls_back_and_closes_failed_school_update():
@@ -493,7 +645,7 @@ def test_create_teacher_profile_api_preserves_success_and_allocation_contract(
         ).one()
         assert teacher.regUserID == user.id
         assert teacher.url_id.startswith("profile-create")
-        assert teacher.wishlist_url == "https://example.test/list&tag=h0mer00mher0-20"
+        assert teacher.wishlist_url == "https://example.test/list"
         assert user.createCount == 1
     finally:
         db.close()
@@ -538,3 +690,26 @@ def test_update_url_id_api_preserves_validation_collision_and_success_contracts(
         ).one()
     finally:
         db.close()
+
+
+def test_teacher_image_api_enforces_size_and_detected_type(app_module):
+    seed_url_id_profiles(app_module)
+    app_module.app.state.limiter._storage.reset()
+    client = TestClient(app_module.app)
+    login_url_id_user(client)
+
+    oversized = client.post(
+        "/profile/update_teacher_image/",
+        files={"image": ("large.png", b"x" * (1024 * 1024 + 1), "image/png")},
+    )
+    invalid_type = client.post(
+        "/profile/update_teacher_image/",
+        files={"image": ("teacher.txt", b"plain text", "text/plain")},
+    )
+
+    assert oversized.status_code == 400
+    assert oversized.json()["detail"] == "File size exceeds the allowed limit"
+    assert invalid_type.status_code == 400
+    assert invalid_type.json()["detail"] == (
+        "Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed."
+    )

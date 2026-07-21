@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from backend.routers.forum import create_forum_router
+from backend.core.errors import DomainError, domain_error_handler
 
 
 class NoopLimiter:
@@ -80,10 +81,19 @@ def make_record(**values):
     return SimpleNamespace(**defaults)
 
 
-def make_client(app_module, rows=None, *, current_user_id=10, role="teacher"):
+def make_client(
+    app_module,
+    rows=None,
+    *,
+    current_user_id=10,
+    role="teacher",
+    session_factory_override=None,
+):
     sessions = []
 
     def session_factory():
+        if session_factory_override is not None:
+            return session_factory_override()
         session = SpySession(rows or {})
         sessions.append(session)
         return session
@@ -96,6 +106,7 @@ def make_client(app_module, rows=None, *, current_user_id=10, role="teacher"):
         }
 
     test_app = FastAPI()
+    test_app.add_exception_handler(DomainError, domain_error_handler)
     test_app.include_router(
         create_forum_router(
             session_factory=session_factory,
@@ -115,6 +126,32 @@ def make_client(app_module, rows=None, *, current_user_id=10, role="teacher"):
         )
     )
     return TestClient(test_app), sessions
+
+
+def test_unexpected_forum_errors_are_logged_and_return_non_sensitive_500(
+    app_module, caplog
+):
+    class ExplodingSession:
+        def query(self, _model):
+            raise RuntimeError("database-password-should-not-leak")
+
+        def close(self):
+            pass
+
+    client, _ = make_client(
+        app_module,
+        session_factory_override=ExplodingSession,
+    )
+
+    with caplog.at_level("ERROR", logger="backend.routers.forum"):
+        response = client.get("/forum/get_posts")
+
+    assert response.status_code == 500
+    assert response.json() == {
+        "detail": "Could not retrieve posts due to a server error."
+    }
+    assert "database-password-should-not-leak" not in response.text
+    assert "Database error during post retrieval" in caplog.text
 
 
 def assert_closed_once_with_rollback(session):
@@ -191,3 +228,31 @@ def test_unauthorized_comment_delete_rolls_back_and_closes_session(app_module):
 
     assert response.status_code == 403
     assert_closed_once_with_rollback(sessions[0])
+
+
+def test_unauthorized_comment_edit_rolls_back_and_closes_session(app_module):
+    client, sessions = make_client(
+        app_module,
+        rows={app_module.ForumComment: [make_record(user_id=99)]},
+    )
+
+    response = client.patch(
+        "/forum/comment/1/update",
+        data={"content": "Attempted update"},
+    )
+
+    assert response.status_code == 403
+    assert_closed_once_with_rollback(sessions[0])
+
+
+def test_non_admin_post_delete_is_rejected_before_deletion(app_module):
+    client, sessions = make_client(
+        app_module,
+        rows={app_module.ForumPost: [make_record(user_id=10)]},
+        role="teacher",
+    )
+
+    response = client.delete("/forum/post/1/delete")
+
+    assert response.status_code == 403
+    assert sessions == []

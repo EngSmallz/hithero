@@ -49,4 +49,23 @@ def test_profile_read_service_returns_session_context_and_access_policy():
     assert service.has_teacher_access({}, 42, "teacher") is True
     assert service.has_teacher_access({}, 7, "teacher") is False
     assert service.has_teacher_access({}, 42, "admin") is False
-    assert service.get_teacher_url({}) == "www.HelpTeachers.net/teacher/example-teacher"
+    assert service.get_teacher_url({}) == "/teacher/example-teacher"
+
+
+def test_profile_read_service_serializes_current_teacher_without_account_fields():
+    service = ProfileReadService(FakeProfileRepository())
+
+    result = service.get_current_teacher(42)
+
+    assert result == {
+        "name": "Example Teacher",
+        "url_id": "example-teacher",
+        "state": "IL",
+        "county": "Cook",
+        "district": "District 1",
+        "school": "Example School",
+        "wishlist_url": "https://example.test/wishlist",
+        "about_me": "Books",
+        "image_data": "aW1hZ2UtYnl0ZXM=",
+    }
+    assert "regUserID" not in result

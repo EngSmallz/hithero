@@ -1,3 +1,6 @@
+from backend.core.policies import require_forum_content_owner
+
+
 class ForumService:
     """Forum creation and workflow orchestration."""
 
@@ -78,8 +81,9 @@ class ForumService:
         if error == "missing":
             raise LookupError(f"Post with ID {post_id} not found.")
         if error == "forbidden":
-            raise PermissionError(
-                "Not authorized to edit this post. You must be the author."
+            require_forum_content_owner(
+                False,
+                detail="Not authorized to edit this post. You must be the author.",
             )
         return post
 
@@ -92,8 +96,9 @@ class ForumService:
         if error == "missing":
             raise LookupError(f"Comment with ID {comment_id} not found.")
         if error == "forbidden":
-            raise PermissionError(
-                "Not authorized to edit this comment. You must be the author."
+            require_forum_content_owner(
+                False,
+                detail="Not authorized to edit this comment. You must be the author.",
             )
         return comment
 
@@ -115,6 +120,9 @@ class ForumService:
         if error == "missing":
             raise LookupError("Comment not found")
         if error == "forbidden":
-            raise PermissionError(
-                "Access denied: You can only delete your own comments or be an administrator."
+            require_forum_content_owner(
+                False,
+                detail=(
+                    "Access denied: You can only delete your own comments or be an administrator."
+                ),
             )

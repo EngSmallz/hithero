@@ -291,5 +291,5 @@ def test_teacher_directory_option_and_index_routes_preserve_not_found_messages(
     }
     response = client.post("/api/index_teachers/", data={"state": "AK"})
     assert response.status_code == 404
-    assert response.headers["content-type"].startswith("text/html")
-    assert "Page Does Not Exist" in response.text
+    assert response.headers["content-type"].startswith("application/json")
+    assert response.json() == {"detail": "No teachers found with the given criteria."}
