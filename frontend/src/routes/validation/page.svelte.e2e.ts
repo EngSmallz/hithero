@@ -8,6 +8,18 @@ test.describe('/validation', () => {
 		await expect(page).toHaveURL('/login?redirect=%2Fvalidation');
 	});
 
+	test('returns 403 for authenticated users without teacher/admin role', async ({
+		page,
+		context
+	}) => {
+		await installAuthenticatedSession(context, 'user');
+
+		const response = await page.goto('/validation', { waitUntil: 'domcontentloaded' });
+
+		expect(response?.status()).toBe(403);
+		await expect(page.getByRole('heading', { level: 1, name: 'Forbidden' })).toBeVisible();
+	});
+
 	test('renders validation tools for teachers', async ({ page, context }) => {
 		await installAuthenticatedSession(context, 'teacher');
 

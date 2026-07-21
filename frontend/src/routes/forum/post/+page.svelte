@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import { onMount } from 'svelte';
+	import { untrack } from 'svelte';
 	import Alert from '$lib/components/Alert.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import FormField from '$lib/components/FormField.svelte';
@@ -37,24 +37,38 @@
 	type StatusMessage = { variant: StatusVariant; message: string };
 
 	let { data } = $props<{ data: PageData }>();
+	const initialData = untrack(() => data);
 
 	const postId = page.url.searchParams.get('id')?.trim() || '';
 	const inputClass =
 		'block min-h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-950 shadow-sm focus:border-green-600 focus:outline-2 focus:outline-green-600';
 
 	let profile = $derived<BackendProfile | null>(data.profile);
-	let post = $state<ForumPost | null>(null);
-	let comments = $state<ForumComment[]>([]);
-	let status = $state<StatusMessage | null>({
-		variant: 'info',
-		message: 'Loading post details...'
-	});
-	let commentsStatus = $state<StatusMessage | null>(null);
+	let post = $state<ForumPost | null>(initialData.post);
+	let comments = $state<ForumComment[]>(initialData.comments);
+	let status = $state<StatusMessage | null>(
+		initialData.detailState === 'invalid-id'
+			? {
+					variant: 'error',
+					message:
+						'Post ID is missing from the URL. Please ensure you are navigating from the forum list.'
+				}
+			: initialData.detailState === 'not-found'
+				? { variant: 'error', message: `Post with ID ${postId} not found.` }
+				: initialData.detailState === 'backend-unavailable'
+					? { variant: 'error', message: 'The discussion is temporarily unavailable.' }
+					: null
+	);
+	let commentsStatus = $state<StatusMessage | null>(
+		initialData.detailState === 'comments-unavailable'
+			? { variant: 'error', message: 'Comments are temporarily unavailable.' }
+			: null
+	);
 	let actionStatus = $state<StatusMessage | null>(null);
 	let isBusy = $state(false);
 	let isEditingPost = $state(false);
-	let editTitle = $state('');
-	let editContent = $state('');
+	let editTitle = $state(initialData.post?.title ?? '');
+	let editContent = $state(initialData.post?.content ?? '');
 	let newComment = $state('');
 	let editingCommentId = $state<number | null>(null);
 	let editingCommentContent = $state('');
@@ -76,55 +90,6 @@
 	let canonicalPath = $derived(
 		postId ? `${routes.forumPost}?id=${encodeURIComponent(postId)}` : routes.forumPost
 	);
-
-	onMount(() => {
-		void loadPostDetail();
-	});
-
-	async function loadPostDetail() {
-		if (!postId) {
-			status = {
-				variant: 'error',
-				message:
-					'Post ID is missing from the URL. Please ensure you are navigating from the forum list.'
-			};
-			return;
-		}
-
-		status = { variant: 'info', message: 'Loading post details...' };
-		try {
-			post = await apiFetch<ForumPost>('/forum/get_post', { query: { post_id: postId } });
-			editTitle = post.title;
-			editContent = post.content;
-			status = null;
-			await loadComments(post.id);
-		} catch (error) {
-			status = {
-				variant: 'error',
-				message:
-					error instanceof Error
-						? `Failed to load post ${postId}: ${error.message}`
-						: 'Network Error: Could not reach the server to fetch the post.'
-			};
-		}
-	}
-
-	async function loadComments(id: number) {
-		commentsStatus = { variant: 'info', message: 'Loading comments...' };
-		try {
-			comments = await apiFetch<ForumComment[]>(`/forum/comments/${id}/`);
-			commentsStatus = null;
-		} catch (error) {
-			comments = [];
-			commentsStatus = {
-				variant: 'error',
-				message:
-					error instanceof Error
-						? `Failed to load comments: ${error.message}`
-						: 'Network error. Could not load comments.'
-			};
-		}
-	}
 
 	async function vote(voteType: 1 | -1) {
 		if (!post) return;

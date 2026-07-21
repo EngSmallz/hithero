@@ -27,6 +27,27 @@ async function installTeacherProfileStub(page: Page) {
 	});
 }
 
+async function installVerifiedTeacherProfileStub(page: Page) {
+	await installAuthenticatedSession(page.context());
+	await page.route('**/api/profile/', async (route) => {
+		await route.fulfill({
+			contentType: 'application/json',
+			body: JSON.stringify({
+				user_role: 'teacher',
+				user_id: 12,
+				user_email: 'teacher@example.test',
+				profile_prefill: {
+					name: 'Approved Teacher',
+					state: 'WA',
+					county: 'King',
+					district: 'Seattle Public Schools',
+					school: 'Evergreen Elementary'
+				}
+			})
+		});
+	});
+}
+
 async function addSchoolSelections(page: Page) {
 	const stateSelect = page.getByRole('combobox', { name: /^State/ });
 	await addSelectOption(page, /^State/, 'WA');
@@ -78,6 +99,26 @@ test.describe('/profile/create', () => {
 		await expect(page).toHaveURL('/login?redirect=%2Fprofile%2Fcreate');
 	});
 
+	test('prefills approved registration details and locks school fields', async ({ page }) => {
+		await installVerifiedTeacherProfileStub(page);
+
+		await page.goto('/profile/create', { waitUntil: 'domcontentloaded' });
+
+		await expect(page.getByLabel(/^Full Name/)).toHaveValue('Approved Teacher');
+		await expect(page.locator('#verified-state')).toHaveValue('WA');
+		await expect(page.locator('#verified-state')).toHaveAttribute('readonly', '');
+		await expect(page.locator('#verified-county')).toHaveValue('King');
+		await expect(page.locator('#verified-district')).toHaveValue('Seattle Public Schools');
+		await expect(page.locator('#verified-school')).toHaveValue('Evergreen Elementary');
+		await expect(page.getByRole('combobox')).toHaveCount(0);
+		await expect(page.getByText(/re-verification is required/)).toBeVisible();
+
+		const wishlist = page.getByLabel(/^Amazon Wishlist URL/);
+		await wishlist.fill('www.amazon.com/hz/wishlist/ls/ABC?ref_=wl_share');
+		await wishlist.blur();
+		await expect(wishlist).toHaveValue('https://www.amazon.com/hz/wishlist/ls/ABC');
+	});
+
 	test('opens mobile navigation', async ({ page }) => {
 		await installTeacherProfileStub(page);
 		await page.setViewportSize({ width: 390, height: 844 });
@@ -111,6 +152,10 @@ test.describe('/profile/create', () => {
 	test('opens wishlist setup help', async ({ page }) => {
 		await installTeacherProfileStub(page);
 		await page.goto('/profile/create', { waitUntil: 'domcontentloaded' });
+		await expect(page.locator('[data-profile-enhanced]')).toHaveAttribute(
+			'data-profile-enhanced',
+			'true'
+		);
 
 		await page.getByRole('button', { name: 'How to Get Link' }).click();
 
@@ -154,11 +199,21 @@ test.describe('/profile/create', () => {
 
 		await page.goto('/profile/create', { waitUntil: 'load' });
 		await page.waitForLoadState('networkidle');
+		await expect(page.locator('[data-profile-enhanced]')).toHaveAttribute(
+			'data-profile-enhanced',
+			'true'
+		);
 		await addSchoolSelections(page);
 		await page.getByLabel(/^Full Name/).fill('Integration Teacher');
 		await page.getByLabel(/^About Me/).fill('I help students build durable skills.');
 		await page.getByLabel(/^Amazon Wishlist URL/).fill('https://example.com/wishlist');
+		const createResponse = page.waitForResponse(
+			(response) =>
+				response.url().endsWith('/profile/create_teacher_profile/') &&
+				response.request().method() === 'POST'
+		);
 		await page.getByRole('button', { name: 'Submit' }).click();
+		await createResponse;
 
 		await expect(page.getByRole('status')).toContainText('Teacher created successfully');
 		await expect(page.getByRole('button', { name: 'View My Page' })).toBeVisible();

@@ -56,17 +56,9 @@
 <PageShell
 	eyebrow="Partners"
 	title="Thank You to Our Partners"
-	intro="We are thankful for the partners whose support helps us make a lasting impact for teachers and students."
+	intro="We are thankful for the partners whose support helps us make a lasting impact on teachers and students. Your contributions have helped us grow into the organization we are today, making a meaningful difference in classrooms across the country."
 >
 	<div class="space-y-8">
-		<section class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-			<p class="text-lg leading-8 text-slate-700">
-				Your contributions have made a lasting impact on the lives of teachers and students, helping
-				us grow into the organization we are today. Together, we are making a meaningful difference
-				in classrooms across the country.
-			</p>
-		</section>
-
 		{#each partnerGroups as group (group.title)}
 			<section class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
 				<h2 class="text-center text-2xl font-bold tracking-normal text-green-800">

@@ -6,9 +6,14 @@
 	import FormField from '$lib/components/FormField.svelte';
 	import PageShell from '$lib/components/PageShell.svelte';
 	import Seo from '$lib/components/Seo.svelte';
-	import { getBackendOrigin } from '$lib/api/client';
+	import { apiFetch } from '$lib/api/client';
 	import { normalizeStringOptions } from '$lib/api/options';
-	import { getRecaptchaResponse, renderRecaptcha, resetRecaptcha } from '$lib/recaptcha';
+	import {
+		getRecaptchaResponse,
+		isRecaptchaMock,
+		renderRecaptcha,
+		resetRecaptcha
+	} from '$lib/recaptcha';
 	import { routes } from '$lib/routes';
 	import type { ActionData, PageData } from './$types';
 
@@ -18,9 +23,8 @@
 
 	let { data, form } = $props<{ data: PageData; form?: ActionData }>();
 
-	const backendOrigin = getBackendOrigin();
-	const registrationEndpoint = `${backendOrigin}/profile/register/`;
 	const recaptchaSiteKey = '6Lf9uiIqAAAAAMt19WMR4q0aO-JMqks9Du0yHHlL';
+	const useMockRecaptcha = isRecaptchaMock();
 	const inputClass =
 		'block min-h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-950 shadow-sm focus:border-green-600 focus:outline-2 focus:outline-green-600';
 
@@ -33,6 +37,7 @@
 	let selectedDistrict = $state('');
 	let selectedSchool = $state('');
 	let termsAccepted = $state(false);
+	let mockRecaptchaAccepted = $state(false);
 	let isTermsOpen = $state(false);
 	let isSubmitting = $state(false);
 	let status = $state<StatusMessage | null>(null);
@@ -66,7 +71,7 @@
 
 	onMount(() => {
 		let mounted = true;
-		if (recaptchaContainer) {
+		if (!useMockRecaptcha && recaptchaContainer) {
 			void renderRecaptcha(recaptchaContainer, recaptchaSiteKey)
 				.then((widgetId) => {
 					if (mounted) {
@@ -108,18 +113,18 @@
 		schools = [];
 	}
 
+	function getSelectValue(event: Event): string {
+		const target = event.currentTarget;
+		return target instanceof HTMLSelectElement ? target.value : '';
+	}
+
 	async function fetchSchoolOptions(path: string): Promise<string[]> {
-		const response = await fetch(`${backendOrigin}${path}`);
-		const body = (await response.json().catch(() => [])) as unknown;
-
-		if (!response.ok) {
-			throw new Error('School options could not be loaded.');
-		}
-
+		const body = await apiFetch<unknown>(path);
 		return normalizeStringOptions(body);
 	}
 
-	async function handleStateChange() {
+	async function handleStateChange(event: Event) {
+		selectedState = getSelectValue(event);
 		resetCountySelection();
 
 		if (!selectedState) {
@@ -137,7 +142,8 @@
 		}
 	}
 
-	async function handleCountyChange() {
+	async function handleCountyChange(event: Event) {
+		selectedCounty = getSelectValue(event);
 		resetDistrictSelection();
 
 		if (!selectedState || !selectedCounty) {
@@ -157,7 +163,8 @@
 		}
 	}
 
-	async function handleDistrictChange() {
+	async function handleDistrictChange(event: Event) {
+		selectedDistrict = getSelectValue(event);
 		resetSchoolSelection();
 
 		if (!selectedState || !selectedCounty || !selectedDistrict) {
@@ -190,7 +197,7 @@
 		const formData = new FormData(form);
 		const password = String(formData.get('password') ?? '');
 		const confirmPassword = String(formData.get('confirm_password') ?? '');
-		const recaptchaResponse = getRecaptchaResponse(recaptchaWidgetId);
+		const recaptchaResponse = getRecaptchaResponse(recaptchaWidgetId, mockRecaptchaAccepted);
 
 		if (password !== confirmPassword) {
 			status = {
@@ -221,16 +228,11 @@
 		formData.append('recaptcha_response', recaptchaResponse);
 
 		try {
-			const response = await fetch(registrationEndpoint, {
+			const body = await apiFetch<ApiMessage>('/profile/register/', {
 				method: 'POST',
 				body: formData
 			});
-			const body = (await response.json().catch(() => ({}))) as ApiMessage;
 			const message = body.detail || body.message;
-
-			if (!response.ok) {
-				throw new Error(message || 'Registration failed. Please try again.');
-			}
 
 			status = {
 				variant: 'success',
@@ -247,6 +249,7 @@
 			};
 		} finally {
 			resetRecaptcha(recaptchaWidgetId);
+			mockRecaptchaAccepted = false;
 			isSubmitting = false;
 		}
 	}
@@ -256,6 +259,7 @@
 	title="Homeroom Heroes - Register"
 	description="Register as an educator with Homeroom Heroes to create a teacher profile and share your classroom wishlist."
 	path={routes.register}
+	noindex
 />
 
 <PageShell
@@ -422,11 +426,26 @@
 				</div>
 
 				<div class="min-h-20">
-					<div
-						bind:this={recaptchaContainer}
-						class="g-recaptcha"
-						data-sitekey={recaptchaSiteKey}
-					></div>
+					{#if useMockRecaptcha}
+						<div class="rounded-md border border-blue-200 bg-blue-50 p-4 text-blue-950">
+							<label class="flex items-center gap-3 font-semibold" for="recaptcha-mock">
+								<input
+									id="recaptcha-mock"
+									type="checkbox"
+									bind:checked={mockRecaptchaAccepted}
+									class="size-5 rounded border-slate-300 text-green-700 focus:outline-2 focus:outline-green-600"
+								/>
+								<span>I'm not a robot (local test CAPTCHA)</span>
+							</label>
+							<p class="mt-2 text-sm">This mock is enabled only for local manual testing.</p>
+						</div>
+					{:else}
+						<div
+							bind:this={recaptchaContainer}
+							class="g-recaptcha"
+							data-sitekey={recaptchaSiteKey}
+						></div>
+					{/if}
 				</div>
 
 				<div class="flex flex-col gap-3 sm:flex-row">

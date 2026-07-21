@@ -1,4 +1,4 @@
-import { apiFetch } from '$lib/api/client';
+import { serverApiFetch } from '$lib/server/api';
 import { actionErrorMessage, formMessage } from '$lib/server/form-actions';
 import { fail } from '@sveltejs/kit';
 import type { Actions } from './$types';
@@ -18,8 +18,7 @@ export const actions: Actions = {
 		}
 
 		try {
-			const result = await apiFetch<ApiMessage>('/api/contact_us/', {
-				fetch,
+			const result = await serverApiFetch<ApiMessage>({ fetch, request }, '/api/contact_us/', {
 				method: 'POST',
 				body: submitted
 			});

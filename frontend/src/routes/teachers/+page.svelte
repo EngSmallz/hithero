@@ -111,10 +111,12 @@
 			<div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
 				<div>
 					<h2 class="text-3xl font-bold tracking-normal text-green-800">Search Results</h2>
-					<p class="mt-2 text-base text-slate-600">
-						{directory.total}
-						{directory.total === 1 ? 'teacher' : 'teachers'} found
-					</p>
+					{#if !data.backendUnavailable}
+						<p class="mt-2 text-base text-slate-600">
+							{directory.total}
+							{directory.total === 1 ? 'teacher' : 'teachers'} found
+						</p>
+					{/if}
 				</div>
 			</div>
 
@@ -137,7 +139,7 @@
 						</a>
 					{/each}
 				</div>
-			{:else}
+			{:else if !data.backendUnavailable}
 				<p
 					class="mt-6 rounded-md border border-slate-200 bg-slate-50 p-5 text-center text-slate-700"
 				>

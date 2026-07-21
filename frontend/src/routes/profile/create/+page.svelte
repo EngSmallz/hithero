@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+	import { resolve } from '$app/paths';
 	import Alert from '$lib/components/Alert.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import FormField from '$lib/components/FormField.svelte';
@@ -7,6 +9,7 @@
 	import { apiFetch } from '$lib/api/client';
 	import { normalizeStringOptions } from '$lib/api/options';
 	import { routes } from '$lib/routes';
+	import { normalizeWishlistInput } from '$lib/wishlist';
 	import type { UserRole } from '$lib/api/types';
 	import type { ActionData, PageData } from './$types';
 
@@ -14,14 +17,25 @@
 	type StatusMessage = { variant: StatusVariant; message: string };
 	type ApiMessage = { detail?: string; message?: string; role?: UserRole };
 	let { data, form } = $props<{ data: PageData; form?: ActionData }>();
+	let verifiedSchool = $derived(data.profilePrefill);
+	let hasVerifiedSchool = $derived(
+		Boolean(
+			verifiedSchool?.state &&
+			verifiedSchool?.county &&
+			verifiedSchool?.district &&
+			verifiedSchool?.school
+		)
+	);
 
 	const inputClass =
-		'block min-h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-950 shadow-sm focus:border-green-600 focus:outline-2 focus:outline-green-600';
+		'block min-h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-950 shadow-sm focus:border-green-600 focus:outline-2 focus:outline-green-600 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-100 disabled:text-slate-500 read-only:cursor-not-allowed read-only:border-slate-300 read-only:bg-slate-100 read-only:text-slate-700';
 
 	let states = $derived(data.states);
+	let isEnhanced = $state(false);
 	let counties = $state<string[]>([]);
 	let districts = $state<string[]>([]);
 	let schools = $state<string[]>([]);
+	let profileName = $state('');
 	let selectedState = $state('');
 	let selectedCounty = $state('');
 	let selectedDistrict = $state('');
@@ -33,6 +47,7 @@
 	let status = $state<StatusMessage | null>(null);
 	let schoolOptionsStatus = $state<StatusMessage | null>(null);
 	let hasInitializedSchoolOptionsStatus = $state(false);
+	let hasInitializedPrefill = $state(false);
 	let formStatus = $derived(
 		form?.message
 			? {
@@ -43,6 +58,23 @@
 	);
 
 	let charactersRemaining = $derived(500 - aboutMe.length);
+
+	onMount(() => {
+		isEnhanced = true;
+	});
+
+	$effect(() => {
+		if (hasInitializedPrefill) {
+			return;
+		}
+
+		hasInitializedPrefill = true;
+		profileName = verifiedSchool?.name ?? '';
+		selectedState = verifiedSchool?.state ?? '';
+		selectedCounty = verifiedSchool?.county ?? '';
+		selectedDistrict = verifiedSchool?.district ?? '';
+		selectedSchool = verifiedSchool?.school ?? '';
+	});
 
 	$effect(() => {
 		if (hasInitializedSchoolOptionsStatus) {
@@ -80,12 +112,27 @@
 		schools = [];
 	}
 
+	function getSelectValue(event: Event): string {
+		const target = event.currentTarget;
+		return target instanceof HTMLSelectElement ? target.value : '';
+	}
+
+	function normalizeWishlistUrlField(event: Event) {
+		const target = event.currentTarget;
+		if (!(target instanceof HTMLInputElement)) {
+			return;
+		}
+
+		target.value = normalizeWishlistInput(target.value);
+	}
+
 	async function fetchSchoolOptions(path: string): Promise<string[]> {
 		const body = await apiFetch<unknown>(path);
 		return normalizeStringOptions(body);
 	}
 
-	async function handleStateChange() {
+	async function handleStateChange(event: Event) {
+		selectedState = getSelectValue(event);
 		resetCountySelection();
 
 		if (!selectedState) {
@@ -103,7 +150,8 @@
 		}
 	}
 
-	async function handleCountyChange() {
+	async function handleCountyChange(event: Event) {
+		selectedCounty = getSelectValue(event);
 		resetDistrictSelection();
 
 		if (!selectedState || !selectedCounty) {
@@ -123,7 +171,8 @@
 		}
 	}
 
-	async function handleDistrictChange() {
+	async function handleDistrictChange(event: Event) {
+		selectedDistrict = getSelectValue(event);
 		resetSchoolSelection();
 
 		if (!selectedState || !selectedCounty || !selectedDistrict) {
@@ -205,7 +254,10 @@
 	narrow
 >
 	<div class="mx-auto max-w-3xl">
-		<section class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+		<section
+			class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8"
+			data-profile-enhanced={isEnhanced}
+		>
 			{#if hasCreatedProfile || form?.success}
 				<div class="space-y-5">
 					{#if status || formStatus}
@@ -239,71 +291,136 @@
 							autocomplete="name"
 							required
 							class={inputClass}
+							bind:value={profileName}
 						/>
 					</FormField>
 
-					<FormField id="state" label="State" required>
-						<select
-							id="state"
-							name="state"
-							required
-							class={inputClass}
-							bind:value={selectedState}
-							onchange={handleStateChange}
+					{#if hasVerifiedSchool}
+						<div
+							class="rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-950"
+							aria-describedby="verified-school-note"
 						>
-							<option value="" disabled>Choose state</option>
-							{#each states as state (state)}
-								<option value={state}>{state}</option>
-							{/each}
-						</select>
-					</FormField>
+							<p id="verified-school-note">
+								School information was verified during registration and cannot be changed here.
+								Contact support if your school has changed; a re-verification is required.
+							</p>
+						</div>
+						{#each [['state', 'State', verifiedSchool?.state], ['county', 'County', verifiedSchool?.county], ['district', 'School District', verifiedSchool?.district], ['school', 'School', verifiedSchool?.school]] as [field, label, value] (field)}
+							<FormField id={`verified-${field}`} {label} required>
+								<input
+									id={`verified-${field}`}
+									name={field}
+									type="text"
+									{value}
+									readonly
+									aria-describedby="verified-school-note"
+									class={`${inputClass} !bg-slate-100 !text-slate-700`}
+								/>
+							</FormField>
+						{/each}
+					{:else}
+						<noscript>
+							<style>
+								.enhanced-school-fields {
+									display: none;
+								}
+							</style>
+							<div class="space-y-4">
+								<div
+									class="rounded-md border border-blue-200 bg-blue-50 p-4 text-blue-950"
+									role="status"
+								>
+									JavaScript is disabled. Enter the complete school location manually; profile
+									creation will still submit through this Homeroom Heroes page.
+								</div>
+								<label class="block font-semibold text-slate-800" for="manual-create-state">
+									State (manual entry)
+								</label>
+								<input id="manual-create-state" name="state" required class={inputClass} />
+								<label class="block font-semibold text-slate-800" for="manual-create-county">
+									County (manual entry)
+								</label>
+								<input id="manual-create-county" name="county" required class={inputClass} />
+								<label class="block font-semibold text-slate-800" for="manual-create-district">
+									School District (manual entry)
+								</label>
+								<input id="manual-create-district" name="district" required class={inputClass} />
+								<label class="block font-semibold text-slate-800" for="manual-create-school">
+									School (manual entry)
+								</label>
+								<input id="manual-create-school" name="school" required class={inputClass} />
+							</div>
+						</noscript>
 
-					<FormField id="county" label="County" required>
-						<select
-							id="county"
-							name="county"
-							required
-							class={inputClass}
-							bind:value={selectedCounty}
-							onchange={handleCountyChange}
-						>
-							<option value="" disabled>Choose county</option>
-							{#each counties as county (county)}
-								<option value={county}>{county}</option>
-							{/each}
-						</select>
-					</FormField>
+						<div class="enhanced-school-fields space-y-5">
+							<FormField id="state" label="State" required>
+								<select
+									id="state"
+									name="state"
+									required={isEnhanced}
+									disabled={!isEnhanced}
+									class={inputClass}
+									bind:value={selectedState}
+									onchange={handleStateChange}
+								>
+									<option value="" disabled>Choose state</option>
+									{#each states as state (state)}
+										<option value={state}>{state}</option>
+									{/each}
+								</select>
+							</FormField>
 
-					<FormField id="district" label="School District" required>
-						<select
-							id="district"
-							name="district"
-							required
-							class={inputClass}
-							bind:value={selectedDistrict}
-							onchange={handleDistrictChange}
-						>
-							<option value="" disabled>Choose district</option>
-							{#each districts as district (district)}
-								<option value={district}>{district}</option>
-							{/each}
-						</select>
-					</FormField>
+							<FormField id="county" label="County" required>
+								<select
+									id="county"
+									name="county"
+									required={isEnhanced}
+									disabled={!isEnhanced}
+									class={inputClass}
+									bind:value={selectedCounty}
+									onchange={handleCountyChange}
+								>
+									<option value="" disabled>Choose county</option>
+									{#each counties as county (county)}
+										<option value={county}>{county}</option>
+									{/each}
+								</select>
+							</FormField>
 
-					<FormField id="school" label="School" required>
-						<select
-							id="school"
-							name="school"
-							required
-							class={inputClass}
-							bind:value={selectedSchool}
-						>
-							<option value="" disabled>Choose school</option>
-							{#each schools as school (school)}
-								<option value={school}>{school}</option>
-							{/each}
-						</select>
-					</FormField>
+							<FormField id="district" label="School District" required>
+								<select
+									id="district"
+									name="district"
+									required={isEnhanced}
+									disabled={!isEnhanced}
+									class={inputClass}
+									bind:value={selectedDistrict}
+									onchange={handleDistrictChange}
+								>
+									<option value="" disabled>Choose district</option>
+									{#each districts as district (district)}
+										<option value={district}>{district}</option>
+									{/each}
+								</select>
+							</FormField>
+
+							<FormField id="school" label="School" required>
+								<select
+									id="school"
+									name="school"
+									required={isEnhanced}
+									disabled={!isEnhanced}
+									class={inputClass}
+									bind:value={selectedSchool}
+								>
+									<option value="" disabled>Choose school</option>
+									{#each schools as school (school)}
+										<option value={school}>{school}</option>
+									{/each}
+								</select>
+							</FormField>
+						</div>
+					{/if}
 
 					<FormField
 						id="aboutMe"
@@ -324,14 +441,36 @@
 					<FormField
 						id="wishlist"
 						label="Amazon Wishlist URL"
-						help="Registry links do not work. Use a shareable Amazon wishlist link."
+						help="Use a shareable Amazon wishlist link. Existing query parameters are removed; our affiliate tag is added when supporters open it."
 						required
 					>
 						<div class="space-y-3">
-							<Button type="button" variant="secondary" onclick={() => (isWishlistHelpOpen = true)}>
+							<Button
+								type="button"
+								variant="secondary"
+								disabled={!isEnhanced}
+								onclick={() => (isWishlistHelpOpen = true)}
+							>
 								How to Get Link
 							</Button>
-							<input id="wishlist" name="wishlist" type="url" required class={inputClass} />
+							<noscript>
+								<a
+									class="font-semibold text-green-800 underline"
+									href={resolve(routes.wishlistSetup)}
+								>
+									Wishlist setup instructions
+								</a>
+							</noscript>
+							<input
+								id="wishlist"
+								name="wishlist"
+								type="url"
+								inputmode="url"
+								placeholder="https://www.amazon.com/hz/wishlist/..."
+								onblur={normalizeWishlistUrlField}
+								required
+								class={inputClass}
+							/>
 						</div>
 					</FormField>
 

@@ -1,11 +1,12 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import Alert from '$lib/components/Alert.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import Seo from '$lib/components/Seo.svelte';
-	import { getBackendOrigin } from '$lib/api/client';
+	import { apiFetch, getBackendOrigin } from '$lib/api/client';
 	import type { UserRole } from '$lib/api/types';
 	import { routes } from '$lib/routes';
+	import { buildWishlistUrl } from '$lib/wishlist';
 	import type { PageData } from './$types';
 
 	type StatusVariant = 'info' | 'success' | 'warning' | 'error';
@@ -97,12 +98,24 @@
 		'Armed Forces Pacific': 'Armed-Forces'
 	};
 
-	let teacher = $state<TeacherProfile | null>(null);
+	const initialData = untrack(() => data);
+	let teacher = $state<TeacherProfile | null>(initialData.teacher);
 	let currentProfile = $derived<ProfileResponse | null>(data.profile);
-	let isLoading = $state(true);
-	let isOwner = $state(false);
+	let isLoading = $state(initialData.currentTeacherState === 'session-selected');
+	let isOwner = $state(
+		Boolean(
+			initialData.teacher &&
+			(initialData.profile?.user_role === 'teacher' || initialData.profile?.user_role === 'admin')
+		)
+	);
 	let isUploadingImage = $state(false);
-	let status = $state<StatusMessage | null>(null);
+	let status = $state<StatusMessage | null>(
+		initialData.currentTeacherState === 'backend-unavailable'
+			? { variant: 'error', message: 'Teacher profiles are temporarily unavailable.' }
+			: initialData.currentTeacherState === 'not-found'
+				? { variant: 'warning', message: 'Your account does not have a teacher profile yet.' }
+				: null
+	);
 	let imageInput = $state<HTMLInputElement | null>(null);
 
 	let teacherName = $derived(teacher?.name?.trim() || 'Teacher Profile');
@@ -131,7 +144,9 @@
 	);
 
 	onMount(() => {
-		void loadTeacherPage();
+		if (initialData.currentTeacherState === 'session-selected') {
+			void loadTeacherPage();
+		}
 	});
 
 	async function loadTeacherPage() {
@@ -139,11 +154,7 @@
 		status = { variant: 'info', message: 'Loading teacher profile...' };
 		isOwner = false;
 
-		let loadedTeacher = await tryFetchTeacherInfo();
-		if (!loadedTeacher && isAuthenticatedTeacherOrAdmin(currentProfile)) {
-			await seedMyTeacherSession();
-			loadedTeacher = await tryFetchTeacherInfo();
-		}
+		const loadedTeacher = await tryFetchTeacherInfo();
 
 		if (!loadedTeacher) {
 			teacher = null;
@@ -163,28 +174,10 @@
 
 	async function tryFetchTeacherInfo(): Promise<TeacherProfile | null> {
 		try {
-			const response = await fetch(`${backendOrigin}/api/get_teacher_info/`, {
-				credentials: 'include'
-			});
-
-			if (!response.ok) {
-				throw new Error(await readResponseMessage(response));
-			}
-
-			return (await response.json()) as TeacherProfile;
+			return await apiFetch<TeacherProfile>('/api/get_teacher_info/');
 		} catch (error) {
 			console.error('Error fetching teacher info:', error);
 			return null;
-		}
-	}
-
-	async function seedMyTeacherSession(): Promise<void> {
-		try {
-			await fetch(`${backendOrigin}/profile/myinfo/`, {
-				credentials: 'include'
-			});
-		} catch (error) {
-			console.error('Error fetching my page info:', error);
 		}
 	}
 
@@ -200,10 +193,8 @@
 		}
 
 		try {
-			const response = await fetch(`${backendOrigin}/api/check_access_teacher/`, {
-				credentials: 'include'
-			});
-			isOwner = response.ok;
+			await apiFetch<unknown>('/api/check_access_teacher/');
+			isOwner = true;
 		} catch (error) {
 			console.error('Error checking teacher access:', error);
 			isOwner = false;
@@ -238,15 +229,10 @@
 		isUploadingImage = true;
 
 		try {
-			const response = await fetch(`${backendOrigin}/profile/update_teacher_image/`, {
+			await apiFetch<unknown>('/profile/update_teacher_image/', {
 				method: 'POST',
-				body: formData,
-				credentials: 'include'
+				body: formData
 			});
-
-			if (!response.ok) {
-				throw new Error(await readResponseMessage(response));
-			}
 
 			window.location.reload();
 		} catch (error) {
@@ -262,39 +248,19 @@
 
 	async function sharePage() {
 		try {
-			const response = await fetch(`${backendOrigin}/api/teacher_url/`, {
-				credentials: 'include',
-				headers: {
-					'Content-Type': 'application/json'
-				}
-			});
-
-			if (!response.ok) {
-				window.alert(`Error: ${response.statusText}`);
-				return;
-			}
-
-			const data = (await response.json().catch(() => ({}))) as ApiMessage;
+			const data = await apiFetch<ApiMessage>('/api/teacher_url/');
 			if (!data.url) {
 				throw new Error('Teacher URL was not returned.');
 			}
 
-			await navigator.clipboard.writeText(data.url);
+			const shareUrl = new URL(data.url, window.location.origin).toString();
+			await navigator.clipboard.writeText(shareUrl);
 			window.alert('Teacher URL has been copied to clipboard!');
 		} catch (error) {
 			const message = error instanceof Error ? error.message : 'Unable to share this teacher page.';
 			console.error('Error:', error);
 			window.alert(`Error: ${message}`);
 		}
-	}
-
-	async function readResponseMessage(response: Response): Promise<string> {
-		const body = (await response.json().catch(() => ({}))) as ApiMessage;
-		return body.detail || body.message || response.statusText || 'Request failed.';
-	}
-
-	function isAuthenticatedTeacherOrAdmin(profile: ProfileResponse | null): boolean {
-		return profile?.user_role === 'teacher' || profile?.user_role === 'admin';
 	}
 
 	function titleCaseWords(value: string): string {
@@ -320,6 +286,16 @@
 <Seo title={seoTitle} description={seoDescription} path={routes.teacher} noindex />
 
 <div class="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
+	<noscript>
+		<div
+			class="mx-auto mb-6 max-w-3xl rounded-md border border-amber-200 bg-amber-50 p-4 text-amber-950"
+			role="alert"
+		>
+			Image updates and Share Page require JavaScript. Profile details, wishlist links, and account
+			settings remain available without it.
+		</div>
+	</noscript>
+
 	{#if status}
 		<div class="mx-auto mb-6 max-w-3xl">
 			<Alert variant={status.variant}>{status.message}</Alert>
@@ -370,7 +346,7 @@
 					{#if teacher.wishlist_url}
 						<!-- eslint-disable svelte/no-navigation-without-resolve -->
 						<a
-							href={teacher.wishlist_url}
+							href={buildWishlistUrl(teacher.wishlist_url)}
 							target="_blank"
 							rel="noopener noreferrer"
 							class="inline-flex min-h-12 items-center justify-center rounded-full bg-yellow-500 px-8 text-xl font-bold text-slate-950 shadow-sm transition hover:bg-yellow-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-600"
@@ -403,5 +379,18 @@
 				</Button>
 			</div>
 		</div>
+	{:else if initialData.currentTeacherState === 'not-found' && currentProfile}
+		<section
+			class="mx-auto max-w-3xl rounded-lg border border-green-200 bg-white p-8 text-center shadow-sm sm:p-10"
+		>
+			<h1 class="text-3xl font-bold tracking-normal text-green-900 sm:text-4xl">
+				Create your teacher profile
+			</h1>
+			<p class="mx-auto mt-4 max-w-2xl text-lg leading-8 text-slate-700">
+				Your account is approved. Add your school, classroom details, and wishlist so supporters can
+				find you.
+			</p>
+			<Button href={routes.profileCreate} class="mt-6">Create Teacher Profile</Button>
+		</section>
 	{/if}
 </div>

@@ -1,13 +1,13 @@
 <script lang="ts">
 	/* eslint-disable svelte/no-at-html-tags */
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { resolve } from '$app/paths';
 	import Alert from '$lib/components/Alert.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import PageShell from '$lib/components/PageShell.svelte';
 	import Seo from '$lib/components/Seo.svelte';
-	import { apiFetch } from '$lib/api/client';
 	import { routes } from '$lib/routes';
+	import type { PageData } from './$types';
 
 	type ForumPost = {
 		id: number;
@@ -28,11 +28,18 @@
 		{ value: 'upvotes', label: 'Upvotes' }
 	];
 
-	let posts = $state<ForumPost[]>([]);
+	let { data } = $props<{ data: PageData }>();
+	const initialData = untrack(() => data);
+	let posts = $state<ForumPost[]>(initialData.posts);
 	let searchTerm = $state('');
 	let currentSort = $state<SortMode>('date-newest');
 	let visibleCount = $state(10);
-	let status = $state<StatusMessage | null>({ variant: 'info', message: 'Loading discussions...' });
+	let isEnhanced = $state(false);
+	let status = $state<StatusMessage | null>(
+		initialData.forumState === 'backend-unavailable'
+			? { variant: 'error', message: 'The forum is temporarily unavailable.' }
+			: null
+	);
 
 	let filteredPosts = $derived.by(() => {
 		const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -56,25 +63,8 @@
 	let canLoadMore = $derived(!searchTerm.trim() && filteredPosts.length > visibleCount);
 
 	onMount(() => {
-		void fetchPosts();
+		isEnhanced = true;
 	});
-
-	async function fetchPosts() {
-		status = { variant: 'info', message: 'Loading discussions...' };
-
-		try {
-			posts = await apiFetch<ForumPost[]>('/forum/get_posts');
-			status = null;
-		} catch (error) {
-			status = {
-				variant: 'error',
-				message:
-					error instanceof Error
-						? `Error loading posts: ${error.message}`
-						: 'Network Error: Could not reach the forum API.'
-			};
-		}
-	}
 
 	function setSort(value: SortMode) {
 		currentSort = value;
@@ -155,7 +145,7 @@
 />
 
 <PageShell eyebrow="Forum" title="The Teachers' Lounge" narrow={false}>
-	<div class="mx-auto max-w-4xl space-y-6">
+	<div class="mx-auto max-w-4xl space-y-6" data-forum-enhanced={isEnhanced}>
 		<div class="grid gap-3 sm:grid-cols-[1fr_auto]">
 			<label class="sr-only" for="post-search-input">Search posts by keyword</label>
 			<input
@@ -244,7 +234,9 @@
 
 		{#if canLoadMore}
 			<div class="text-center">
-				<Button type="button" onclick={loadMorePosts}>Load 10 More Discussions</Button>
+				<Button type="button" disabled={!isEnhanced} onclick={loadMorePosts}>
+					Load 10 More Discussions
+				</Button>
 			</div>
 		{/if}
 	</div>

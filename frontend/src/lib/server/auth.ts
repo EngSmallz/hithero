@@ -1,5 +1,6 @@
 import { error, redirect } from '@sveltejs/kit';
-import { apiFetch, ApiError } from '$lib/api/client';
+import { ApiError } from '$lib/api/client';
+import { serverApiFetch } from '$lib/server/api';
 import type { BackendProfile, UserRole } from '$lib/api/types';
 
 type AuthEvent = {
@@ -8,20 +9,12 @@ type AuthEvent = {
 	url: URL;
 };
 
-function requestHeaders(request: Request): HeadersInit | undefined {
-	const cookie = request.headers.get('cookie');
-	return cookie ? { cookie } : undefined;
-}
-
 export async function getBackendProfile(
 	fetcher: typeof fetch,
 	request: Request
 ): Promise<BackendProfile | null> {
 	try {
-		return await apiFetch<BackendProfile>('/api/profile/', {
-			fetch: fetcher,
-			headers: requestHeaders(request)
-		});
+		return await serverApiFetch<BackendProfile>({ fetch: fetcher, request }, '/api/profile/');
 	} catch (profileError) {
 		if (profileError instanceof ApiError && [401, 404].includes(profileError.status)) {
 			return null;
@@ -39,10 +32,7 @@ export async function requireBackendRole(
 	let profile: BackendProfile;
 
 	try {
-		profile = await apiFetch<BackendProfile>('/api/profile/', {
-			fetch: event.fetch,
-			headers: requestHeaders(event.request)
-		});
+		profile = await serverApiFetch(event, '/api/profile/');
 	} catch (profileError) {
 		if (profileError instanceof ApiError && [401, 404].includes(profileError.status)) {
 			const returnTo = `${event.url.pathname}${event.url.search}`;

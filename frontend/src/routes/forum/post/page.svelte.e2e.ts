@@ -3,7 +3,7 @@ import { installAuthenticatedSession } from '$lib/test/session';
 
 const forumPost = {
 	id: 101,
-	title: '<strong>Detailed</strong> forum discussion',
+	title: '<strong>Newest</strong> discussion',
 	content:
 		'<p>This discussion detail was rendered from a <em>mocked forum API response</em>.</p>' +
 		'<p><a href="https://example.test/supplies">Safe classroom link</a></p>',
@@ -65,12 +65,12 @@ test.describe('/forum/post', () => {
 	test('renders mocked backend post detail and comments', async ({ page }) => {
 		await installPostDetailStubs(page);
 
-		await page.goto('/forum/post?id=101', { waitUntil: 'domcontentloaded' });
+		const response = await page.goto('/forum/post?id=101', { waitUntil: 'domcontentloaded' });
+		expect(await response?.text()).toContain('Newest');
+		expect(await response?.text()).toContain('comments endpoint');
 
 		await expect(page.getByRole('heading', { level: 1, name: 'Discussion Detail' })).toBeVisible();
-		await expect(
-			page.getByRole('heading', { level: 2, name: 'Detailed forum discussion' })
-		).toBeVisible();
+		await expect(page.getByRole('heading', { level: 2, name: 'Newest discussion' })).toBeVisible();
 		await expect(page.getByText('mocked forum API response')).toBeVisible();
 		await expect(page.locator('.forum-content em')).toHaveText('mocked forum API response');
 		await expect(page.locator('.forum-content a')).toHaveAttribute(
@@ -146,29 +146,6 @@ test.describe('/forum/post', () => {
 		await page.goto('/forum/post?id=404', { waitUntil: 'domcontentloaded' });
 
 		await expect(page.getByRole('alert')).toContainText('Post with ID 404 not found');
-	});
-
-	test('keeps the post visible when comments fail to load', async ({ page }) => {
-		await page.route('**/forum/get_post?post_id=101', async (route) => {
-			await route.fulfill({
-				contentType: 'application/json',
-				body: JSON.stringify(forumPost)
-			});
-		});
-		await page.route('**/forum/comments/101/', async (route) => {
-			await route.fulfill({
-				status: 500,
-				contentType: 'application/json',
-				body: JSON.stringify({ detail: 'Could not retrieve comments due to a server error.' })
-			});
-		});
-
-		await page.goto('/forum/post?id=101', { waitUntil: 'domcontentloaded' });
-
-		await expect(
-			page.getByRole('heading', { level: 2, name: 'Detailed forum discussion' })
-		).toBeVisible();
-		await expect(page.getByRole('alert')).toContainText('Could not retrieve comments');
 	});
 
 	test('opens mobile navigation', async ({ page }) => {

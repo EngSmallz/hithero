@@ -1,5 +1,5 @@
-import { apiFetch } from '$lib/api/client';
-import { actionErrorMessage, cookieHeaders, formMessage } from '$lib/server/form-actions';
+import { serverApiFetch } from '$lib/server/api';
+import { actionErrorMessage, formMessage } from '$lib/server/form-actions';
 import { requireBackendRole } from '$lib/server/auth';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
@@ -20,12 +20,14 @@ export const actions: Actions = {
 		let shouldRedirect = false;
 
 		try {
-			const result = await apiFetch<ApiMessage>('/profile/update_password/', {
-				fetch,
-				method: 'POST',
-				body: submitted,
-				headers: cookieHeaders(request)
-			});
+			const result = await serverApiFetch<ApiMessage>(
+				{ fetch, request },
+				'/profile/update_password/',
+				{
+					method: 'POST',
+					body: submitted
+				}
+			);
 			message = formMessage(result, message);
 
 			if (result.status === 'success' || result.message === 'Password updated successfully') {

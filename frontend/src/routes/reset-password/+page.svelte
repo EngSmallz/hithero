@@ -5,7 +5,7 @@
 	import FormField from '$lib/components/FormField.svelte';
 	import PageShell from '$lib/components/PageShell.svelte';
 	import Seo from '$lib/components/Seo.svelte';
-	import { getBackendOrigin } from '$lib/api/client';
+	import { apiFetch } from '$lib/api/client';
 	import { routes } from '$lib/routes';
 	import type { ActionData } from './$types';
 
@@ -13,8 +13,6 @@
 	type StatusMessage = { variant: StatusVariant; message: string };
 	type ApiMessage = { detail?: string; message?: string };
 
-	const backendOrigin = getBackendOrigin();
-	const resetPasswordEndpoint = `${backendOrigin}/profile/reset_password/`;
 	const inputClass =
 		'block min-h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-950 shadow-sm focus:border-green-600 focus:outline-2 focus:outline-green-600';
 
@@ -53,16 +51,11 @@
 		status = { variant: 'info', message: 'Resetting your password...' };
 
 		try {
-			const response = await fetch(resetPasswordEndpoint, {
+			const body = await apiFetch<ApiMessage>('/profile/reset_password/', {
 				method: 'POST',
 				body: formData
 			});
-			const body = (await response.json().catch(() => ({}))) as ApiMessage;
 			const message = body.detail || body.message;
-
-			if (!response.ok) {
-				throw new Error(message || 'Something went wrong. Please try again.');
-			}
 
 			hasResetPassword = true;
 			status = {

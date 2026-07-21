@@ -8,11 +8,14 @@ const teacherProfile = {
 	school: 'Evergreen Elementary',
 	name: 'Avery Adams',
 	wishlist_url: 'https://example.com/wishlist',
-	about_me: 'I help students build durable skills.',
+	about_me: 'I build a classroom where students can practice curiosity every day.',
 	image_data: null
 };
 
-async function installTeacherEditorStubs(page: Page) {
+async function installTeacherEditorStubs(
+	page: Page,
+	options: { verifiedSchool?: boolean } = {}
+) {
 	await installAuthenticatedSession(page.context());
 	await page.route('**/api/profile/', async (route) => {
 		await route.fulfill({
@@ -20,7 +23,17 @@ async function installTeacherEditorStubs(page: Page) {
 			body: JSON.stringify({
 				user_role: 'teacher',
 				user_id: 12,
-				user_email: 'teacher@example.test'
+				user_email: 'teacher@example.test',
+				...(options.verifiedSchool
+					? {
+							profile_prefill: {
+								state: teacherProfile.state,
+								county: teacherProfile.county,
+								district: teacherProfile.district,
+								school: teacherProfile.school
+							}
+						}
+					: {})
 			})
 		});
 	});
@@ -71,7 +84,7 @@ async function installTeacherEditorStubs(page: Page) {
 		async (route) => {
 			await route.fulfill({
 				contentType: 'application/json',
-				body: JSON.stringify(['Evergreen Elementary'])
+				body: JSON.stringify(['Evergreen Elementary', 'Roosevelt High School'])
 			});
 		}
 	);
@@ -95,7 +108,7 @@ test.describe('/profile/edit', () => {
 		await expect(page.getByRole('combobox', { name: /^School required$/ })).toHaveValue(
 			'Evergreen Elementary'
 		);
-		await expect(page.getByLabel(/^About Me/)).toHaveValue('I help students build durable skills.');
+		await expect(page.getByLabel(/^About Me/)).toHaveValue(teacherProfile.about_me);
 		await expect(page.getByLabel(/^Amazon Wishlist URL/)).toHaveValue(
 			'https://example.com/wishlist'
 		);
@@ -147,10 +160,56 @@ test.describe('/profile/edit', () => {
 		await expect(page).toHaveURL('/teacher');
 	});
 
+	test('keeps verified school values read-only until an explicit confirmed change request', async ({
+		page
+	}) => {
+		await installTeacherEditorStubs(page, { verifiedSchool: true });
+		let requestBody = '';
+		await page.route('**/profile/request_school_change/', async (route) => {
+			requestBody = route.request().postData() || '';
+			await route.fulfill({
+				contentType: 'application/json',
+				body: JSON.stringify({ message: 'School change submitted for reapproval.' })
+			});
+		});
+
+		await page.goto('/profile/edit', { waitUntil: 'domcontentloaded' });
+		await expect(page.getByRole('button', { name: 'Update School' })).toBeVisible();
+		await expect(page.locator('#school')).toHaveAttribute('readonly', '');
+
+		await page.getByRole('button', { name: 'Update School' }).click();
+		await expect(page.getByRole('button', { name: 'Cancel' })).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Save Updated School' })).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Update School' })).toHaveCount(0);
+
+		const school = page.getByRole('combobox', { name: /^School required$/ });
+		await school.selectOption({ label: 'Roosevelt High School' });
+		await page.getByRole('button', { name: 'Cancel' }).click();
+		await expect(page.locator('#school')).toHaveValue('Evergreen Elementary');
+		await expect(page.getByRole('button', { name: 'Update School' })).toBeVisible();
+
+		await page.getByRole('button', { name: 'Update School' }).click();
+		await school.selectOption({ label: 'Roosevelt High School' });
+		page.once('dialog', async (dialog) => {
+			expect(dialog.message()).toContain(
+				'removed from public and search results until the new school is reapproved'
+			);
+			await dialog.accept();
+		});
+		await page.getByRole('button', { name: 'Save Updated School' }).click();
+
+		await expect.poll(() => requestBody).toContain('Roosevelt High School');
+		await expect(page).toHaveURL('/teacher');
+	});
+
 	test('opens wishlist setup help', async ({ page }) => {
 		await installTeacherEditorStubs(page);
 
 		await page.goto('/profile/edit', { waitUntil: 'domcontentloaded' });
+		await expect(page.locator('[data-profile-enhanced]')).toHaveAttribute(
+			'data-profile-enhanced',
+			'true'
+		);
 		await page.getByRole('button', { name: 'How to Get Link' }).click();
 
 		const dialog = page.getByRole('dialog', { name: 'Wishlist setup' });

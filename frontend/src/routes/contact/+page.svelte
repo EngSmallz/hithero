@@ -5,16 +5,20 @@
 	import FormField from '$lib/components/FormField.svelte';
 	import PageShell from '$lib/components/PageShell.svelte';
 	import Seo from '$lib/components/Seo.svelte';
-	import { getBackendOrigin } from '$lib/api/client';
-	import { getRecaptchaResponse, renderRecaptcha, resetRecaptcha } from '$lib/recaptcha';
+	import { apiFetch } from '$lib/api/client';
+	import {
+		getRecaptchaResponse,
+		isRecaptchaMock,
+		renderRecaptcha,
+		resetRecaptcha
+	} from '$lib/recaptcha';
 	import { routes } from '$lib/routes';
 	import type { ActionData } from './$types';
 
 	type StatusVariant = 'info' | 'success' | 'warning' | 'error';
 
-	const backendOrigin = getBackendOrigin();
-	const contactEndpoint = `${backendOrigin}/api/contact_us/`;
 	const recaptchaSiteKey = '6Lf9uiIqAAAAAMt19WMR4q0aO-JMqks9Du0yHHlL';
+	const useMockRecaptcha = isRecaptchaMock();
 	const socialLinks = [
 		{
 			label: 'Instagram',
@@ -45,6 +49,7 @@
 	let charactersRemaining = $derived(250 - message.length);
 	let recaptchaContainer = $state<HTMLElement | null>(null);
 	let recaptchaWidgetId = $state<number | null>(null);
+	let mockRecaptchaAccepted = $state(false);
 	let { form } = $props<{ form?: ActionData }>();
 	let formStatus = $derived(
 		form?.message
@@ -57,7 +62,7 @@
 
 	onMount(() => {
 		let mounted = true;
-		if (recaptchaContainer) {
+		if (!useMockRecaptcha && recaptchaContainer) {
 			void renderRecaptcha(recaptchaContainer, recaptchaSiteKey)
 				.then((widgetId) => {
 					if (mounted) {
@@ -86,7 +91,7 @@
 			return;
 		}
 
-		const recaptchaResponse = getRecaptchaResponse(recaptchaWidgetId);
+		const recaptchaResponse = getRecaptchaResponse(recaptchaWidgetId, mockRecaptchaAccepted);
 
 		if (!recaptchaResponse) {
 			status = {
@@ -103,18 +108,10 @@
 		formData.append('recaptcha_response', recaptchaResponse);
 
 		try {
-			const response = await fetch(contactEndpoint, {
+			const body = await apiFetch<{ message?: string; detail?: string }>('/api/contact_us/', {
 				method: 'POST',
 				body: formData
 			});
-			const body = (await response.json().catch(() => ({}))) as {
-				message?: string;
-				detail?: string;
-			};
-
-			if (!response.ok) {
-				throw new Error(body.message || body.detail || 'Message submission failed.');
-			}
 
 			form.reset();
 			message = '';
@@ -129,6 +126,7 @@
 			};
 		} finally {
 			resetRecaptcha(recaptchaWidgetId);
+			mockRecaptchaAccepted = false;
 			isSubmitting = false;
 		}
 	}
@@ -235,11 +233,26 @@
 				</FormField>
 
 				<div class="min-h-20">
-					<div
-						bind:this={recaptchaContainer}
-						class="g-recaptcha"
-						data-sitekey={recaptchaSiteKey}
-					></div>
+					{#if useMockRecaptcha}
+						<div class="rounded-md border border-blue-200 bg-blue-50 p-4 text-blue-950">
+							<label class="flex items-center gap-3 font-semibold" for="recaptcha-mock">
+								<input
+									id="recaptcha-mock"
+									type="checkbox"
+									bind:checked={mockRecaptchaAccepted}
+									class="size-5 rounded border-slate-300 text-green-700 focus:outline-2 focus:outline-green-600"
+								/>
+								<span>I'm not a robot (local test CAPTCHA)</span>
+							</label>
+							<p class="mt-2 text-sm">This mock is enabled only for local manual testing.</p>
+						</div>
+					{:else}
+						<div
+							bind:this={recaptchaContainer}
+							class="g-recaptcha"
+							data-sitekey={recaptchaSiteKey}
+						></div>
+					{/if}
 				</div>
 
 				<Button type="submit" disabled={isSubmitting} class="w-full">

@@ -1,4 +1,4 @@
-import { apiFetch } from '$lib/api/client';
+import { serverApiFetch } from '$lib/server/api';
 import { actionErrorMessage, formMessage } from '$lib/server/form-actions';
 import { fail } from '@sveltejs/kit';
 import type { Actions } from './$types';
@@ -10,11 +10,14 @@ export const actions: Actions = {
 		const submitted = await request.formData();
 
 		try {
-			const result = await apiFetch<ApiMessage>('/profile/forgot_password/', {
-				fetch,
-				method: 'POST',
-				body: submitted
-			});
+			const result = await serverApiFetch<ApiMessage>(
+				{ fetch, request },
+				'/profile/forgot_password/',
+				{
+					method: 'POST',
+					body: submitted
+				}
+			);
 
 			return {
 				success: true,

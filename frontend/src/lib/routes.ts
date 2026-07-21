@@ -51,7 +51,7 @@ export function isExternalHref(href: string): boolean {
 	return /^(https?:)?\/\//.test(href) || href.startsWith('mailto:') || href.startsWith('tel:');
 }
 
-export function getCanonicalUrl(path = routes.home): string {
+export function getCanonicalUrl(path: string = routes.home): string {
 	if (/^https?:\/\//.test(path)) {
 		return path;
 	}

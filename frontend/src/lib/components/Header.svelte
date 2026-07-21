@@ -1,6 +1,7 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { resolve } from '$app/paths';
-	import { getBackendOrigin } from '$lib/api/client';
+	import { apiFetch } from '$lib/api/client';
 	import type { BackendProfile } from '$lib/api/types';
 	import { publicNavItems, routes } from '$lib/routes';
 
@@ -9,13 +10,22 @@
 		initialProfile?: BackendProfile | null;
 	}>();
 
-	const backendOrigin = getBackendOrigin();
 	let isMenuOpen = $state(false);
+	let isEnhanced = $state(false);
 	let profile = $derived<BackendProfile | null>(initialProfile);
 	let isLoggingOut = $state(false);
 	let isAuthenticated = $derived(profile !== null);
+	let visiblePublicNavItems = $derived(
+		isAuthenticated
+			? publicNavItems.filter((item) => item.href !== routes.register)
+			: publicNavItems
+	);
 	let canValidate = $derived(profile?.user_role === 'teacher' || profile?.user_role === 'admin');
 	let isAdmin = $derived(profile?.user_role === 'admin');
+
+	onMount(() => {
+		isEnhanced = true;
+	});
 
 	function closeMenu() {
 		isMenuOpen = false;
@@ -30,7 +40,7 @@
 			? 'bg-white/15 text-white'
 			: 'text-green-50 hover:bg-white/10 hover:text-white';
 
-		return `rounded-md px-3 py-2 text-sm font-semibold transition ${activeClass}`;
+	return `rounded-md px-3 py-2 text-base font-semibold transition lg:text-lg ${activeClass}`;
 	}
 
 	function mobileLinkClass(href: string): string {
@@ -44,13 +54,7 @@
 	async function logout() {
 		isLoggingOut = true;
 		try {
-			const response = await fetch(`${backendOrigin}/profile/logout/`, {
-				method: 'POST',
-				credentials: 'include'
-			});
-			if (!response.ok) {
-				throw new Error('Logout request failed');
-			}
+			await apiFetch<unknown>('/profile/logout/', { method: 'POST' });
 			profile = null;
 			window.location.href = routes.home;
 		} catch {
@@ -61,8 +65,11 @@
 	}
 </script>
 
-<header class="bg-green-800 text-white shadow-sm">
-	<div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
+<header
+	class="bg-gradient-to-r from-green-700 to-green-900 text-white shadow-sm"
+	data-header-enhanced={isEnhanced}
+>
+	<div class="mx-auto flex max-w-[1730px] items-center justify-between px-4 py-4 sm:px-6 md:py-6 lg:px-8">
 		<a
 			href={resolve(routes.home)}
 			class="inline-flex items-center rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
@@ -72,12 +79,12 @@
 				alt="Homeroom Heroes"
 				width="298"
 				height="95"
-				class="h-12 w-auto sm:h-14"
+			class="h-16 w-auto md:h-20"
 			/>
 		</a>
 
 		<nav aria-label="Primary" class="hidden items-center gap-1 md:flex">
-			{#each publicNavItems as item (item.href)}
+			{#each visiblePublicNavItems as item (item.href)}
 				<a
 					href={resolve(item.href as '/')}
 					class={navLinkClass(item.href)}
@@ -101,7 +108,7 @@
 				{/if}
 				<button
 					type="button"
-					disabled={isLoggingOut}
+					disabled={isLoggingOut || !isEnhanced}
 					class="inline-flex min-h-10 items-center justify-center rounded-md border border-white/60 px-4 text-sm font-semibold text-white transition hover:bg-white hover:text-green-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:opacity-60"
 					onclick={() => void logout()}
 				>
@@ -154,7 +161,7 @@
 	{#if isMenuOpen}
 		<div id="mobile-navigation" class="border-t border-green-700 bg-white md:hidden">
 			<nav aria-label="Mobile primary" class="mx-auto max-w-7xl space-y-1 px-4 py-3">
-				{#each publicNavItems as item (item.href)}
+				{#each visiblePublicNavItems as item (item.href)}
 					<a
 						href={resolve(item.href as '/')}
 						class={mobileLinkClass(item.href)}
@@ -189,7 +196,7 @@
 					{/if}
 					<button
 						type="button"
-						disabled={isLoggingOut}
+						disabled={isLoggingOut || !isEnhanced}
 						class="block w-full rounded-md px-3 py-2 text-left text-base font-semibold text-green-950 transition hover:bg-green-50 disabled:opacity-60"
 						onclick={() => void logout()}
 					>

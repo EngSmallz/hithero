@@ -160,6 +160,20 @@ function uniqueSchool(label: string, testInfo: TestInfo) {
 	};
 }
 
+function isolatedSqliteUrl(databaseUrl: string, workerIndex: number): string {
+	const prefix = 'sqlite:///';
+	if (!databaseUrl.startsWith(prefix)) {
+		return databaseUrl;
+	}
+
+	const databasePath = databaseUrl.slice(prefix.length);
+	const extension = '.sqlite';
+	const stem = databasePath.endsWith(extension)
+		? databasePath.slice(0, -extension.length)
+		: databasePath;
+	return `${prefix}${stem}-${TEST_RUN_ID}-worker-${workerIndex}${extension}`;
+}
+
 const test = base.extend<Record<never, never>, { workerStack: TestStack }>({
 	workerStack: [
 		async ({ browserName }, use, workerInfo) => {
@@ -189,8 +203,21 @@ async function startStack(workerIndex: number): Promise<TestStack> {
 	const dbDir = sharedDatabaseUrl
 		? null
 		: await mkdtemp(resolve(tmpdir(), `hithero-integration-${workerIndex}-`));
-	const testDatabaseUrl =
-		sharedDatabaseUrl ?? `sqlite:///${resolve(dbDir as string, 'hithero.sqlite')}`;
+	const testDatabaseUrl = sharedDatabaseUrl
+		? isolatedSqliteUrl(sharedDatabaseUrl, workerIndex)
+		: `sqlite:///${resolve(dbDir as string, 'hithero.sqlite')}`;
+	const svelteKitOutDir = resolve(
+		rootDir,
+		'.tmp',
+		'sveltekit',
+		`${TEST_RUN_ID}-integration-worker-${workerIndex}`
+	);
+	const viteCacheDir = resolve(
+		rootDir,
+		'.tmp',
+		'vite-cache',
+		`${TEST_RUN_ID}-integration-worker-${workerIndex}`
+	);
 	const env = {
 		...process.env,
 		APP_ENV: 'test',
@@ -200,9 +227,7 @@ async function startStack(workerIndex: number): Promise<TestStack> {
 		CORS_ALLOW_ORIGINS: frontendOrigin
 	};
 
-	if (dbDir) {
-		await runDbHelper(['reset'], env);
-	}
+	await runDbHelper(['reset'], env);
 
 	let backend: ManagedProcess | undefined;
 	let frontend: ManagedProcess | undefined;
@@ -224,7 +249,9 @@ async function startStack(workerIndex: number): Promise<TestStack> {
 				cwd: frontendDir,
 				env: {
 					...env,
-					PUBLIC_BACKEND_ORIGIN: backendOrigin
+					PUBLIC_BACKEND_ORIGIN: backendOrigin,
+					SVELTEKIT_OUT_DIR: svelteKitOutDir,
+					VITE_CACHE_DIR: viteCacheDir
 				}
 			}
 		);
@@ -300,6 +327,32 @@ test('wrong password posts to FastAPI and stays on login with invalid credential
 	expect(loginResponse.status()).toBe(200);
 	await expect(page).toHaveURL(`${stack.frontendOrigin}/login`);
 	await expect(page.getByRole('status')).toContainText('Invalid login credentials.');
+});
+
+test('logout clears the real FastAPI session and returns to the homepage', async ({
+	page,
+	context
+}, testInfo) => {
+	const email = uniqueEmail('logout', testInfo);
+	const password = 'correct horse battery staple';
+	await seedLoginUser({ email, password, createCount: 1 });
+	await loginThroughSvelteAction(page, email, password);
+	await gotoFrontend(page, '/');
+
+	const logoutResponse = await submitAndWaitForBackendPost(
+		page,
+		() => page.getByRole('button', { name: 'Logout' }).click(),
+		'/profile/logout/'
+	);
+
+	expect(logoutResponse.status()).toBe(200);
+	await expect(page).toHaveURL(`${stack.frontendOrigin}/`);
+	await expect(page.getByRole('link', { name: 'Login' })).toBeVisible();
+	const backendCookies = await context.cookies(stack.backendOrigin);
+	expect(backendCookies.find((cookie) => cookie.name === 'session')?.value ?? '').toBe('');
+
+	await gotoFrontend(page, '/update-password');
+	await expect(page).toHaveURL(`${stack.frontendOrigin}/login?redirect=%2Fupdate-password`);
 });
 
 test('forgot password posts to FastAPI and creates a reset token for a registered user', async ({
@@ -561,7 +614,10 @@ test('teacher page loads real FastAPI data through SvelteKit for logged-in teach
 	);
 	expect(loginResponse.status()).toBe(200);
 
-	await gotoFrontend(page, '/teacher');
+	const teacherResponse = await page.goto(`${stack.frontendOrigin}/teacher`, {
+		waitUntil: 'domcontentloaded'
+	});
+	expect(await teacherResponse?.text()).toContain(teacherName);
 
 	await expect(page.getByRole('heading', { level: 1, name: teacherName })).toBeVisible();
 	await expect(page.getByText(`School: ${school.school}`)).toBeVisible();
@@ -613,6 +669,25 @@ test('public teacher URL renders server HTML and metadata from FastAPI data', as
 	const initialHtml = await response?.text();
 	expect(initialHtml).toContain(teacherName);
 	expect(initialHtml).toContain('This public teacher page was rendered on the server.');
+	const jsonLd = JSON.parse(
+		(await page.locator('script[type="application/ld+json"]').textContent()) ?? ''
+	);
+	expect(jsonLd).toEqual({
+		'@context': 'https://schema.org',
+		'@type': 'Person',
+		name: teacherName,
+		url: `https://www.helpteachers.net/teacher/${urlId}`,
+		description: 'This public teacher page was rendered on the server.',
+		worksFor: {
+			'@type': 'EducationalOrganization',
+			name: school.school
+		},
+		address: {
+			'@type': 'PostalAddress',
+			addressLocality: school.county,
+			addressRegion: school.state
+		}
+	});
 
 	await expect(page.getByRole('heading', { level: 1, name: teacherName })).toBeVisible();
 	await expect(page.getByText(`School: ${school.school}`)).toBeVisible();
@@ -753,7 +828,10 @@ test('forum list loads real FastAPI posts through SvelteKit', async ({ page }, t
 	});
 	await loginThroughSvelteAction(page, email, password);
 
-	await gotoFrontend(page, '/forum');
+	const forumResponse = await page.goto(`${stack.frontendOrigin}/forum`, {
+		waitUntil: 'domcontentloaded'
+	});
+	expect(await forumResponse?.text()).toContain(title);
 
 	await expect(page.getByRole('heading', { level: 1, name: "The Teachers' Lounge" })).toBeVisible();
 	const discussionPost = page.getByRole('link').filter({ hasText: title });
@@ -792,7 +870,13 @@ test('forum post detail loads real FastAPI post and comments through SvelteKit',
 	const post = await getForumPost(title);
 	await loginThroughSvelteAction(page, email, password);
 
-	await gotoFrontend(page, `/forum/post?id=${post.id}`);
+	const detailResponse = await page.goto(`${stack.frontendOrigin}/forum/post?id=${post.id}`, {
+		waitUntil: 'domcontentloaded'
+	});
+	expect(await detailResponse?.text()).toContain(title);
+	expect(await detailResponse?.text()).toContain(
+		'detail comment came from the isolated FastAPI database'
+	);
 
 	await expect(page.getByRole('heading', { level: 1, name: 'Discussion Detail' })).toBeVisible();
 	await expect(page.getByRole('heading', { level: 2, name: title })).toBeVisible();
@@ -804,6 +888,65 @@ test('forum post detail loads real FastAPI post and comments through SvelteKit',
 	await expect(
 		page.getByText('detail comment came from the isolated FastAPI database')
 	).toBeVisible();
+});
+
+test('forum SSR distinguishes list failure from comments-only failure', async ({ page }) => {
+	const backendPort = await getFreePort();
+	const frontendPort = await getFreePort();
+	const backendOrigin = `http://127.0.0.1:${backendPort}`;
+	const frontendOrigin = `http://127.0.0.1:${frontendPort}`;
+	const fakeBackend = new ManagedProcess(
+		'Forum failure backend',
+		PYTHON,
+		['frontend/tests/integration/fake_forum_backend.py', '--port', String(backendPort)],
+		{ cwd: rootDir, env: process.env }
+	);
+	let isolatedFrontend: ManagedProcess | undefined;
+
+	try {
+		await waitForHttp(`${backendOrigin}/api/profile/`, fakeBackend);
+		isolatedFrontend = new ManagedProcess(
+			'Forum failure SvelteKit',
+			'npm',
+			['run', 'dev', '--', '--host', '127.0.0.1', '--port', String(frontendPort), '--strictPort'],
+			{
+				cwd: frontendDir,
+				env: {
+					...process.env,
+					PUBLIC_BACKEND_ORIGIN: backendOrigin,
+					SVELTEKIT_OUT_DIR: resolve(
+						rootDir,
+						'.tmp',
+						'sveltekit',
+						`${TEST_RUN_ID}-forum-failure-${frontendPort}`
+					)
+				}
+			}
+		);
+		await waitForHttp(`${frontendOrigin}/forum`, isolatedFrontend);
+
+		const listResponse = await page.goto(`${frontendOrigin}/forum`, {
+			waitUntil: 'domcontentloaded'
+		});
+		const listHtml = await listResponse?.text();
+		expect(listResponse?.status()).toBe(200);
+		expect(listHtml).toContain('The forum is temporarily unavailable.');
+		expect(listHtml).not.toContain('No discussions have been posted yet.');
+
+		const detailResponse = await page.goto(`${frontendOrigin}/forum/post?id=101`, {
+			waitUntil: 'domcontentloaded'
+		});
+		const detailHtml = await detailResponse?.text();
+		expect(detailResponse?.status()).toBe(200);
+		expect(detailHtml).toContain('Failure-boundary discussion');
+		expect(detailHtml).toContain('Comments are temporarily unavailable.');
+		await expect(
+			page.getByRole('heading', { level: 2, name: 'Failure-boundary discussion' })
+		).toBeVisible();
+		await expect(page.getByRole('alert')).toContainText('Comments are temporarily unavailable.');
+	} finally {
+		await Promise.all([isolatedFrontend?.stop(), fakeBackend.stop()]);
+	}
 });
 
 test('logged-in forum users can vote and comment through SvelteKit', async ({ page }, testInfo) => {
@@ -907,6 +1050,45 @@ test('registration posts to FastAPI and queues a NewUsers validation row', async
 		emailed: 0,
 		password_is_hashed: true
 	});
+});
+
+test('backend-unavailable SSR is distinct from an empty teacher directory', async ({ page }) => {
+	const frontendPort = await getFreePort();
+	const unavailableBackendPort = await getFreePort();
+	const frontendOrigin = `http://127.0.0.1:${frontendPort}`;
+	const isolatedFrontend = new ManagedProcess(
+		'Unavailable-backend SvelteKit',
+		'npm',
+		['run', 'dev', '--', '--host', '127.0.0.1', '--port', String(frontendPort), '--strictPort'],
+		{
+			cwd: frontendDir,
+			env: {
+				...process.env,
+				PUBLIC_BACKEND_ORIGIN: `http://127.0.0.1:${unavailableBackendPort}`,
+				SVELTEKIT_OUT_DIR: resolve(
+					rootDir,
+					'.tmp',
+					'sveltekit',
+					`${TEST_RUN_ID}-backend-unavailable-${frontendPort}`
+				)
+			}
+		}
+	);
+
+	try {
+		await waitForHttp(`${frontendOrigin}/teachers`, isolatedFrontend);
+		const response = await page.goto(`${frontendOrigin}/teachers`, {
+			waitUntil: 'domcontentloaded'
+		});
+		const initialHtml = await response?.text();
+
+		expect(response?.status()).toBe(200);
+		expect(initialHtml).toContain('Teacher directory unavailable');
+		expect(initialHtml).not.toContain('No teachers found for your selection');
+		await expect(page.getByRole('status')).toContainText('backend API is not reachable');
+	} finally {
+		await isolatedFrontend.stop();
+	}
 });
 
 async function seedLoginUser(args: {

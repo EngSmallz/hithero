@@ -52,6 +52,10 @@ test.describe('/update-password', () => {
 		});
 
 		await page.goto('/update-password', { waitUntil: 'domcontentloaded' });
+		await expect(page.locator('[data-header-enhanced]')).toHaveAttribute(
+			'data-header-enhanced',
+			'true'
+		);
 		await page.getByLabel(/^Old Password/).fill('wrong-password');
 		await page.getByLabel(/^New Password/).fill('new password');
 		await page.getByLabel(/^Confirm New Password/).fill('new password');
@@ -84,6 +88,10 @@ test.describe('/update-password', () => {
 		});
 
 		await page.goto('/update-password', { waitUntil: 'domcontentloaded' });
+		await expect(page.locator('[data-header-enhanced]')).toHaveAttribute(
+			'data-header-enhanced',
+			'true'
+		);
 		await page.getByLabel(/^Old Password/).fill('old password');
 		await page.getByLabel(/^New Password/).fill('new password');
 		await page.getByLabel(/^Confirm New Password/).fill('new password');

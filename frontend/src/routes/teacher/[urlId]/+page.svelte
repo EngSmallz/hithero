@@ -3,7 +3,9 @@
 	import Button from '$lib/components/Button.svelte';
 	import PageShell from '$lib/components/PageShell.svelte';
 	import Seo from '$lib/components/Seo.svelte';
-	import { routes } from '$lib/routes';
+	import { buildTeacherPersonJsonLd, serializeJsonLd } from '$lib/seo/teacher-jsonld';
+	import { getCanonicalUrl, routes } from '$lib/routes';
+	import { buildWishlistUrl } from '$lib/wishlist';
 	import type { PageData } from './$types';
 
 	let { data } = $props<{ data: PageData }>();
@@ -21,6 +23,10 @@
 	);
 	let schoolText = $derived(teacher.school || 'School unavailable');
 	let canonicalPath = $derived(`${routes.teacher}/${encodeURIComponent(teacher.url_id)}`);
+	let teacherPersonJsonLd = $derived.by(() => {
+		const structuredData = buildTeacherPersonJsonLd(teacher, getCanonicalUrl(canonicalPath));
+		return structuredData ? serializeJsonLd(structuredData) : null;
+	});
 	let seoTitle = $derived(`${teacherName} - Homeroom Heroes Teacher Profile`);
 	let seoDescription = $derived(
 		`Support ${teacherName}'s classroom wishlist through Homeroom Heroes.`
@@ -39,6 +45,12 @@
 </script>
 
 <Seo title={seoTitle} description={seoDescription} path={canonicalPath} />
+
+	<svelte:head>
+		{#if teacherPersonJsonLd}
+		<script type="application/ld+json">{teacherPersonJsonLd}</script>
+		{/if}
+	</svelte:head>
 
 <PageShell narrow>
 	<article class="space-y-8">
@@ -63,7 +75,7 @@
 				{#if teacher.wishlist_url}
 					<!-- eslint-disable svelte/no-navigation-without-resolve -->
 					<a
-						href={teacher.wishlist_url}
+						href={buildWishlistUrl(teacher.wishlist_url)}
 						target="_blank"
 						rel="noopener noreferrer"
 						class="inline-flex min-h-12 items-center justify-center rounded-full bg-yellow-500 px-8 text-xl font-bold text-slate-950 shadow-sm transition hover:bg-yellow-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-600"

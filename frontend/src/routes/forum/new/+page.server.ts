@@ -1,5 +1,6 @@
 import { requireBackendRole } from '$lib/server/auth';
-import { apiFetch, ApiError } from '$lib/api/client';
+import { ApiError } from '$lib/api/client';
+import { serverApiFetch } from '$lib/server/api';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -15,11 +16,6 @@ export const load: PageServerLoad = async ({ fetch, request, url }) => {
 	await requireBackendRole({ fetch, request, url }, ['teacher', 'admin', 'user']);
 	return {};
 };
-
-function cookieHeaders(request: Request): HeadersInit | undefined {
-	const cookie = request.headers.get('cookie');
-	return cookie ? { cookie } : undefined;
-}
 
 export const actions: Actions = {
 	default: async ({ fetch, request, url }) => {
@@ -43,12 +39,14 @@ export const actions: Actions = {
 		formData.set('content', content);
 
 		try {
-			const createdPost = await apiFetch<CreatedPost>('/forum/create_post', {
-				fetch,
-				method: 'POST',
-				body: formData,
-				headers: cookieHeaders(request)
-			});
+			const createdPost = await serverApiFetch<CreatedPost>(
+				{ fetch, request },
+				'/forum/create_post',
+				{
+					method: 'POST',
+					body: formData
+				}
+			);
 
 			if (!createdPost.id) {
 				return fail(502, {

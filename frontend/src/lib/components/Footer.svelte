@@ -13,7 +13,7 @@
 	const year = new Date().getFullYear();
 </script>
 
-<footer class="border-t border-slate-200 bg-slate-950 text-slate-200">
+<footer class="border-t border-green-700 bg-gradient-to-r from-green-700 to-green-900 text-white">
 	<div
 		class="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8"
 	>
@@ -30,14 +30,14 @@
 					class="h-10 w-auto"
 				/>
 			</a>
-			<p class="mt-3 text-sm text-slate-400">
+			<p class="mt-3 text-sm text-green-100">
 				Copyright {year} Homeroom Heroes. All rights reserved.
 			</p>
 		</div>
 
 		<nav aria-label="Footer" class="flex flex-wrap gap-x-5 gap-y-2 text-sm font-medium">
 			{#each footerLinks as item (item.href)}
-				<a href={resolve(item.href as '/')} class="text-slate-300 transition hover:text-white">
+				<a href={resolve(item.href as '/')} class="text-green-50 transition hover:text-white">
 					{item.label}
 				</a>
 			{/each}

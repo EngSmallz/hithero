@@ -55,7 +55,11 @@ export const actions: Actions = {
 			method: 'POST',
 			body: submitted,
 			credentials: 'include',
-			headers: { accept: 'application/json' }
+			headers: {
+				accept: 'application/json',
+				...(request.headers.get('origin') ? { origin: request.headers.get('origin') ?? '' } : {}),
+				...(request.headers.get('referer') ? { referer: request.headers.get('referer') ?? '' } : {})
+			}
 		});
 		const body = (await response.json().catch(() => ({}))) as LoginResponse;
 		const message = formMessage(body, 'Login failed. Please check your credentials and try again.');

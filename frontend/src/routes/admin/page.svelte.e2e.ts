@@ -65,6 +65,15 @@ test.describe('/admin', () => {
 		await expect(page).toHaveURL('/login?redirect=%2Fadmin');
 	});
 
+	test('returns 403 for authenticated non-admin users', async ({ page, context }) => {
+		await installAuthenticatedSession(context, 'teacher');
+
+		const response = await page.goto('/admin', { waitUntil: 'domcontentloaded' });
+
+		expect(response?.status()).toBe(403);
+		await expect(page.getByRole('heading', { level: 1, name: 'Forbidden' })).toBeVisible();
+	});
+
 	test('renders administrator tools for admins', async ({ page }) => {
 		await installAdminSession(page);
 

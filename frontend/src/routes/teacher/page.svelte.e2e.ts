@@ -58,6 +58,10 @@ test.describe('/teacher', () => {
 
 		await page.goto('/teacher', { waitUntil: 'domcontentloaded' });
 
+		await expect(page.locator('[data-app-shell]')).toHaveCSS(
+			'background-color',
+			'rgb(31, 41, 55)'
+		);
 		await expect(page.getByRole('heading', { level: 1, name: 'Avery Adams' })).toBeVisible();
 		await expect(page.getByText('School: Evergreen Elementary')).toBeVisible();
 		await expect(page.getByText('Location: King, Washington')).toBeVisible();
@@ -66,7 +70,7 @@ test.describe('/teacher', () => {
 		).toBeVisible();
 		await expect(page.getByRole('link', { name: 'View Wishlist' })).toHaveAttribute(
 			'href',
-			'https://example.com/wishlist'
+			'https://example.com/wishlist?tag=h0mer00mher0-20'
 		);
 		await expect(page.getByRole('button', { name: 'Share Page' })).toBeVisible();
 		await expect(page.getByRole('link', { name: 'Edit Info' })).toHaveCount(0);
@@ -91,6 +95,35 @@ test.describe('/teacher', () => {
 			'href',
 			'/update-password'
 		);
+	});
+
+	test('hides signed-out entry links and offers profile creation for an approved teacher', async ({
+		page
+	}) => {
+		await installOwnerProfileStub(page);
+		await page.route('**/api/current_teacher/', async (route) => {
+			await route.fulfill({
+				status: 404,
+				contentType: 'application/json',
+				body: JSON.stringify({ detail: 'Teacher profile not found' })
+			});
+		});
+		await page.setViewportSize({ width: 390, height: 844 });
+
+		await page.goto('/teacher', { waitUntil: 'domcontentloaded' });
+
+		await expect(
+			page.getByRole('heading', { level: 1, name: 'Create your teacher profile' })
+		).toBeVisible();
+		await expect(page.getByRole('link', { name: 'Create Teacher Profile' })).toHaveAttribute(
+			'href',
+			'/profile/create'
+		);
+		await page.getByRole('button', { name: 'Open navigation' }).click();
+		const mobileNav = page.getByRole('navigation', { name: 'Mobile primary' });
+		await expect(mobileNav.getByRole('link', { name: 'Login' })).toHaveCount(0);
+		await expect(mobileNav.getByRole('link', { name: 'Sign Up' })).toHaveCount(0);
+		await expect(mobileNav.getByRole('button', { name: 'Logout' })).toBeVisible();
 	});
 
 	test('does not show owner controls to unauthenticated visitors', async ({ page }) => {

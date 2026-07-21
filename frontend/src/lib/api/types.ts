@@ -24,6 +24,15 @@ export type BackendProfile = {
 	user_role: UserRole;
 	user_id: number | string;
 	user_email: string;
+	profile_prefill?: ProfilePrefill | null;
+};
+
+export type ProfilePrefill = {
+	name: string;
+	state: string;
+	county: string;
+	district: string;
+	school: string;
 };
 
 export type TeacherSummary = {

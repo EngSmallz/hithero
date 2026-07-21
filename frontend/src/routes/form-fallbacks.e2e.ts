@@ -71,7 +71,10 @@ test.describe('form fallbacks without JavaScript', () => {
 		await expect(page.getByRole('alert')).toBeVisible();
 	});
 
-	test('keeps profile creation native action on the Svelte page', async ({ page, context }) => {
+	test('submits profile creation through the SvelteKit action with manual school fields', async ({
+		page,
+		context
+	}) => {
 		await installAuthenticatedSession(context);
 
 		await page.goto('/profile/create', { waitUntil: 'domcontentloaded' });
@@ -80,6 +83,31 @@ test.describe('form fallbacks without JavaScript', () => {
 		await expect(
 			page.getByRole('heading', { level: 1, name: 'Create Teacher Profile' })
 		).toBeVisible();
+		await page.getByLabel(/^Full Name/).fill('No JavaScript Teacher');
+		await page.getByLabel('State (manual entry)').fill('Washington');
+		await page.getByLabel('County (manual entry)').fill('King');
+		await page.getByLabel('School District (manual entry)').fill('Seattle Public Schools');
+		await page.getByLabel('School (manual entry)').fill('Evergreen Elementary');
+		await page.getByLabel(/^About Me/).fill('This submission stays on the clean Svelte route.');
+		await page.getByLabel(/^Amazon Wishlist URL/).fill('https://example.com/no-js-wishlist');
+		await page.getByRole('button', { name: 'Submit' }).click({ force: true });
+
+		await expect(page).toHaveURL('/profile/create');
+		await expect(page.getByRole('alert')).toContainText('Profile already created');
+		await expect(page.locator('body')).not.toContainText('{"message"');
+	});
+
+	test('renders and submits the profile editor without JavaScript', async ({ page, context }) => {
+		await installAuthenticatedSession(context);
+
+		const response = await page.goto('/profile/edit', { waitUntil: 'domcontentloaded' });
+		expect(await response?.text()).toContain('Avery Adams');
+		await expect(page.getByLabel(/^Name/)).toHaveValue('Avery Adams');
+		await expect(page.getByLabel('State (manual entry)')).toHaveValue('Washington');
+		await page.getByRole('button', { name: 'Update School' }).click();
+
+		await expect(page).toHaveURL(/\/teacher\?profile_update=/);
+		await expect(page.locator('body')).not.toContainText('{"message"');
 	});
 
 	test('identifies forum post interactions as JavaScript-required', async ({ page, context }) => {
@@ -87,9 +115,11 @@ test.describe('form fallbacks without JavaScript', () => {
 
 		await page.goto('/forum/post?id=123', { waitUntil: 'domcontentloaded' });
 
-		await expect(page.getByRole('alert')).toContainText(
-			'Voting, commenting, and editing discussions require JavaScript'
-		);
+		await expect(
+			page.getByRole('alert').filter({
+				hasText: 'Voting, commenting, and editing discussions require JavaScript'
+			})
+		).toBeVisible();
 		await expect(page.locator('body')).not.toContainText('/forum/posts/123/comment');
 	});
 
@@ -102,5 +132,28 @@ test.describe('form fallbacks without JavaScript', () => {
 			'Admin report and account deletion tools require JavaScript'
 		);
 		await expect(page.locator('form')).toHaveCount(2);
+	});
+
+	test('identifies validation actions as JavaScript-required', async ({ page, context }) => {
+		await installAuthenticatedSession(context);
+
+		await page.goto('/validation', { waitUntil: 'domcontentloaded' });
+
+		await expect(page.getByRole('alert')).toContainText(
+			'Validation, report, email, and delete actions require JavaScript'
+		);
+	});
+
+	test('identifies teacher image and share actions as JavaScript-required', async ({
+		page,
+		context
+	}) => {
+		await installAuthenticatedSession(context);
+
+		await page.goto('/teacher', { waitUntil: 'domcontentloaded' });
+
+		await expect(page.getByRole('alert')).toContainText(
+			'Image updates and Share Page require JavaScript'
+		);
 	});
 });

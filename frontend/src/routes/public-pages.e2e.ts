@@ -31,7 +31,7 @@ const publicPages = [
 		canonical: 'https://www.helpteachers.net/register',
 		heading: 'User Registration',
 		description: /Register as an educator/,
-		robots: null
+		robots: 'noindex, nofollow'
 	},
 	{
 		path: '/login',
@@ -39,7 +39,7 @@ const publicPages = [
 		canonical: 'https://www.helpteachers.net/login',
 		heading: 'Log In to Your Account',
 		description: /Log in to your Homeroom Heroes account/,
-		robots: null
+		robots: 'noindex, nofollow'
 	},
 	{
 		path: '/forgot',
@@ -47,7 +47,7 @@ const publicPages = [
 		canonical: 'https://www.helpteachers.net/forgot',
 		heading: 'Forgot Your Password?',
 		description: /Request password reset instructions/,
-		robots: null
+		robots: 'noindex, nofollow'
 	},
 	{
 		path: '/reset-password',
@@ -79,7 +79,7 @@ const publicPages = [
 		canonical: 'https://www.helpteachers.net/wishlist-setup',
 		heading: 'Steps to Setup Wishlist',
 		description: /Amazon classroom wishlist/,
-		robots: null
+		robots: 'noindex, nofollow'
 	}
 ];
 
@@ -88,6 +88,10 @@ test.describe('static public pages', () => {
 		test(`${pageSpec.path} renders content and SEO metadata`, async ({ page }) => {
 			await page.goto(pageSpec.path, { waitUntil: 'domcontentloaded' });
 
+			await expect(page.locator('[data-app-shell]')).toHaveCSS(
+				'background-color',
+				'rgb(31, 41, 55)'
+			);
 			await expect(page).toHaveTitle(pageSpec.title);
 			await expect(page.getByRole('heading', { level: 1, name: pageSpec.heading })).toBeVisible();
 			await expect(page.locator('meta[name="description"]')).toHaveAttribute(
@@ -134,6 +138,10 @@ test.describe('static public pages', () => {
 			const response = await page.goto(errorSpec.path, { waitUntil: 'domcontentloaded' });
 
 			expect(response?.status()).toBe(errorSpec.status);
+			await expect(page.locator('[data-app-shell]')).toHaveCSS(
+				'background-color',
+				'rgb(31, 41, 55)'
+			);
 			await expect(page.getByRole('heading', { level: 1, name: errorSpec.heading })).toBeVisible();
 			await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
 				'content',

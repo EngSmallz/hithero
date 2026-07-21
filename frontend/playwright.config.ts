@@ -19,7 +19,7 @@ export default defineConfig({
 	use: { baseURL: frontendOrigin },
 	webServer: [
 		{
-			command: `${python} -c "import app; app.init_db()" && ${python} -m uvicorn app:app --host 127.0.0.1 --port ${backendPort}`,
+			command: `${python} frontend/tests/e2e_seed.py && ${python} -m uvicorn app:app --host 127.0.0.1 --port ${backendPort}`,
 			cwd: '..',
 			port: backendPort,
 			env: {

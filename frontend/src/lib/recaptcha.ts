@@ -1,8 +1,16 @@
+import { env } from '$env/dynamic/public';
+
 type RecaptchaApi = {
 	render: (container: HTMLElement, options: { sitekey: string }) => number;
 	getResponse: (widgetId?: number) => string;
 	reset: (widgetId?: number) => void;
 };
+
+const LOCAL_RECAPTCHA_TOKEN = 'hithero-test-recaptcha';
+
+export function isRecaptchaMock(): boolean {
+	return env.PUBLIC_RECAPTCHA_MODE === 'mock';
+}
 
 declare global {
 	interface Window {
@@ -66,16 +74,24 @@ async function loadRecaptcha(): Promise<RecaptchaApi> {
 }
 
 export async function renderRecaptcha(container: HTMLElement, sitekey: string): Promise<number> {
+	if (isRecaptchaMock()) {
+		return -1;
+	}
+
 	const recaptcha = await loadRecaptcha();
 	return recaptcha.render(container, { sitekey });
 }
 
-export function getRecaptchaResponse(widgetId: number | null): string {
+export function getRecaptchaResponse(widgetId: number | null, mockAccepted = false): string {
+	if (isRecaptchaMock()) {
+		return mockAccepted ? LOCAL_RECAPTCHA_TOKEN : '';
+	}
+
 	return widgetId === null ? '' : (window.grecaptcha?.getResponse(widgetId) ?? '');
 }
 
 export function resetRecaptcha(widgetId: number | null): void {
-	if (widgetId !== null) {
+	if (widgetId !== null && !isRecaptchaMock()) {
 		window.grecaptcha?.reset(widgetId);
 	}
 }

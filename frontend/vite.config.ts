@@ -3,10 +3,15 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 
+const svelteKitOutDir = process.env.SVELTEKIT_OUT_DIR?.trim() || '.svelte-kit';
+const viteCacheDir = process.env.VITE_CACHE_DIR?.trim() || 'node_modules/.vite';
+
 export default defineConfig({
+	cacheDir: viteCacheDir,
 	plugins: [
 		tailwindcss(),
 		sveltekit({
+			outDir: svelteKitOutDir,
 			compilerOptions: {
 				// Force runes mode for the project, except for libraries. Can be removed in svelte 6.
 				runes: ({ filename }) =>

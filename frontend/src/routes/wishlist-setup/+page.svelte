@@ -59,6 +59,7 @@
 	title="Steps to Setup Wishlist - Homeroom Heroes"
 	description="Follow step-by-step instructions for creating and sharing an Amazon classroom wishlist with Homeroom Heroes."
 	path={routes.wishlistSetup}
+	noindex
 />
 
 <PageShell
