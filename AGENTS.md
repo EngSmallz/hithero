@@ -43,8 +43,10 @@ completion. If the canonical gate fails, report the exact command, suite, log
 path, and whether the failure reproduced in a focused rerun. Do not hide
 backend concurrency problems by serializing the required parallel suites.
 
-When a task changes modernization behavior, write a short dated report under
-`agent-reports/` describing the change, verification, caveats, and next step.
+When a task changes operational behavior, architecture, or verification,
+update the relevant concise root documentation (`README.md` or
+`GOLDEN_TARGET.md`) in the same change. Use commit messages and pull requests
+for historical rationale; do not create tracking-report or ticket trees.
 
 Use this file to orient quickly before changing the Homeroom Heroes codebase.
 
@@ -52,9 +54,10 @@ Use this file to orient quickly before changing the Homeroom Heroes codebase.
 
 - Backend: FastAPI in `app.py` with routers under `backend/routers`.
 - Frontend: SvelteKit + TypeScript under `frontend/`.
-- Legacy browser pages still exist under `pages/` and are intentionally retained until redirect/removal decisions are proven by tests.
-- Modernization tickets live under `ticket/`.
-- Modernization plans live under `docs/`.
+- SvelteKit is the only page implementation. Temporary redirects for old
+  `/pages/*.html` links live in `backend/routers/redirects.py`.
+- The remaining modernization work is deliberately bounded in
+  `GOLDEN_TARGET.md`.
 
 ## Canonical Verification
 
@@ -101,15 +104,13 @@ Use focused commands while iterating, then the canonical gate before finalizing.
 
 ## High-Signal References
 
-- Route ownership and status: `docs/route-status-matrix.md`
-- Form fallback audit: `docs/form-fallback-matrix.md`
-- Agent handoff template: `docs/agent-handoff-template.md`
-- Test workflow: `docs/test-workflow.md`
-- Modernization tickets: `ticket/README.md`
+- Current architecture, configuration, and verification: `README.md`
+- Remaining evidence-led retirement work: `GOLDEN_TARGET.md`
 
 ## Common Pitfalls
 
-- Do not delete legacy pages or routes until clean replacements, redirects, sitemap decisions, and tests are in place.
+- Do not reintroduce backend-served HTML pages. Keep or retire external URL
+  redirects only through an explicit deployment decision.
 - Do not treat direct FastAPI form `action` URLs as automatically safe. Some can strand users on raw JSON if JavaScript is slow or disabled.
 - Keep public/indexable pages server-rendered with title, description, canonical URL, and Open Graph metadata.
 - Keep private/auth/admin/forum pages out of the sitemap and use `noindex` where appropriate.
@@ -121,10 +122,13 @@ Use focused commands while iterating, then the canonical gate before finalizing.
 
 For modernization work, "done" means:
 
-- Relevant ticket acceptance criteria are met.
+- Relevant completion criteria in `GOLDEN_TARGET.md` are met.
 - Focused tests for the changed area pass.
 - `scripts/run-all-tests.sh` passes for merge/release confidence.
-- A short, dense task report is written under `agent-reports/` using a dated slug, for example `agent-reports/2026-06-26-p1-04-form-fallback-audit.md`.
-- Any known remaining issue is captured in `ticket/` or called out clearly in the task report.
+- Root documentation is updated when the change affects architecture,
+  operations, verification, or the remaining retirement plan.
+- Any known remaining issue is captured in `GOLDEN_TARGET.md` when it is a
+  durable modernization concern, or clearly called out in the handoff.
 
-Task reports should be brief but audit-ready: summarize what changed, why it changed, important implementation decisions, verification commands/results, known caveats, and the next best step. Use `docs/agent-handoff-template.md` as the shape when in doubt.
+Handoffs should be brief and audit-ready: summarize what changed, why it
+changed, verification commands/results, known caveats, and the next best step.

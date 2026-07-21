@@ -16,8 +16,11 @@ coverage.xml
 htmlcov/
 playwright-report/
 test-results/
+.svelte-kit/
 
-# Generated or bulky local QA artifacts. Keep dated audit reports elsewhere in
-# agent-reports/ tracked when they are part of a completed milestone.
-agent-reports/responsive-qa-*/
+# Retired historical tracking directories. Keep living documentation at the
+# repository root instead.
+agent-reports/
+docs/
+ticket/
 mech_interp/
