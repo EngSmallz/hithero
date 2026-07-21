@@ -16,39 +16,31 @@ The backend commands require Python, and the frontend commands require Node.js
 and npm. In Codex, if those tools are not on the non-interactive `PATH`, run
 the commands through the configured login shell as described in `AGENTS.md`.
 
-## Prepare an isolated SQLite database
-
-Use a database file dedicated to this manual stack. Do not point it at the
-database used by another test process or a production/local development
-instance.
-
-```bash
-mkdir -p .tmp
-APP_ENV=test \
-SECRET_KEY=test-secret \
-TEST_DATABASE_URL=sqlite:///./.tmp/local-test.sqlite \
-make init-test-db
-```
-
-`init-test-db` creates the SQLAlchemy tables. It does not seed teachers,
-schools, or users; create test records through the registration flow or seed
-the SQLite file with a one-off fixture/script kept outside production code.
-
 ## Start the backend
 
-In terminal 1:
+In terminal 1, run:
 
 ```bash
-APP_ENV=test \
-SECRET_KEY=test-secret \
-TEST_DATABASE_URL=sqlite:///./.tmp/local-test.sqlite \
-TEST_RECAPTCHA_TOKEN=hithero-test-recaptcha \
-uvicorn app:app --host 127.0.0.1 --port 8000 --reload
+make local-test
 ```
 
-The backend uses the SQLite URL selected by `TEST_DATABASE_URL` when
-`APP_ENV=test`. It accepts local frontend origins and does not require the
-SQL Server `pyodbc` driver.
+For the normal full local development stack instead, use `make local`; it
+delegates to the managed launcher and starts both FastAPI and SvelteKit.
+
+Before FastAPI starts, `make local-test` creates the configured SQLite schema
+with SQLAlchemy metadata and seeds 100 deterministic demo schools plus 50
+public demo teacher profiles. The bootstrap is idempotent: a second run adds
+zero rows. It never applies Alembic migrations and refuses non-SQLite URLs.
+The checked-in source fixtures are
+`scripts/fixtures/schools.csv` and
+`scripts/fixtures/fake-public-teachers.csv`; they contain only obvious demo
+values and no credentials or personal data.
+The target explicitly clears `DATABASE_URL`, so it cannot accidentally use the
+production/development database. Override `LOCAL_TEST_DATABASE_URL`,
+`LOCAL_TEST_HOST`, or `LOCAL_TEST_PORT` when you need a separate instance.
+
+The backend accepts local frontend origins and does not require the SQL Server
+`pyodbc` driver.
 
 Check that it is responding with a read-only endpoint:
 
@@ -109,6 +101,10 @@ The full gate runs slow suites in parallel. Never run those suites against
 worker-specific `TEST_DATABASE_URL` instead. To remove only this manual stack,
 stop the local processes and delete `.tmp/local-test.sqlite` when it is no
 longer needed.
+
+`make local` performs the same SQLite bootstrap for `LOCAL_DATABASE_URL`
+(default `.local/hithero-dev.sqlite`) before handing control to the managed
+launcher. The launcher remains responsible for starting and stopping servers.
 
 ## Common configuration mistakes
 
