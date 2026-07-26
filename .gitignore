@@ -1,6 +1,26 @@
 **/*.pyc
+**/__pycache__/
+**/.DS_Store
 .venv/
 .env
+.local/
+.tmp/
 .idea
 sql_query/
 .vscode/
+
+# Local test and coverage outputs.
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+playwright-report/
+test-results/
+.svelte-kit/
+
+# Retired historical tracking directories. Keep living documentation at the
+# repository root instead.
+agent-reports/
+docs/
+ticket/
+mech_interp/
