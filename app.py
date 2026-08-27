@@ -15,7 +15,6 @@ from sqlalchemy.orm import sessionmaker, Session, relationship
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import select, cast, delete, insert, update
 from typing import Optional, List
-from tweepy import Client
 from azure.communication.email import EmailClient
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -152,18 +151,7 @@ class TeacherList(Base):
     about_me = Column(String)
     image_data = Column(LargeBinary)
     url_id = Column(String)
-
-class Spotlight(Base):
-    __tablename__ = "spotlight"
-
-    id = Column(Integer, primary_key=True)
-    token = Column(String)
-    name = Column(String)
-    state = Column(String)
-    county = Column(String)
-    district = Column(String)
-    school = Column(String)
-    image_data = Column(LargeBinary)
+    last_TOD = Column(DateTime, nullable=True)
 
 class ForumPost(Base):
     __tablename__ = "forum_posts"
@@ -421,24 +409,25 @@ def fetch_random_teacher():
     finally:
         db.close()
 
-def store_spotlight(teacher_info: dict, token: str):
-    db = SessionLocal()
-    try:
-        delete_query = delete(Spotlight).where(cast(Spotlight.token, String) == cast(token, String))
-        db.execute(delete_query)
-        if token == "teacher":
-            spotlight_entry = Spotlight(state=teacher_info["state"],county=teacher_info["county"],district=teacher_info["district"],school=teacher_info["school"],name=teacher_info["name"],token=token,image_data=teacher_info["image_data"] )
-        elif token == "district":
-            spotlight_entry = Spotlight(state=teacher_info["state"],county=teacher_info["county"],district=teacher_info["district"],token=token)
-        elif token == "county":
-            spotlight_entry = Spotlight(state=teacher_info["state"],county=teacher_info["county"],token=token)
-        db.add(spotlight_entry)
-        db.commit()
-    except Exception as e:
-        db.rollback()
-        raise e
-    finally:
-        db.close()
+def fetch_teacher_for_tod():
+    """
+    Picks the next Teacher of the Day.
+
+    Repeatedly calls fetch_random_teacher() and checks the returned
+    teacher's last_TOD against a 90-day cutoff, until it finds someone
+    who either has never been featured (last_TOD is NULL) or wasn't
+    featured in the last 90 days. Does not mutate any data - the caller
+    is responsible for stamping last_TOD once the pick is finalized.
+    """
+    cutoff = datetime.datetime.utcnow() - datetime.timedelta(days=90)
+    while True:
+        candidate = fetch_random_teacher()
+        if candidate is None:
+            # No teachers at all in teacher_list.
+            return None
+        if candidate.last_TOD is None or candidate.last_TOD < cutoff:
+            return candidate
+        # Otherwise loop and try again - candidate was featured too recently.
 
 def send_teacher_of_the_day_email(recipient_email: str, recipient_name: str, url_id: str):
     """
@@ -476,35 +465,33 @@ def send_teacher_of_the_day_email(recipient_email: str, recipient_name: str, url
 def daily_job():
     db = SessionLocal()
     try:
-        # Re-fetch the teacher to ensure we get the full object with regUserID and url_id
-        random_teacher = fetch_random_teacher()
-        
-        if random_teacher:
+        # Picks a teacher who hasn't been Teacher of the Day in the last 90 days
+        chosen_teacher = fetch_teacher_for_tod()
+
+        if chosen_teacher:
             teacher_info = {
-                "name": random_teacher.name, 
-                "state": random_teacher.state,
-                "county": random_teacher.county,
-                "district": random_teacher.district,
-                "school": random_teacher.school,
-                "image_data": random_teacher.image_data,
-                "url_id": random_teacher.url_id
+                "name": chosen_teacher.name,
+                "state": chosen_teacher.state,
+                "county": chosen_teacher.county,
+                "district": chosen_teacher.district,
+                "school": chosen_teacher.school,
+                "image_data": chosen_teacher.image_data,
+                "url_id": chosen_teacher.url_id
             }
 
-            # Store the teacher in the spotlight regardless of email availability
-            store_spotlight(teacher_info, "teacher")
+            # Stamp last_TOD on the chosen teacher so they're excluded from
+            # selection for the next 90 days.
+            update_query = (
+                update(TeacherList)
+                .where(TeacherList.id == chosen_teacher.id)
+                .values(last_TOD=datetime.datetime.utcnow())
+            )
+            db.execute(update_query)
+            db.commit()
 
             # Now, attempt to fetch the email and send the notification
-            email_query = select(RegisteredUsers.email).where(RegisteredUsers.id == random_teacher.regUserID)
+            email_query = select(RegisteredUsers.email).where(RegisteredUsers.id == chosen_teacher.regUserID)
             teacher_email = db.execute(email_query).scalar_one_or_none()
-
-            # Now make x post about the teacher <-- REPLACE THIS COMMENT WITH THE FOLLOWING LINES
-            teacher_url = f"www.HelpTeachers.net/teacher/{random_teacher.url_id}"
-            tweet_message = (
-                f"Today's #TeacherOfTheDay is {random_teacher.name}! "
-                f"You can support their classroom and mission here: {teacher_url}"
-                f"#HomeroomHeroes #Education"
-            )
-            post_tweet_x(tweet_message)
 
             if teacher_email:
                 # Send the email notification
@@ -514,39 +501,14 @@ def daily_job():
                     url_id=teacher_info["url_id"]
                 )
             else:
-                print(f"No email found for teacher: {random_teacher.name}. Spotlight stored, but no email sent.")
+                print(f"No email found for teacher: {chosen_teacher.name}. last_TOD updated, but no email sent.")
         else:
-            print("No random teacher found.")
+            print("No eligible teacher found.")
     except Exception as e:
+        db.rollback()
         print(f"Error in daily_job: {e}")
     finally:
         db.close()
-
-def monday_job():
-    random_teacher = fetch_random_teacher()
-    if random_teacher:
-        teacher_info = {
-            "state": random_teacher[0].state,
-            "county": random_teacher[0].county,
-            "district": random_teacher[0].district,
-        }
-        store_spotlight(teacher_info, "district")
-    else:
-        print("No random teacher found.")
-
-def first_of_month_job():
-    if date.today().day == 1:
-        random_teacher = fetch_random_teacher()
-        if random_teacher:
-            teacher_info = {
-                "state": random_teacher[0].state,
-                "county": random_teacher[0].county
-            }
-            store_spotlight(teacher_info, "county")
-        else:
-            print("No random teacher found.")
-    else:
-        print('Not the first.')
 
 def wednesday_job():
     db = SessionLocal()
@@ -790,35 +752,6 @@ def send_validation_reminder_email(recipient_email: str):
 def thursday_job():
     send_validation_reminder_emails()
     print("Thursday job to send new user validation reminders has completed.")
-
-def post_tweet_x(tweet_text: str):
-    """
-    Authenticates and posts a tweet using the X API (Tweepy v2).
-    REQUIRES: Consumer Key, Consumer Secret, Access Token, and Access Token Secret.
-    These must be stored securely as environment variables.
-    """
-    API_KEY = os.getenv("X_API_KEY")
-    API_SECRET = os.getenv("X_API_SECRET")
-    ACCESS_TOKEN = os.getenv("X_ACCESS_TOKEN")
-    ACCESS_TOKEN_SECRET = os.getenv("X_ACCESS_TOKEN_SECRET")
-    if not all([API_KEY, API_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET]):
-        print("X API credentials missing. Skipping tweet post.")
-        print("Please set X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET environment variables.")
-        return
-    try:
-        # Authenticate using OAuth 1.0a (required for posting tweets)
-        client = Client(
-            consumer_key=API_KEY,
-            consumer_secret=API_SECRET,
-            access_token=ACCESS_TOKEN,
-            access_token_secret=ACCESS_TOKEN_SECRET
-        )
-        # Post the tweet
-        response = client.create_tweet(text=tweet_text)
-        print(f"X POST SUCCESS: Tweeted: {tweet_text}")
-        print(f"X Response ID: {response.data['id']}")
-    except Exception as e:
-        print(f"X POST ERROR: Failed to post tweet. {e}")
 
 def model_to_dict(model):
     """Converts a SQLAlchemy model instance to a dictionary, handling dates for JSON serialization."""
@@ -1540,16 +1473,21 @@ async def reset_password(token: str = Form(...), new_password: str = Form(...), 
     finally:
         db.close()
 
-#api that gets spotlight data based on token
-@app.get("/spotlight/{token}")
-async def get_spotlight_info(request: Request, token: str):
+#api that gets today's Teacher of the Day (whoever has the most recent last_TOD)
+@app.get("/api/teacher_of_the_day")
+async def get_teacher_of_the_day(request: Request):
     db = SessionLocal()
     try:
-        query = select(Spotlight).where(cast(Spotlight.token, String) == cast(token, String))
+        query = (
+            select(TeacherList)
+            .where(TeacherList.last_TOD.isnot(None))
+            .order_by(desc(TeacherList.last_TOD))
+            .limit(1)
+        )
         result = db.execute(query)
-        spotlight_info = result.fetchone()
-        if spotlight_info:
-            data = spotlight_info[0]
+        row = result.fetchone()
+        if row:
+            data = row[0]
             if data.image_data:
                 image_data = base64.b64encode(data.image_data).decode('utf-8')
             else:
@@ -1567,14 +1505,17 @@ async def get_spotlight_info(request: Request, token: str):
                 "district": data.district,
                 "school": data.school,
                 "name": data.name,
-                "image_data": image_data
+                "image_data": image_data,
+                "url_id": data.url_id
             }
             return data_dict
         else:
-            raise HTTPException(status_code=404, detail="Spotlight info not found for the given token")
+            raise HTTPException(status_code=404, detail="Teacher of the Day not found")
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Internal Server Error: {str(e)}") 
-        raise HTTPException(status_code=500, detail=f"Internal server error")
+        logger.error(f"Internal Server Error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
     finally:
         db.close()
 
