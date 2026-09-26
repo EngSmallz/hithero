@@ -127,7 +127,43 @@
                     Permanently Delete Account
                 </button>
             </form>
-        
+        </section>
+
+        <section class="bg-white p-8 rounded-lg shadow-xl text-gray-800 mt-8">
+            <h2 class="text-3xl font-bold text-green-800 mb-6 text-center">Create Admin Account</h2>
+            <form id="create-admin-form" class="space-y-6">
+                <div>
+                    <label for="new-admin-email" class="block text-lg font-medium text-gray-700 mb-2">Email:</label>
+                    <input type="email" id="new-admin-email" name="email" required
+                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-base bg-gray-50 text-gray-900"
+                           placeholder="new.admin@example.com">
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="new-admin-password" class="block text-lg font-medium text-gray-700 mb-2">Password:</label>
+                        <input type="password" id="new-admin-password" name="password" required minlength="8"
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-base bg-gray-50 text-gray-900">
+                    </div>
+                    <div>
+                        <label for="new-admin-confirm-password" class="block text-lg font-medium text-gray-700 mb-2">Confirm Password:</label>
+                        <input type="password" id="new-admin-confirm-password" name="confirm_password" required minlength="8"
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-base bg-gray-50 text-gray-900">
+                    </div>
+                </div>
+                <div>
+                    <label for="new-admin-secret" class="block text-lg font-medium text-gray-700 mb-2">Admin Secret Key:</label>
+                    <input type="password" id="new-admin-secret" name="admin_secret_input" required
+                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-base bg-gray-50 text-gray-900"
+                           placeholder="Enter admin secret">
+                </div>
+
+                <button type="submit"
+                        class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md mt-6">
+                    Create Admin Account
+                </button>
+            </form>
+        </section>
+
     </main>
 
     <footer class="bg-gray-800 text-white py-6 mt-8 rounded-t-lg shadow-inner text-center">
@@ -304,6 +340,39 @@
             // Teacher Contact Form listener (The only one remaining)
             const searchForm = document.getElementById("teacher-contact-form");
             const deleteForm = document.getElementById("delete-user-form");
+            const createAdminForm = document.getElementById("create-admin-form");
+            createAdminForm.addEventListener("submit", async function (event) {
+                event.preventDefault();
+
+                const newAdminPassword = document.getElementById("new-admin-password").value;
+                const newAdminConfirmPassword = document.getElementById("new-admin-confirm-password").value;
+                if (newAdminPassword !== newAdminConfirmPassword) {
+                    alert("Passwords do not match.");
+                    return;
+                }
+
+                const formData = new FormData(createAdminForm);
+
+                try {
+                    const response = await fetch("/admin/create_admin/", {
+                        method: "POST",
+                        body: formData,
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        alert(data.message);
+                        createAdminForm.reset();
+                    } else {
+                        alert(data.detail || "Failed to create admin account. Please try again.");
+                    }
+                } catch (error) {
+                    console.error("Error:", error);
+                    alert("An error occurred. Please try again.");
+                }
+            });
+
             deleteForm.addEventListener("submit",  async function (event) {
                 event.preventDefault();
 
@@ -340,11 +409,19 @@
                     });
 
                     if (response.ok) {
-                        const data = await response.json();
-                        alert(data.message);
+                        // Response is a PDF file - trigger a browser download
+                        const blob = await response.blob();
+                        const downloadUrl = window.URL.createObjectURL(blob);
+                        const link = document.createElement("a");
+                        link.href = downloadUrl;
+                        link.download = "teacher_report.pdf";
+                        document.body.appendChild(link);
+                        link.click();
+                        link.remove();
+                        window.URL.revokeObjectURL(downloadUrl);
                     } else {
                         const errorData = await response.json();
-                        alert(errorData.message || "Failed to generate teacher report. Please try again.");
+                        alert(errorData.detail || errorData.message || "Failed to generate teacher report. Please try again.");
                     }
                 } catch (error) {
                     console.error("Error:", error);

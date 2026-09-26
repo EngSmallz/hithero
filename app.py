@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, Request, Form, Depends, Body, File, UploadFile, Response, status, Path
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, FileResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 import os, logging, smtplib, secrets, string, pyodbc, time, ssl, datetime, base64, requests, threading
 from dotenv import load_dotenv
@@ -19,7 +19,11 @@ from azure.communication.email import EmailClient
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
-import bleach, puremagic, re
+import bleach, puremagic, re, io
+from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 
 app = FastAPI()
 load_dotenv()
@@ -1745,38 +1749,49 @@ async def generate_teacher_report(state: str = Form(...), county: str = Form(Non
             RegisteredUsers.phone_number).where(RegisteredUsers.id.in_(reg_user_ids))
         users = db.execute(user_query).fetchall()
 
-        # Step 3: Prepare data for the document
-        data = ["Name\tSchool\tEmail\tPhone"]  # Tab-separated headers
-
-        # Step 4: Map teachers to their corresponding user data (email and phone)
+        # Step 3: Map teachers to their corresponding user data (email and phone)
         user_dict = {user.id: {"email": user.email, "phone": user.phone_number} for user in users}
+
+        table_data = [["Name", "School", "Email", "Phone"]]
         for teacher in teachers:
-            teacher_info = f"{teacher.name}\t{teacher.school}\t{user_dict.get(teacher.regUserID, {}).get('email', 'N/A')}\t{user_dict.get(teacher.regUserID, {}).get('phone', 'N/A')}"
-            data.append(teacher_info)
+            table_data.append([
+                teacher.name or "",
+                teacher.school or "",
+                user_dict.get(teacher.regUserID, {}).get('email', 'N/A'),
+                user_dict.get(teacher.regUserID, {}).get('phone', 'N/A'),
+            ])
 
-        # Step 5: Prepare the file content as a string (convert list to newline-separated string)
-        file_content = "\n".join(data)  # Now file_content includes both headers and teacher data
+        # Step 4: Build the PDF in memory
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        styles = getSampleStyleSheet()
+        story = [Paragraph("Teacher Report", styles['Title']), Spacer(1, 12)]
 
-        file_name = 'teacher_report.txt'
-        file_path = os.path.join('./', file_name)  # Specify the full path where the file will be saved
+        table = Table(table_data, repeatRows=1)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#2c3e50")),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor("#f2f2f2")]),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ]))
+        story.append(table)
+        doc.build(story)
+        buffer.seek(0)
 
-        with open(file_path, 'w') as temp_file:
-            temp_file.write(file_content)  # Save your report data to the file
-
-        # Step 6: Send the attachment and delete remnant on disk
-        send_attachment(
-            recipient_email="homeroom.heroes.main@gmail.com",
-            subject="Teacher Report",
-            message="Please find the attached teacher report.",
-            attachment_path=file_path  # Use the specific file path
+        # Step 5: Stream the PDF back to the browser as a download
+        return StreamingResponse(
+            buffer,
+            media_type="application/pdf",
+            headers={"Content-Disposition": "attachment; filename=teacher_report.pdf"}
         )
-        try:
-            os.remove(file_path)
-        except OSError:
-            logger.error("Failed to delete temporary report file.")
-        # Step 7: Return response
-        return {"message": f"Teacher report saved and sent via email."}
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Report generation error: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
@@ -2278,6 +2293,70 @@ async def admin_delete_user_account(target_email: str = Form(...), admin_secret_
         print(f"Error during administrative account deletion for {target_email}: {str(e)}")
         logger.error(f"Internal Server Error: {str(e)}") 
         raise HTTPException(status_code=500, detail=f"Internal Server Error")
+    finally:
+        db.close()
+
+
+@app.post("/admin/create_admin/")
+@limiter.limit("5/minute")
+async def create_admin_account(
+    request: Request,
+    email: str = Form(...),
+    password: str = Form(...),
+    confirm_password: str = Form(...),
+    admin_secret_input: str = Form(...),
+    current_role: str = Depends(get_current_role)
+):
+    """
+    Allows an authenticated 'admin' user, who also supplies the server's admin
+    secret, to create a brand new admin account directly in registered_users.
+    Only email, password, and role are stored; id is auto-assigned by the DB.
+    """
+    # 1. ROLE CHECK: Only an existing admin may create another admin
+    if not current_role or current_role != 'admin':
+        raise HTTPException(status_code=403, detail="Forbidden. Only administrators can create admin accounts.")
+
+    # 2. SECRET CHECK: Same server secret used for other sensitive admin actions
+    ADMIN_SECRET = os.getenv("admin_secret")
+    if not ADMIN_SECRET or admin_secret_input != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Invalid administrator secret provided.")
+
+    # 3. BASIC VALIDATION
+    if password != confirm_password:
+        raise HTTPException(status_code=400, detail="Passwords do not match.")
+    if len(password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters long.")
+
+    db: Session = SessionLocal()
+    try:
+        # 4. Make sure this email isn't already in use, in either table
+        existing_registered = db.execute(
+            select(RegisteredUsers.id).where(cast(RegisteredUsers.email, String) == cast(email, String))
+        ).fetchone()
+        existing_pending = db.execute(
+            select(NewUsers.id).where(cast(NewUsers.email, String) == cast(email, String))
+        ).fetchone()
+        if existing_registered or existing_pending:
+            raise HTTPException(status_code=400, detail="An account with this email already exists.")
+
+        # 5. Create the admin account directly in registered_users (id auto-assigned by the DB)
+        hashed_password = sha256_crypt.hash(password)
+        new_admin = RegisteredUsers(
+            email=email,
+            password=hashed_password,
+            role='admin',
+            createCount=0
+        )
+        db.add(new_admin)
+        db.commit()
+        return {"message": f"Admin account created successfully for {email}."}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error creating admin account: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
     finally:
         db.close()
 
