@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Homeroom Heroes SGO - Tax Burden & Credit Estimator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="shortcut icon" type="image/x-icon" href="/static/images/favicon.ico" />
+    <link rel="stylesheet" href="/static/style.css"> 
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17482080573"></script>
+    <script> window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'AW-17482080573'); </script> 
+</head>
+<body class="bg-gray-800 text-gray-50">
+    <header class="bg-gradient-to-r from-emerald-700 to-teal-900 text-white shadow-lg py-4 md:py-6 relative">
+        <div class="container mx-auto px-4 flex justify-between items-center">
+            <div class="flex items-center">
+                <a href="/pages/sgo_home.html" class="flex items-center">
+                    <img src="/static/images/logo_transparent.png" alt="Homeroom Heroes Logo" class="h-16 md:h-20 mr-3">
+                </a>
+                <nav class="hidden md:flex ml-4">
+                    <ul class="flex space-x-4 md:space-x-8 text-lg">
+                        <li><a href="/pages/sgo_home.html" class="hover:text-teal-200 transition duration-300 ease-in-out rounded-md p-2">SGO Home</a></li>
+                        <li><a href="/pages/sgo_donate.html" class="hover:text-teal-200 transition duration-300 ease-in-out rounded-md p-2">Donate & Claim Credit</a></li>
+                        <li><a href="/pages/sgo_apply.html" class="hover:text-teal-200 transition duration-300 ease-in-out rounded-md p-2">Apply for Tech</a></li>
+                        <li><a href="/pages/sgo_calculator.html" class="hover:text-teal-200 transition duration-300 ease-in-out rounded-md p-2">Tax Estimator</a></li>
+                        <li><a href="/pages/homepage.html" class="hover:text-teal-200 transition duration-300 ease-in-out rounded-md p-2">Teacher Wishlists</a></li>
+                    </ul>
+                </nav>
+            </div>
+
+            <div class="relative">
+                <button id="hamburgerButton" class="text-white text-3xl focus:outline-none md:hidden" onclick="toggleMenu()">☰</button>
+
+                <div class="menu-items absolute right-0 top-full mt-2 w-48 bg-teal-800 rounded-md shadow-lg py-1 z-20 hidden md:hidden" id="menuItems">
+                    <nav class="md:hidden">
+                        <ul class="flex flex-col text-base p-1">
+                            <li><a href="/pages/sgo_home.html" class="listButton block">SGO Home</a></li>
+                            <li><a href="/pages/sgo_donate.html" class="listButton block">Donate & Claim Credit</a></li>
+                            <li><a href="/pages/sgo_apply.html" class="listButton block">Apply for Tech</a></li>
+                            <li><a href="/pages/sgo_calculator.html" class="listButton block">Tax Estimator</a></li>
+                            <li><a href="/pages/homepage.html" class="listButton block">Teacher Wishlists</a></li>
+                            <hr class="my-1 border-teal-700">
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <main class="container mx-auto px-4 py-8">
+        <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+            
+            <!-- Estimator Form Card -->
+            <section class="bg-white p-8 rounded-lg shadow-md text-gray-800">
+                <span class="bg-teal-100 text-teal-800 text-xs font-bold uppercase tracking-widest py-1 px-3 rounded-full mb-3 inline-block">Section 25F Tool</span>
+                <h2 class="text-2xl font-bold text-teal-900 mb-2">SGO Tax Credit Estimator</h2>
+                <p class="text-gray-600 text-sm mb-6">Estimate your federal tax liability to find your optimal SGO donation amount without going over your total tax bill.</p>
+
+                <form id="tax-estimator-form" class="space-y-4" onsubmit="event.preventDefault(); calculateTaxCredit();">
+                    
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label for="filing_status" class="block text-sm font-medium text-gray-700">Filing Status:</label>
+                            <button type="button" onclick="openInfoModal('Filing Status', 'Your tax filing status (Single, Married Filing Jointly, or Head of Household) determines your standard deduction amount and your maximum statutory SGO credit cap ($1,700 for individuals, $3,400 for joint filers).')" class="text-teal-700 hover:text-teal-900 text-xs font-bold bg-teal-50 hover:bg-teal-100 px-2 py-0.5 rounded-full transition">i</button>
+                        </div>
+                        <select id="filing_status" name="filing_status" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500 bg-gray-50 text-gray-900">
+                            <option value="single">Single ($1,700 SGO Cap)</option>
+                            <option value="joint">Married Filing Jointly ($3,400 SGO Cap)</option>
+                            <option value="head">Head of Household ($1,700 SGO Cap)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label for="agi" class="block text-sm font-medium text-gray-700">Estimated Annual AGI ($):</label>
+                            <button type="button" onclick="openInfoModal('Adjusted Gross Income (AGI)', 'Your total gross income (wages, dividends, business income, capital gains) minus specific adjustments like student loan interest or retirement contributions. Look at Line 11 of your prior year Form 1040 for reference.')" class="text-teal-700 hover:text-teal-900 text-xs font-bold bg-teal-50 hover:bg-teal-100 px-2 py-0.5 rounded-full transition">i</button>
+                        </div>
+                        <input type="number" id="agi" name="agi" placeholder="e.g. 85000" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500 bg-gray-50 text-gray-900">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label for="deduction_type" class="block text-sm font-medium text-gray-700">Deduction Method:</label>
+                            <button type="button" onclick="openInfoModal('Deduction Method', 'You can take the standard deduction (a fixed dollar amount set by the IRS based on your filing status) or itemize your specific deductions (mortgage interest, state/local taxes, charitable gifts). Most taxpayers use the standard deduction.')" class="text-teal-700 hover:text-teal-900 text-xs font-bold bg-teal-50 hover:bg-teal-100 px-2 py-0.5 rounded-full transition">i</button>
+                        </div>
+                        <select id="deduction_type" name="deduction_type" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500 bg-gray-50 text-gray-900">
+                            <option value="standard">Standard Deduction (2026/2027 est.)</option>
+                            <option value="itemized">Itemized Deductions</option>
+                        </select>
+                    </div>
+
+                    <div id="itemized_container" class="hidden">
+                        <div class="flex justify-between items-center mb-1">
+                            <label for="itemized_amount" class="block text-sm font-medium text-gray-700">Total Itemized Deductions ($):</label>
+                            <button type="button" onclick="openInfoModal('Itemized Deductions', 'The sum of all your individual deductions combined on Schedule A, such as mortgage interest, medical expenses exceeding 7.5% of AGI, and charitable contributions.')" class="text-teal-700 hover:text-teal-900 text-xs font-bold bg-teal-50 hover:bg-teal-100 px-2 py-0.5 rounded-full transition">i</button>
+                        </div>
+                        <input type="number" id="itemized_amount" name="itemized_amount" placeholder="e.g. 18000"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500 bg-gray-50 text-gray-900">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label for="other_credits" class="block text-sm font-medium text-gray-700">Other Non-Refundable Credits ($):</label>
+                            <button type="button" onclick="openInfoModal('Other Non-Refundable Credits', 'Other tax credits you qualify for (such as the Child Tax Credit or education credits) that reduce your tax bill before your SGO credit is applied.')" class="text-teal-700 hover:text-teal-900 text-xs font-bold bg-teal-50 hover:bg-teal-100 px-2 py-0.5 rounded-full transition">i</button>
+                        </div>
+                        <input type="number" id="other_credits" name="other_credits" placeholder="e.g. 2000" value="0"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500 bg-gray-50 text-gray-900">
+                    </div>
+
+                    <button type="submit"
+                            class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2.5 px-4 rounded-lg transition duration-300 ease-in-out shadow-md">
+                        Calculate Optimal Donation
+                    </button>
+                </form>
+            </section>
+
+            <!-- Results Output Card -->
+            <section class="bg-teal-950 text-white p-8 rounded-lg shadow-md flex flex-col justify-between border border-teal-800">
+                <div>
+                    <div class="flex justify-between items-center mb-4 border-b border-teal-800 pb-2">
+                        <h3 class="text-xl font-bold text-teal-300">Your SGO Credit Analysis</h3>
+                        <button type="button" onclick="openInfoModal('SGO Credit Analysis', 'This breakdown calculates your estimated taxable income and total tax liability to determine your exact recommended donation ceiling under Section 25F.')" class="text-teal-300 hover:text-white text-xs font-bold bg-teal-900 hover:bg-teal-800 px-2 py-0.5 rounded-full transition border border-teal-700">i</button>
+                    </div>
+                    
+                    <div class="space-y-4 text-sm">
+                        <div class="flex justify-between items-center">
+                            <span class="text-teal-200 flex items-center">Estimated Taxable Income: <button type="button" onclick="openInfoModal('Taxable Income', 'Your Adjusted Gross Income minus your standard or itemized deduction. This is the amount of income subject to federal income tax brackets.')" class="ml-2 text-teal-300 hover:text-white text-[10px] font-bold bg-teal-900 px-1.5 py-0.5 rounded-full">i</button></span>
+                            <span id="res_taxable_income" class="font-semibold text-white">$0</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-teal-200 flex items-center">Total Tax Liability: <button type="button" onclick="openInfoModal('Total Tax Liability', 'Your total federal income tax bill for the year before factoring in money withheld from your paychecks (equivalent to Line 24 on Form 1040).')" class="ml-2 text-teal-300 hover:text-white text-[10px] font-bold bg-teal-900 px-1.5 py-0.5 rounded-full">i</button></span>
+                            <span id="res_total_tax" class="font-semibold text-white">$0</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-teal-200 flex items-center">Maximum Statutory Cap: <button type="button" onclick="openInfoModal('Statutory SGO Cap', 'The absolute maximum federal limit set by Section 25F: $1,700 for single filers or $3,400 for married couples filing jointly.')" class="ml-2 text-teal-300 hover:text-white text-[10px] font-bold bg-teal-900 px-1.5 py-0.5 rounded-full">i</button></span>
+                            <span id="res_sgo_cap" class="font-semibold text-teal-300">$1,700</span>
+                        </div>
+                        
+                        <div class="bg-teal-900/60 p-4 rounded-lg border border-teal-700 mt-6 text-center">
+                            <p class="text-xs uppercase tracking-widest text-teal-300 mb-1">Recommended Donation <button type="button" onclick="openInfoModal('Recommended Donation', 'The optimal amount to donate to Homeroom Heroes. It matches your total tax liability or the statutory cap—whichever is lower—so you get 100% of your money back as a tax credit.')" class="text-teal-300 hover:text-white text-[10px] font-bold bg-teal-800 px-1.5 py-0.5 rounded-full">i</button></p>
+                            <p id="res_recommended_donation" class="text-3xl font-extrabold text-white">$0</p>
+                            <p id="res_note" class="text-xs text-teal-200 mt-2">Enter your AGI and click calculate to view your target donation.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 pt-4 border-t border-teal-800">
+                    <button onclick="redirectTo('/pages/sgo_donate.html')" id="proceedDonateBtn" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 px-4 rounded-lg transition duration-300 shadow-md hidden">
+                        Proceed to Donate & Claim Credit &rarr;
+                    </button>
+                    <p class="text-[11px] text-teal-300/80 text-center mt-3">*Estimates are for planning purposes under Section 25F rules. Unused credits carry forward for up to 5 years.</p>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Info Modal / I-Pane Component -->
+    <div id="infoModal" class="fixed inset-0 bg-black bg-opacity-60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white text-gray-900 rounded-lg shadow-xl max-w-md w-full p-6 relative border-t-4 border-teal-600">
+            <button onclick="closeInfoModal()" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+            <h3 id="modalTitle" class="text-lg font-bold text-teal-900 mb-2">Information</h3>
+            <p id="modalBody" class="text-sm text-gray-600 leading-relaxed mb-6"></p>
+            <button onclick="closeInfoModal()" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 rounded-lg transition">Got it</button>
+        </div>
+    </div>
+
+    <footer class="bg-gray-800 text-white py-6 mt-8 rounded-t-lg shadow-inner text-center">
+        <div class="container mx-auto px-4 text-sm">
+            <p>&copy; 2026 Homeroom Heroes. SGO Wing. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        function redirectTo(url) {
+            window.location.href = url;
+        }
+
+        function toggleMenu() {
+            const menuItems = document.getElementById('menuItems');
+            menuItems.classList.toggle('hidden');
+        }
+
+        // I-Pane Modal Functions
+        function openInfoModal(title, text) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalBody').textContent = text;
+            document.getElementById('infoModal').classList.remove('hidden');
+        }
+
+        function closeInfoModal() {
+            document.getElementById('infoModal').classList.add('hidden');
+        }
+
+        // Close modal when clicking outside of card content
+        window.onclick = function(event) {
+            const modal = document.getElementById('infoModal');
+            if (event.target === modal) {
+                closeInfoModal();
+            }
+        }
+
+        // Toggle itemized input visibility
+        document.getElementById('deduction_type').addEventListener('change', function() {
+            const container = document.getElementById('itemized_container');
+            if (this.value === 'itemized') {
+                container.classList.remove('hidden');
+            } else {
+                container.classList.add('hidden');
+            }
+        });
+
+        // Simplified 2026/2027 Federal Tax Bracket & Standard Deduction Estimator logic
+        function calculateTaxCredit() {
+            const filingStatus = document.getElementById('filing_status').value;
+            const agi = parseFloat(document.getElementById('agi').value) || 0;
+            const deductionType = document.getElementById('deduction_type').value;
+            const itemizedAmount = parseFloat(document.getElementById('itemized_amount').value) || 0;
+            const otherCredits = parseFloat(document.getElementById('other_credits').value) || 0;
+
+            // Standard deductions (approximate 2026 levels)
+            let standardDeduction = 15000;
+            let sgoCap = 1700;
+
+            if (filingStatus === 'joint') {
+                standardDeduction = 30000;
+                sgoCap = 3400;
+            } else if (filingStatus === 'head') {
+                standardDeduction = 22500;
+                sgoCap = 1700;
+            }
+
+            const deduction = deductionType === 'itemized' ? itemizedAmount : standardDeduction;
+            let taxableIncome = Math.max(0, agi - deduction);
+
+            // Simple progressive tax bracket approximation (2026 brackets)
+            let taxLiability = 0;
+            if (filingStatus === 'joint') {
+                if (taxableIncome <= 23200) {
+                    taxLiability = taxableIncome * 0.10;
+                } else if (taxableIncome <= 94300) {
+                    taxLiability = 2320 + (taxableIncome - 23200) * 0.12;
+                } else if (taxableIncome <= 201050) {
+                    taxLiability = 10852 + (taxableIncome - 94300) * 0.22;
+                } else {
+                    taxLiability = 34336.50 + (taxableIncome - 201050) * 0.24;
+                }
+            } else {
+                if (taxableIncome <= 11600) {
+                    taxLiability = taxableIncome * 0.10;
+                } else if (taxableIncome <= 47150) {
+                    taxLiability = 1160 + (taxableIncome - 11600) * 0.12;
+                } else if (taxableIncome <= 100525) {
+                    taxLiability = 5426 + (taxableIncome - 47150) * 0.22;
+                } else {
+                    taxLiability = 17168.50 + (taxableIncome - 100525) * 0.24;
+                }
+            }
+
+            let netTaxLiability = Math.max(0, taxLiability - otherCredits);
+            let recommendedDonation = Math.min(netTaxLiability, sgoCap);
+
+            // Update UI results
+            document.getElementById('res_taxable_income').textContent = '$' + taxableIncome.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
+            document.getElementById('res_total_tax').textContent = '$' + netTaxLiability.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
+            document.getElementById('res_sgo_cap').textContent = '$' + sgoCap.toLocaleString();
+            document.getElementById('res_recommended_donation').textContent = '$' + recommendedDonation.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
+            
+            if (recommendedDonation > 0) {
+                document.getElementById('res_note').textContent = `You have enough tax liability to fully utilize a $${recommendedDonation.toLocaleString()} SGO credit!`;
+                document.getElementById('proceedDonateBtn').classList.remove('hidden');
+            } else {
+                document.getElementById('res_note').textContent = 'Your estimated tax liability is $0, but remember: unused credits carry forward for up to 5 years if your income changes!';
+                document.getElementById('proceedDonateBtn').classList.remove('hidden');
+            }
+        }
+    </script>
+</body>
+</html>

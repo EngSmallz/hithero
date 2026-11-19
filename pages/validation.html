@@ -11,8 +11,6 @@
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17482080573"></script>
     <script> window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'AW-17482080573'); </script> 
-    
-
 </head>
 <body class="bg-gray-800 text-gray-50">
     <header class="bg-gradient-to-r from-green-700 to-green-900 text-white shadow-lg py-4 md:py-6 relative">
@@ -33,11 +31,11 @@
                 </nav>
             </div>
 
+            <!-- Hamburger Menu Always Viewable (matching about.html pattern) -->
             <div class="relative">
-                <button id="hamburgerButton" class="text-white text-3xl focus:outline-none **md:hidden**" onclick="toggleMenu()">☰</button>
+                <button id="hamburgerButton" class="text-white text-3xl focus:outline-none" onclick="toggleMenu()">☰</button>
 
-                <div class="menu-items absolute right-0 top-full mt-2 w-48 bg-green-800 rounded-md shadow-lg py-1 z-20 hidden **md:hidden**" id="menuItems">
-                    
+                <div class="menu-items absolute right-0 top-full mt-2 w-48 bg-green-800 rounded-md shadow-lg py-1 z-20 hidden" id="menuItems">
                     <nav class="md:hidden">
                         <ul class="flex flex-col text-base p-1">
                             <li><a href="/pages/homepage.html" class="listButton block">Home</a></li>
@@ -46,7 +44,8 @@
                             <li><a href="/pages/about.html" class="listButton block">About</a></li>
                             <li><a href="/pages/contact.html" class="listButton block">Contact</a></li>
                             <li><a href="/pages/partners.html" class="listButton block">Partners</a></li>
-                            <hr class="my-1 border-green-700"> </ul>
+                            <hr class="my-1 border-green-700">
+                        </ul>
                     </nav>
                     
                     <button id="loginButton" class="listButton hidden" onclick="redirectTo('/pages/login.html')">Login</button>
@@ -60,7 +59,7 @@
     </header>
       
     <main class="flex-grow container mx-auto px-4 py-8">
-        <section class="bg-white p-8 rounded-lg shadow-md text-gray-800 max-w-4xl mx-auto mb-8">
+        <section class="bg-white p-8 rounded-lg shadow-md text-gray-800 max-w-6xl mx-auto mb-8">
             <h2 class="text-3xl font-bold text-green-700 mb-4">How Validation Works</h2>
             <p class="text-gray-700 text-lg leading-relaxed mb-6">
                 The validation process allows Homeroom Heroes to ensure only teachers are signing up.
@@ -69,9 +68,45 @@
                 If you know them and can validate them with the information present, then please press the green "Validate" button.
                 If you believe someone other than the teacher signed up with fake information, then please press the red "Report" button and we will investigate.
             </p>
+
+            <!-- FILTER & SEARCH CONTROLS -->
+            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6 flex flex-col md:flex-row gap-4 justify-between items-center">
+                <div class="w-full md:w-1/2">
+                    <input type="text" id="searchInput" placeholder="Search by name, email, school, or district..." onkeyup="filterValidationList()"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 text-sm bg-white text-gray-900">
+                </div>
+                <div class="flex gap-3 w-full md:w-auto">
+                    <select id="stateFilter" onchange="filterValidationList()" class="px-3 py-2 border border-gray-300 rounded-md text-sm bg-white text-gray-900">
+                        <option value="ALL">All States</option>
+                    </select>
+                    <select id="statusFilter" onchange="filterValidationList()" class="px-3 py-2 border border-gray-300 rounded-md text-sm bg-white text-gray-900">
+                        <option value="ALL">All Statuses</option>
+                        <option value="reported">Reported Only</option>
+                        <option value="emailed">Emailed Only</option>
+                    </select>
+                </div>
+            </div>
+
             <h2 class="text-3xl font-bold text-green-700 mb-4">Validation List</h2>
-            <ul id="validationList" class="space-y-4">
-                </ul>
+            
+            <div class="overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-green-800 text-white uppercase text-xs">
+                            <th class="py-3 px-4">Teacher Name & Email</th>
+                            <th class="py-3 px-4">Location (State / District / School)</th>
+                            <th class="py-3 px-4">Phone</th>
+                            <th class="py-3 px-4 text-center">Status Flags</th>
+                            <th class="py-3 px-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="validationTableBody" class="divide-y divide-gray-200 bg-white">
+                        <tr>
+                            <td colspan="5" class="py-6 text-center text-gray-500">Loading validation list...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </section>
     </main>
 
@@ -82,20 +117,21 @@
     </footer>
 
     <script>
+        let allUsersData = [];
+        let currentUserRole = '';
+
         function redirectTo(url) {
             window.location.href = url;
         }
         
-        // This function dynamically shows/hides menu items based on user authentication and role.
         async function checkAuthentication() {
             const menuItems = document.getElementById('menuItems');
-            // Hide all dynamic buttons first to prevent flicker
             const buttons = ['loginButton', 'logoutButton', 'mypageButton', 'validationButton', 'forumButton'];
             buttons.forEach(id => {
                 const button = document.getElementById(id);
                 if (button) {
                     button.classList.add('hidden');
-                    button.classList.remove('block'); // Ensure 'block' is removed
+                    button.classList.remove('block');
                 }
             });
 
@@ -111,38 +147,33 @@
                 }
             } catch (error) {
                 console.error('Error fetching user profile:', error);
-                // If there's an error fetching profile, assume not logged in.
             }
 
-            // Show buttons based on user role
             if (userRole === 'teacher') {
-                document.getElementById('logoutButton')?.classList.remove('hidden');
-                document.getElementById('logoutButton')?.classList.add('block');
-                document.getElementById('mypageButton')?.classList.remove('hidden');
-                document.getElementById('mypageButton')?.classList.add('block');
+                document.getElementById('mypageButton').classList.remove('hidden');
+                document.getElementById('mypageButton').classList.add('block');
                 document.getElementById('forumButton').classList.remove('hidden');
-                document.getElementById('forumButton').classList.add('block'); // Make it display as a block
-                document.getElementById('validationButton')?.classList.remove('hidden');
-                document.getElementById('validationButton')?.classList.add('block');
+                document.getElementById('forumButton').classList.add('block');
+                document.getElementById('validationButton').classList.remove('hidden');
+                document.getElementById('validationButton').classList.add('block');
+                document.getElementById('logoutButton').classList.remove('hidden');
+                document.getElementById('logoutButton').classList.add('block');
             } else if (userRole === 'admin') {
-                document.getElementById('logoutButton')?.classList.remove('hidden');
-                document.getElementById('logoutButton')?.classList.add('block');
-                document.getElementById('validationButton')?.classList.remove('hidden');
-                document.getElementById('validationButton')?.classList.add('block');
                 document.getElementById('forumButton').classList.remove('hidden');
-                document.getElementById('forumButton').classList.add('block'); // Make it display as a block
+                document.getElementById('forumButton').classList.add('block');
+                document.getElementById('validationButton').classList.remove('hidden');
+                document.getElementById('validationButton').classList.add('block');
+                document.getElementById('logoutButton').classList.remove('hidden');
+                document.getElementById('logoutButton').classList.add('block');
             } else {
-                // Not logged in or unknown role, show login button (if it's the one in the dropdown)
-                document.getElementById('loginButton')?.classList.remove('hidden');
-                document.getElementById('loginButton')?.classList.add('block');
+                document.getElementById('loginButton').classList.remove('hidden');
+                document.getElementById('loginButton').classList.add('block');
             }
         }
 
         function toggleMenu() {
             const menuItems = document.getElementById('menuItems');
-            // Use classList.toggle for Tailwind's hidden utility
             menuItems.classList.toggle('hidden');
-            // If the menu is now shown, update authentication buttons
             if (!menuItems.classList.contains('hidden')) {
                 checkAuthentication();
             }
@@ -160,6 +191,7 @@
                     window.location.href = '/pages/403.html';
                     return;
                 }
+                currentUserRole = data.user_role;
                 get_list(data.user_role);
             } catch (error) {
                 console.error('Error checking permission:', error);
@@ -168,80 +200,137 @@
         }
         window.onload = checkPermission;
 
-
-        async function get_list(userRole) { // Accept userRole as a parameter
+        async function get_list(userRole) {
             try {
                 const response = await fetch(`/api/validation_list/`);
                 const data = await response.json();
-                const validationList = document.getElementById("validationList");
-                validationList.innerHTML = ""; // Clear existing list
-
-                data.new_users.forEach(user => {
-                    const listItem = document.createElement("li");
-                    listItem.className = "bg-gray-100 p-4 rounded-lg shadow-sm mb-4 flex flex-col md:flex-row md:items-center md:justify-between text-gray-800";
-
-                    const userInfoSpan = document.createElement("span");
-                    userInfoSpan.className = "text-lg font-medium mb-2 md:mb-0 md:mr-4";
-                    userInfoSpan.textContent = `${user.name} - ${user.email} - ${user.state} - ${user.district} - ${user.school} - ${user.phone_number}`;
-                    
-                    const buttonContainer = document.createElement("div");
-                    buttonContainer.className = "flex flex-wrap gap-2 mt-2 md:mt-0";
-
-                    const validateButton = document.createElement("button");
-                    validateButton.textContent = "Validate";
-                    validateButton.className = "bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 ease-in-out";
-                    validateButton.addEventListener("click", () => validate(user.email));
-                    buttonContainer.appendChild(validateButton);
-
-                    if (userRole === 'admin') { 
-                        if (user.emailed === 0) { 
-                            const emailButton = document.createElement("button");
-                            emailButton.textContent = "Emailed User";
-                            emailButton.className = "bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 ease-in-out";
-                            emailButton.addEventListener("click", () => emailUser(user.email));
-                            buttonContainer.appendChild(emailButton);
-                        }
-                        const deleteButton = document.createElement("button");
-                        deleteButton.textContent = "Delete";
-                        deleteButton.className = "bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 ease-in-out";
-                        deleteButton.addEventListener("click", () => deleteUser(user.email));
-                        buttonContainer.appendChild(deleteButton);
-
-                        if (user.report === 1) {
-                            const userReport = document.createElement("span");
-                            userReport.className = "text-red-600 font-bold ml-4";
-                            userReport.textContent = ` REPORTED `;
-                            buttonContainer.appendChild(userReport);
-                        } 
-                    } else { // For teachers
-                        const reportButton = document.createElement("button");
-                        reportButton.textContent = "Report";
-                        reportButton.className = "bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 ease-in-out";
-                        reportButton.addEventListener("click", () => reportUser(user.email));
-                        buttonContainer.appendChild(reportButton);
-                    }
-                    
-                    listItem.appendChild(userInfoSpan);
-                    listItem.appendChild(buttonContainer);
-                    validationList.appendChild(listItem);
+                allUsersData = data.new_users || [];
+                
+                const stateSet = new Set(allUsersData.map(u => u.state).filter(Boolean));
+                const stateFilter = document.getElementById('stateFilter');
+                stateFilter.innerHTML = '<option value="ALL">All States</option>';
+                stateSet.forEach(st => {
+                    stateFilter.add(new Option(st, st));
                 });
+
+                renderTable(allUsersData, userRole);
             } catch (error) {
                 console.error('Error fetching validation list:', error);
             }
+        }
+
+        function filterValidationList() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const selectedState = document.getElementById('stateFilter').value;
+            const statusFilter = document.getElementById('statusFilter').value;
+
+            const filtered = allUsersData.filter(user => {
+                const matchesSearch = 
+                    (user.name && user.name.toLowerCase().includes(query)) ||
+                    (user.email && user.email.toLowerCase().includes(query)) ||
+                    (user.school && user.school.toLowerCase().includes(query)) ||
+                    (user.district && user.district.toLowerCase().includes(query));
+
+                const matchesState = selectedState === 'ALL' || user.state === selectedState;
+                
+                let matchesStatus = true;
+                if (statusFilter === 'reported') matchesStatus = user.report === 1;
+                if (statusFilter === 'emailed') matchesStatus = user.emailed === 1;
+
+                return matchesSearch && matchesState && matchesStatus;
+            });
+
+            renderTable(filtered, currentUserRole);
+        }
+
+        function renderTable(users, userRole) {
+            const tbody = document.getElementById("validationTableBody");
+            tbody.innerHTML = "";
+
+            if (users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-gray-500">No teachers found matching your filter.</td></tr>';
+                return;
+            }
+
+            users.forEach(user => {
+                const tr = document.createElement("tr");
+                tr.className = "hover:bg-gray-50 text-gray-800";
+
+                const buttonContainer = document.createElement("div");
+                buttonContainer.className = "flex flex-wrap justify-end gap-2";
+
+                const validateButton = document.createElement("button");
+                validateButton.textContent = "Validate";
+                validateButton.className = "bg-green-600 hover:bg-green-700 text-white font-bold py-1.5 px-3 rounded text-xs transition duration-300 ease-in-out";
+                validateButton.addEventListener("click", () => validate(user.email));
+                buttonContainer.appendChild(validateButton);
+
+                if (userRole === 'admin') { 
+                    if (user.emailed === 0) { 
+                        const emailButton = document.createElement("button");
+                        emailButton.textContent = "Emailed User";
+                        emailButton.className = "bg-blue-600 hover:bg-blue-700 text-white font-bold py-1.5 px-3 rounded text-xs transition duration-300 ease-in-out";
+                        emailButton.addEventListener("click", () => emailUser(user.email));
+                        buttonContainer.appendChild(emailButton);
+                    }
+                    const deleteButton = document.createElement("button");
+                    deleteButton.textContent = "Delete";
+                    deleteButton.className = "bg-red-600 hover:bg-red-700 text-white font-bold py-1.5 px-3 rounded text-xs transition duration-300 ease-in-out";
+                    deleteButton.addEventListener("click", () => deleteUser(user.email));
+                    buttonContainer.appendChild(deleteButton);
+                } else { 
+                    const reportButton = document.createElement("button");
+                    reportButton.textContent = "Report";
+                    reportButton.className = "bg-red-600 hover:bg-red-700 text-white font-bold py-1.5 px-3 rounded text-xs transition duration-300 ease-in-out";
+                    reportButton.addEventListener("click", () => reportUser(user.email));
+                    buttonContainer.appendChild(buttonContainer.appendChild(reportButton));
+                }
+
+                let statusFlagsHTML = '';
+                if (user.report === 1) {
+                    statusFlagsHTML += '<span class="bg-red-100 text-red-800 text-xs font-bold px-2 py-0.5 rounded mr-1"> REPORTED </span>';
+                }
+                if (user.emailed === 1) {
+                    statusFlagsHTML += '<span class="bg-blue-100 text-blue-800 text-xs font-bold px-2 py-0.5 rounded">EMAILED</span>';
+                }
+                if (!statusFlagsHTML) {
+                    statusFlagsHTML = '<span class="text-xs text-gray-400">None</span>';
+                }
+
+                tr.innerHTML = `
+                    <td class="py-3 px-4">
+                        <div class="font-bold text-gray-900">${user.name || 'Unknown'}</div>
+                        <div class="text-xs text-gray-500">${user.email}</div>
+                    </td>
+                    <td class="py-3 px-4">
+                        <div class="font-medium">${user.school || 'N/A'}</div>
+                        <div class="text-xs text-gray-500">${user.district || 'N/A'}, ${user.state || 'N/A'}</div>
+                    </td>
+                    <td class="py-3 px-4 text-xs font-mono">${user.phone_number || 'N/A'}</td>
+                    <td class="py-3 px-4 text-center">
+                        ${statusFlagsHTML}
+                    </td>
+                `;
+                
+                const tdActions = document.createElement("td");
+                tdActions.className = "py-3 px-4 text-right";
+                tdActions.appendChild(buttonContainer);
+                tr.appendChild(tdActions);
+
+                tbody.appendChild(tr);
+            });
         }
         
         async function validate(email) {
             try {
                 const validateResponse = await fetch(`/validation/validate_user/${encodeURIComponent(email)}`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                 });
 
                 if (validateResponse.ok) {
                     alert(`Validation successful for user: ${email}`);
-                    window.location.reload();
+                    get_list(currentUserRole);
                 } else {
                     const errorData = await validateResponse.json();
                     alert(`Validation failed for user: ${email}. ${errorData.detail || ''}`);
@@ -259,14 +348,12 @@
             try {
                 const deleteResponse = await fetch(`/validation/delete_user/${encodeURIComponent(email)}`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                 });
 
                 if (deleteResponse.ok) {
                     alert(`Delete successful for user: ${email}`);
-                    window.location.reload();
+                    get_list(currentUserRole);
                 } else {
                     const errorData = await deleteResponse.json();
                     alert(`Delete failed for user: ${email}. ${errorData.detail || ''}`);
@@ -284,14 +371,12 @@
             try {
                 const reportResponse = await fetch(`/validation/report_user/${encodeURIComponent(email)}`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                 });
 
                 if (reportResponse.ok) {
                     alert(`Report successful for user: ${email}`);
-                    // No reload needed if report status is updated on server and not visually shown (unless get_list is called again)
+                    get_list(currentUserRole);
                 } else {
                     const errorData = await reportResponse.json();
                     alert(`Report failed for user: ${email}. ${errorData.detail || ''}`);
@@ -306,14 +391,12 @@
             try {
                 const emailResponse = await fetch(`/validation/emailed_user/${encodeURIComponent(email)}`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                 });
 
                 if (emailResponse.ok) {
                     alert(`Email status updated successfully for user: ${email}`);
-                    window.location.reload(); // Reload to reflect the change
+                    get_list(currentUserRole);
                 } else {
                     const errorData = await emailResponse.json();
                     alert(`Failed to update email status for user: ${email}. ${errorData.detail || ''}`);
@@ -328,9 +411,7 @@
             try {
                 const response = await fetch(`/profile/logout/`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                 });
                 if (response.ok) {
                     window.location.href = '/';
@@ -348,9 +429,7 @@
             try {
                 const response = await fetch('/profile/myinfo/', {
                     method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                 });
                 if (response.ok) {
                     window.location.href = '/pages/teacher.html';

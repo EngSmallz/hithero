@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Homeroom Heroes SGO - Apply for Student Technology</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="shortcut icon" type="image/x-icon" href="/static/images/favicon.ico" />
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    <link rel="stylesheet" href="/static/style.css"> 
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17482080573"></script>
+    <script> window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'AW-17482080573'); </script> 
+</head>
+<body class="bg-gray-800 text-gray-50">
+    <header class="bg-gradient-to-r from-emerald-700 to-teal-900 text-white shadow-lg py-4 md:py-6 relative">
+        <div class="container mx-auto px-4 flex justify-between items-center">
+            <div class="flex items-center">
+                <a href="/pages/sgo_home.html" class="flex items-center">
+                    <img src="/static/images/logo_transparent.png" alt="Homeroom Heroes Logo" class="h-16 md:h-20 mr-3">
+                </a>
+                <nav class="hidden md:flex ml-4">
+                    <ul class="flex space-x-4 md:space-x-8 text-lg">
+                        <li><a href="/pages/sgo_home.html" class="hover:text-teal-200 transition duration-300 ease-in-out rounded-md p-2">SGO Home</a></li>
+                        <li><a href="/pages/sgo_donate.html" class="hover:text-teal-200 transition duration-300 ease-in-out rounded-md p-2">Donate & Claim Credit</a></li>
+                        <li><a href="/pages/sgo_apply.html" class="hover:text-teal-200 transition duration-300 ease-in-out rounded-md p-2">Apply for Tech</a></li>
+                        <li><a href="/pages/sgo_calculator.html" class="hover:text-teal-200 transition duration-300 ease-in-out rounded-md p-2">Tax Estimator</a></li>
+                        <li><a href="/pages/homepage.html" class="hover:text-teal-200 transition duration-300 ease-in-out rounded-md p-2">Teacher Wishlists</a></li>
+                    </ul>
+                </nav>
+            </div>
+
+            <div class="relative">
+                <button id="hamburgerButton" class="text-white text-3xl focus:outline-none md:hidden" onclick="toggleMenu()">☰</button>
+
+                <div class="menu-items absolute right-0 top-full mt-2 w-48 bg-teal-800 rounded-md shadow-lg py-1 z-20 hidden md:hidden" id="menuItems">
+                    <nav class="md:hidden">
+                        <ul class="flex flex-col text-base p-1">
+                            <li><a href="/pages/sgo_home.html" class="listButton block">SGO Home</a></li>
+                            <li><a href="/pages/sgo_donate.html" class="listButton block">Donate & Claim Credit</a></li>
+                            <li><a href="/pages/sgo_apply.html" class="listButton block">Apply for Tech</a></li>
+                            <li><a href="/pages/sgo_calculator.html" class="listButton block">Tax Estimator</a></li>
+                            <li><a href="/pages/homepage.html" class="listButton block">Teacher Wishlists</a></li>
+                            <hr class="my-1 border-teal-700">
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <main class="container mx-auto px-4 py-8">
+        <section class="bg-white p-8 rounded-lg shadow-md text-gray-800 max-w-2xl mx-auto">
+            <span class="bg-teal-100 text-teal-800 text-xs font-bold uppercase tracking-widest py-1 px-3 rounded-full mb-3 inline-block">Student Hardware Request</span>
+            <h2 class="text-3xl font-bold text-teal-900 mb-2">SGO Student Technology Application</h2>
+            <p class="text-gray-600 text-base mb-6">If your student is enrolled in a K-12 public school within one of our active SGO states and meets household income guidelines, submit this application to request a drop-shipped laptop or educational tech.</p>
+
+            <form id="sgo-application-form" method="post" enctype="multipart/form-data" class="space-y-4">
+                
+                <!-- Parent / Guardian Info -->
+                <div class="border-b pb-4 mb-4">
+                    <h3 class="text-lg font-semibold text-teal-900 mb-3">Parent / Guardian Information</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="parent_name" class="block text-sm font-medium text-gray-700 mb-1">Parent/Guardian Full Name:</label>
+                            <input type="text" id="parent_name" name="parent_name" required
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500 bg-gray-50 text-gray-900">
+                        </div>
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email Address:</label>
+                            <input type="email" id="email" name="email" required
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500 bg-gray-50 text-gray-900">
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <label for="phone_number" class="block text-sm font-medium text-gray-700 mb-1">Phone Number:</label>
+                        <input type="text" id="phone_number" name="phone_number" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500 bg-gray-50 text-gray-900">
+                    </div>
+                </div>
+
+                <!-- Student & School Info -->
+                <div class="border-b pb-4 mb-4">
+                    <h3 class="text-lg font-semibold text-teal-900 mb-3">Student & School Information</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label for="student_name" class="block text-sm font-medium text-gray-700 mb-1">Student Full Name:</label>
+                            <input type="text" id="student_name" name="student_name" required
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500 bg-gray-50 text-gray-900">
+                        </div>
+                        <div>
+                            <label for="student_grade" class="block text-sm font-medium text-gray-700 mb-1">Grade Level:</label>
+                            <select id="student_grade" name="student_grade" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500 bg-gray-50 text-gray-900">
+                                <option value="" disabled selected>Choose grade</option>
+                                <option value="Kindergarten">Kindergarten</option>
+                                <option value="1">1st Grade</option>
+                                <option value="2">2nd Grade</option>
+                                <option value="3">3rd Grade</option>
+                                <option value="4">4th Grade</option>
+                                <option value="5">5th Grade</option>
+                                <option value="6">6th Grade</option>
+                                <option value="7">7th Grade</option>
+                                <option value="8">8th Grade</option>
+                                <option value="9">9th Grade</option>
+                                <option value="10">10th Grade</option>
+                                <option value="11">11th Grade</option>
+                                <option value="12">12th Grade</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Dropdowns following your established pattern -->
+                    <div class="space-y-4">
+                        <div>
+                            <label for="state" class="block text-sm font-medium text-gray-700 mb-1">Participating State:</label>
+                            <select id="state" name="state" onchange="populateCountiesDropdown()" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500 bg-gray-50 text-gray-900">
+                                <option value="" disabled selected>Choose approved state</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="county" class="block text-sm font-medium text-gray-700 mb-1">County:</label>
+                            <select id="county" name="county" onchange="populateDistrictsDropdown()" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500 bg-gray-50 text-gray-900">
+                                <option value="" disabled selected>Choose county</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="district" class="block text-sm font-medium text-gray-700 mb-1">School District:</label>
+                            <select id="district" name="district" onchange="populateSchoolsDropdown()" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500 bg-gray-50 text-gray-900">
+                                <option value="" disabled selected>Choose district</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="school" class="block text-sm font-medium text-gray-700 mb-1">School Name:</label>
+                            <select id="school" name="school" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500 bg-gray-50 text-gray-900">
+                                <option value="" disabled selected>Choose school</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Drop-Shipping Address -->
+                <div class="border-b pb-4 mb-4">
+                    <h3 class="text-lg font-semibold text-teal-900 mb-3">Drop-Ship Delivery Address</h3>
+                    <p class="text-xs text-gray-500 mb-3">Where should we ship the laptop if your application is approved?</p>
+                    
+                    <div class="space-y-3">
+                        <div>
+                            <label for="shipping_street" class="block text-sm font-medium text-gray-700 mb-1">Street Address:</label>
+                            <input type="text" id="shipping_street" name="shipping_street" required
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500 bg-gray-50 text-gray-900">
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div>
+                                <label for="shipping_city" class="block text-sm font-medium text-gray-700 mb-1">City:</label>
+                                <input type="text" id="shipping_city" name="shipping_city" required
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500 bg-gray-50 text-gray-900">
+                            </div>
+                            <div>
+                                <label for="shipping_zip" class="block text-sm font-medium text-gray-700 mb-1">ZIP Code:</label>
+                                <input type="text" id="shipping_zip" name="shipping_zip" required
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500 bg-gray-50 text-gray-900">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Eligibility & Income Verification -->
+                <div class="border-b pb-4 mb-4">
+                    <h3 class="text-lg font-semibold text-teal-900 mb-3">Eligibility Verification</h3>
+                    <p class="text-xs text-gray-500 mb-3">Section 25F prioritizes students from low-to-moderate income households (at or below 300% Area Median Gross Income) or those receiving public assistance.</p>
+                    
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="household_size" class="block text-sm font-medium text-gray-700 mb-1">Household Size:</label>
+                                <select id="household_size" name="household_size" required
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500 bg-gray-50 text-gray-900">
+                                    <option value="" disabled selected>Select size</option>
+                                    <option value="1">1 Person</option>
+                                    <option value="2">2 People</option>
+                                    <option value="3">3 People</option>
+                                    <option value="4">4 People</option>
+                                    <option value="5">5 People</option>
+                                    <option value="6">6+ People</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="annual_income" class="block text-sm font-medium text-gray-700 mb-1">Estimated Annual Household Income ($):</label>
+                                <input type="number" id="annual_income" name="annual_income" placeholder="e.g. 55000" required
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500 bg-gray-50 text-gray-900">
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <label for="verification_doc" class="block text-sm font-medium text-gray-700 mb-1">Upload Verification Document (Income proof, Free/Reduced Lunch letter, or SNAP notice):</label>
+                            <input type="file" id="verification_doc" name="verification_doc" accept=".pdf,.png,.jpg,.jpeg" required
+                                   class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hardware Request Type -->
+                <div class="mb-4">
+                    <label for="hardware_type" class="block text-sm font-medium text-gray-700 mb-1">Requested Technology:</label>
+                    <select id="hardware_type" name="hardware_type" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500 bg-gray-50 text-gray-900">
+                        <option value="" disabled selected>Select equipment needed</option>
+                        <option value="Chromebook">Standard Student Chromebook</option>
+                        <option value="Windows Laptop">Standard Windows Laptop</option>
+                        <option value="Internet Hotspot">Internet Hotspot / Connectivity Stipend</option>
+                    </select>
+                </div>
+
+                <div class="g-recaptcha mt-4" data-sitekey="6Lf9uiIqAAAAAMt19WMR4q0aO-JMqks9Du0yHHlL"></div>
+
+                <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 mt-6">
+                    <button id="submitButton" type="submit"
+                            class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md">
+                        Submit SGO Application
+                    </button>
+                    <button type="button" onclick="redirectTo('/pages/sgo_home.html')"
+                            class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </section>
+    </main>
+
+    <footer class="bg-gray-800 text-white py-6 mt-8 rounded-t-lg shadow-inner text-center">
+        <div class="container mx-auto px-4 text-sm">
+            <p>&copy; 2026 Homeroom Heroes. SGO Wing. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        function redirectTo(url) {
+            window.location.href = url;
+        }
+
+        function toggleMenu() {
+            const menuItems = document.getElementById('menuItems');
+            menuItems.classList.toggle('hidden');
+        }
+
+        // Populate states for SGO (pulling from your approved SGO states endpoint)
+        async function populateStatesDropdown() {
+            try {
+                const response = await fetch("/api/sgo/get_approved_states/");
+                if (!response.ok) throw new Error('Network response was not ok.');
+                const states = await response.json();
+                const stateDropdown = document.getElementById("state");
+                stateDropdown.innerHTML = '<option value="" disabled selected>Choose approved state</option>';
+                states.forEach(state => {
+                    const option = new Option(state.name, state.code);
+                    stateDropdown.add(option);
+                });
+            } catch (error) {
+                console.error("Error retrieving SGO state information:", error);
+                // Fallback demo state if API is not yet active
+                const stateDropdown = document.getElementById("state");
+                stateDropdown.innerHTML = '<option value="" disabled selected>Choose approved state</option>';
+                ['ID', 'FL', 'TX', 'IA'].forEach(st => {
+                    stateDropdown.add(new Option(st, st));
+                });
+            }
+        }
+
+        async function populateCountiesDropdown() {
+            try {
+                const selectedState = document.getElementById("state").value;
+                if (!selectedState) return;
+                const response = await fetch(`/api/get_counties/${selectedState}`);
+                if (!response.ok) throw new Error('Network response was not ok.');
+                const counties = await response.json();
+                const countyDropdown = document.getElementById("county");
+                countyDropdown.innerHTML = '<option value="" disabled selected>Choose county</option>';
+                counties.forEach(county => countyDropdown.add(new Option(county, county)));
+                
+                document.getElementById("district").innerHTML = '<option value="" disabled selected>Choose district</option>';
+                document.getElementById("school").innerHTML = '<option value="" disabled selected>Choose school</option>';
+            } catch (error) {
+                console.error("Error retrieving county information:", error);
+            }
+        }
+
+        async function populateDistrictsDropdown() {
+            try {
+                const selectedState = document.getElementById("state").value;
+                const selectedCounty = document.getElementById("county").value;
+                if (!selectedState || !selectedCounty) return;
+                const response = await fetch(`/api/get_districts/${selectedState}/${selectedCounty}`);
+                if (!response.ok) throw new Error('Network response was not ok.');
+                const districts = await response.json();
+                const districtDropdown = document.getElementById("district");
+                districtDropdown.innerHTML = '<option value="" disabled selected>Choose district</option>';
+                districts.forEach(district => districtDropdown.add(new Option(district, district)));
+                
+                document.getElementById("school").innerHTML = '<option value="" disabled selected>Choose school</option>';
+            } catch (error) {
+                console.error("Error retrieving district information:", error);
+            }
+        }
+
+        async function populateSchoolsDropdown() {
+            try {
+                const selectedState = document.getElementById("state").value;
+                const selectedCounty = document.getElementById("county").value;
+                const selectedDistrict = document.getElementById("district").value;
+                if (!selectedState || !selectedCounty || !selectedDistrict) return;
+                const response = await fetch(`/api/get_schools/${selectedState}/${selectedCounty}/${selectedDistrict}`);
+                if (!response.ok) throw new Error('Network response was not ok.');
+                const schools = await response.json();
+                const schoolDropdown = document.getElementById("school");
+                schoolDropdown.innerHTML = '<option value="" disabled selected>Choose school</option>';
+                schools.forEach(school => schoolDropdown.add(option = new Option(school, school)));
+            } catch (error) {
+                console.error("Error retrieving school information:", error);
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            populateStatesDropdown();
+
+            const appForm = document.getElementById("sgo-application-form");
+            const submitButton = document.getElementById("submitButton");
+
+            submitButton.addEventListener("click", async function (event) {
+                event.preventDefault();
+
+                const recaptchaResponse = grecaptcha.getResponse();
+                if (!recaptchaResponse) {
+                    alert('Please complete the reCAPTCHA verification.');
+                    return;
+                }
+
+                const formData = new FormData(appForm);
+                formData.append('recaptcha_response', recaptchaResponse);
+
+                try {
+                    const response = await fetch("/api/sgo/apply/", {
+                        method: "POST",
+                        body: formData,
+                    });
+
+                    let data = await response.json();
+
+                    if (response.ok) {
+                        alert(data.message || 'Application submitted successfully! We will review your income verification and contact you regarding laptop drop-shipping.');
+                        window.location.href = '/pages/sgo_home.html';
+                    } else {
+                        alert(data.detail || 'Application submission failed. Please check your inputs and try again.');
+                        grecaptcha.reset();
+                    }
+                } catch (error) {
+                    console.error('Error submitting application:', error);
+                    alert('A network error occurred. Please check your connection and try again.');
+                    grecaptcha.reset();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

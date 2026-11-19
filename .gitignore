@@ -1,4 +1,8 @@
 **/*.pyc
+__pycache__/
+.pytest_cache/
+/test/
+/integration_tests/
 .venv/
 .env
 .idea

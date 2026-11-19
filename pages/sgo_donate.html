@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Homeroom Heroes SGO - Donate & Claim 100% Tax Credit</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="shortcut icon" type="image/x-icon" href="/static/images/favicon.ico" />
+    <link rel="stylesheet" href="/static/style.css"> 
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17482080573"></script>
+    <script> window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'AW-17482080573'); </script> 
+</head>
+<body class="bg-gray-800 text-gray-50">
+    <header class="bg-gradient-to-r from-emerald-700 to-teal-900 text-white shadow-lg py-4 md:py-6 relative">
+        <div class="container mx-auto px-4 flex justify-between items-center">
+            <div class="flex items-center">
+                <a href="/pages/sgo_home.html" class="flex items-center">
+                    <img src="/static/images/logo_transparent.png" alt="Homeroom Heroes Logo" class="h-16 md:h-20 mr-3">
+                </a>
+                <nav class="hidden md:flex ml-4">
+                    <ul class="flex space-x-4 md:space-x-8 text-lg">
+                        <li><a href="/pages/sgo_home.html" class="hover:text-teal-200 transition duration-300 ease-in-out rounded-md p-2">SGO Home</a></li>
+                        <li><a href="/pages/sgo_donate.html" class="hover:text-teal-200 transition duration-300 ease-in-out rounded-md p-2">Donate & Claim Credit</a></li>
+                        <li><a href="/pages/sgo_apply.html" class="hover:text-teal-200 transition duration-300 ease-in-out rounded-md p-2">Apply for Tech</a></li>
+                        <li><a href="/pages/sgo_calculator.html" class="hover:text-teal-200 transition duration-300 ease-in-out rounded-md p-2">Tax Estimator</a></li>
+                        <li><a href="/pages/homepage.html" class="hover:text-teal-200 transition duration-300 ease-in-out rounded-md p-2">Teacher Wishlists</a></li>
+                    </ul>
+                </nav>
+            </div>
+
+            <div class="relative">
+                <button id="hamburgerButton" class="text-white text-3xl focus:outline-none md:hidden" onclick="toggleMenu()">☰</button>
+
+                <div class="menu-items absolute right-0 top-full mt-2 w-48 bg-teal-800 rounded-md shadow-lg py-1 z-20 hidden md:hidden" id="menuItems">
+                    <nav class="md:hidden">
+                        <ul class="flex flex-col text-base p-1">
+                            <li><a href="/pages/sgo_home.html" class="listButton block">SGO Home</a></li>
+                            <li><a href="/pages/sgo_donate.html" class="listButton block">Donate & Claim Credit</a></li>
+                            <li><a href="/pages/sgo_apply.html" class="listButton block">Apply for Tech</a></li>
+                            <li><a href="/pages/sgo_calculator.html" class="listButton block">Tax Estimator</a></li>
+                            <li><a href="/pages/homepage.html" class="listButton block">Teacher Wishlists</a></li>
+                            <hr class="my-1 border-teal-700">
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <main class="container mx-auto px-4 py-8">
+        <section class="bg-white p-8 rounded-lg shadow-md text-gray-800 max-w-2xl mx-auto">
+            <span class="bg-teal-100 text-teal-800 text-xs font-bold uppercase tracking-widest py-1 px-3 rounded-full mb-3 inline-block">IRC Section 25F Contribution</span>
+            <h2 class="text-3xl font-bold text-teal-900 mb-2">Redirect Your Federal Taxes</h2>
+            <p class="text-gray-600 text-base mb-6">Make a qualified cash contribution to fund student technology buckets in your chosen participating state and receive a dollar-for-dollar tax credit.</p>
+
+            <form id="sgo-donation-form" method="post" class="space-y-4">
+                
+                <!-- Donor Contact Info -->
+                <div class="border-b pb-4 mb-4">
+                    <h3 class="text-lg font-semibold text-teal-900 mb-3">1. Donor Information</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="donor_name" class="block text-sm font-medium text-gray-700 mb-1">Full Name:</label>
+                            <input type="text" id="donor_name" name="donor_name" required
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500 bg-gray-50 text-gray-900">
+                        </div>
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email (for receipt & Unique Donor Number):</label>
+                            <input type="email" id="email" name="email" required
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500 bg-gray-50 text-gray-900">
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <label for="mailing_address" class="block text-sm font-medium text-gray-700 mb-1">Mailing Address (Required for IRS Annual Tax Acknowledgment):</label>
+                        <input type="text" id="mailing_address" name="mailing_address" placeholder="Street, City, State, ZIP" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500 bg-gray-50 text-gray-900">
+                    </div>
+                </div>
+
+                <!-- State Bucket & Amount Selection -->
+                <div class="border-b pb-4 mb-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-lg font-semibold text-teal-900">2. Target State Pool & Contribution Amount</h3>
+                        <button type="button" onclick="openInfoModal('Target State Pool', 'Every dollar donated is ring-fenced into the specific state bucket you select below. Under IRS rules, SGO funds raised for a state can only be spent on drop-shipped student hardware in that exact state.')" class="text-teal-700 hover:text-teal-900 text-xs font-bold bg-teal-50 hover:bg-teal-100 px-2 py-0.5 rounded-full transition">i</button>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label for="target_state" class="block text-sm font-medium text-gray-700 mb-1">Select Participating State Bucket:</label>
+                            <select id="target_state" name="target_state" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500 bg-gray-50 text-gray-900">
+                                <option value="" disabled selected>Choose approved state bucket</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label for="donation_amount" class="block text-sm font-medium text-gray-700">Donation Amount ($):</label>
+                                <button type="button" onclick="openInfoModal('Contribution Limits', 'Individual filers can claim up to $1,700 annually. Married couples filing jointly can claim up to $3,400 ($1,700 per spouse under proposed IRS rules). Any amount above these caps can still be claimed as a standard charitable deduction.')" class="text-teal-700 hover:text-teal-900 text-xs font-bold bg-teal-50 hover:bg-teal-100 px-2 py-0.5 rounded-full transition">i</button>
+                            </div>
+                            <input type="number" id="donation_amount" name="donation_amount" min="10" max="3400" placeholder="e.g. 1700" required
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500 bg-gray-50 text-gray-900">
+                        </div>
+
+                        <!-- Joint-Filer Split Helper Toggle -->
+                        <div class="bg-teal-50 p-4 rounded-lg border border-teal-200">
+                            <div class="flex items-center">
+                                <input type="checkbox" id="joint_split_toggle" name="joint_split_toggle" onchange="toggleJointSplit()"
+                                       class="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded">
+                                <label for="joint_split_toggle" class="ml-2 block text-sm font-medium text-teal-900">Married Filing Jointly? (Split into two separate $1,700 receipts)</label>
+                            </div>
+                            <p id="joint_split_desc" class="text-xs text-teal-700 mt-2 hidden">Under proposed IRS rules, joint filers maximizing the $3,400 cap should issue two separate contributions. Enter your spouse's name below to generate dual receipts.</p>
+                            
+                            <div id="spouse_container" class="mt-3 hidden">
+                                <label for="spouse_name" class="block text-xs font-medium text-teal-900 mb-1">Spouse Full Name:</label>
+                                <input type="text" id="spouse_name" name="spouse_name" placeholder="Spouse Full Name"
+                                       class="w-full px-3 py-1.5 border border-teal-300 rounded-md shadow-sm bg-white text-gray-900 text-sm">
+                            </div>
+                        </div>
+
+                        <!-- Processing Fee Cover Toggle -->
+                        <div class="flex items-center mt-2">
+                            <input type="checkbox" id="cover_fees" name="cover_fees" checked
+                                   class="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded">
+                            <label for="cover_fees" class="ml-2 block text-sm text-gray-600">Add ~2.9% to cover payment processing fees so 100% of my intended gift goes to student tech.</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Legal Attestation Checkboxes -->
+                <div class="border-b pb-4 mb-4 space-y-3">
+                    <div class="flex items-start">
+                        <input type="checkbox" id="attestation_individual" name="attestation_individual" required
+                               class="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded mt-1">
+                        <label for="attestation_individual" class="ml-2 block text-sm text-gray-700">
+                            <strong>Individual Cash Contribution Attestation:</strong> I certify that this contribution is made as an individual (not from a corporation, business entity, or Donor-Advised Fund) using personal funds via credit/debit/ACH, designated as a Qualified Section 25F Contribution.
+                        </label>
+                    </div>
+
+                    <div class="flex items-start">
+                        <input type="checkbox" id="attestation_nodash" name="attestation_nodash" required
+                               class="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded mt-1">
+                        <label for="attestation_nodash" class="ml-2 block text-sm text-gray-700">
+                            <strong>No Earmarking Acknowledgment:</strong> I understand that SGO scholarships cannot be earmarked or restricted for a specific individual student or family.
+                        </label>
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 mt-6">
+                    <button id="checkoutButton" type="submit"
+                            class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out shadow-md text-center">
+                        Proceed to Secure Checkout &rarr;
+                    </button>
+                    <button type="button" onclick="redirectTo('/pages/sgo_home.html')"
+                            class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out shadow-md">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </section>
+    </main>
+
+    <!-- Info Modal / I-Pane Component -->
+    <div id="infoModal" class="fixed inset-0 bg-black bg-opacity-60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white text-gray-900 rounded-lg shadow-xl max-w-md w-full p-6 relative border-t-4 border-teal-600">
+            <button onclick="closeInfoModal()" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+            <h3 id="modalTitle" class="text-lg font-bold text-teal-900 mb-2">Information</h3>
+            <p id="modalBody" class="text-sm text-gray-600 leading-relaxed mb-6"></p>
+            <button onclick="closeInfoModal()" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 rounded-lg transition">Got it</button>
+        </div>
+    </div>
+
+    <footer class="bg-gray-800 text-white py-6 mt-8 rounded-t-lg shadow-inner text-center">
+        <div class="container mx-auto px-4 text-sm">
+            <p>&copy; 2026 Homeroom Heroes. SGO Wing. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        function redirectTo(url) {
+            window.location.href = url;
+        }
+
+        function toggleMenu() {
+            const menuItems = document.getElementById('menuItems');
+            menuItems.classList.toggle('hidden');
+        }
+
+        // I-Pane Modal Functions
+        function openInfoModal(title, text) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalBody').textContent = text;
+            document.getElementById('infoModal').classList.remove('hidden');
+        }
+
+        function closeInfoModal() {
+            document.getElementById('infoModal').classList.add('hidden');
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('infoModal');
+            if (event.target === modal) {
+                closeInfoModal();
+            }
+        }
+
+        // Toggle joint filer split fields
+        function toggleJointSplit() {
+            const toggle = document.getElementById('joint_split_toggle');
+            const desc = document.getElementById('joint_split_desc');
+            const spouseContainer = document.getElementById('spouse_container');
+            const amountInput = document.getElementById('donation_amount');
+
+            if (toggle.checked) {
+                desc.classList.remove('hidden');
+                spouseContainer.classList.remove('hidden');
+                amountInput.value = '3400';
+                amountInput.max = '3400';
+            } else {
+                desc.classList.add('hidden');
+                spouseContainer.classList.add('hidden');
+                amountInput.value = '1700';
+                amountInput.max = '1700';
+            }
+        }
+
+        // Populate active approved states dropdown
+        async function populateActiveStates() {
+            try {
+                const response = await fetch("/api/sgo/get_approved_states/");
+                if (!response.ok) throw new Error('Network response was not ok.');
+                const states = await response.json();
+                const stateDropdown = document.getElementById("target_state");
+                stateDropdown.innerHTML = '<option value="" disabled selected>Choose approved state bucket</option>';
+                states.forEach(st => {
+                    stateDropdown.add(new Option(st.name, st.code));
+                });
+            } catch (error) {
+                console.error("Error retrieving SGO states:", error);
+                // Fallback demo states
+                const stateDropdown = document.getElementById("target_state");
+                stateDropdown.innerHTML = '<option value="" disabled selected>Choose approved state bucket</option>';
+                [
+                    {code: 'ID', name: 'Idaho'},
+                    {code: 'FL', name: 'Florida'},
+                    {code: 'TX', name: 'Texas'},
+                    {code: 'IA', name: 'Iowa'}
+                ].forEach(st => {
+                    stateDropdown.add(new Option(st.name, st.code));
+                });
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            populateActiveStates();
+
+            const donationForm = document.getElementById("sgo-donation-form");
+            const checkoutButton = document.getElementById("checkoutButton");
+
+            checkoutButton.addEventListener("click", async function (event) {
+                event.preventDefault();
+
+                if (!donationForm.checkValidity()) {
+                    donationForm.reportValidity();
+                    return;
+                }
+
+                const formData = new FormData(donationForm);
+
+                try {
+                    // Call backend Stripe Checkout session endpoint
+                    const response = await fetch("/api/sgo/create_checkout_session/", {
+                        method: "POST",
+                        body: formData,
+                    });
+
+                    let data = await response.json();
+
+                    if (response.ok && data.checkout_url) {
+                        // Redirect user to Stripe Checkout page
+                        window.location.href = data.checkout_url;
+                    } else {
+                        alert(data.detail || 'Could not initiate checkout. Please try again.');
+                    }
+                } catch (error) {
+                    console.error('Network or server error during checkout:', error);
+                    alert('A network error occurred. Please check your connection and try again.');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

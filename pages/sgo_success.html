@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Homeroom Heroes SGO - Donation Confirmed</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="shortcut icon" type="image/x-icon" href="/static/images/favicon.ico" />
+    <link rel="stylesheet" href="/static/style.css"> 
+</head>
+<body class="bg-gray-800 text-gray-50">
+    <header class="bg-gradient-to-r from-emerald-700 to-teal-900 text-white shadow-lg py-4 md:py-6">
+        <div class="container mx-auto px-4 flex justify-between items-center">
+            <a href="/pages/sgo_home.html" class="flex items-center">
+                <img src="/static/images/logo_transparent.png" alt="Homeroom Heroes Logo" class="h-16 md:h-20 mr-3">
+            </a>
+            <nav class="hidden md:flex ml-4">
+                <ul class="flex space-x-6 text-lg">
+                    <li><a href="/pages/sgo_home.html" class="hover:text-teal-200 transition">SGO Home</a></li>
+                    <li><a href="/pages/sgo_donate.html" class="hover:text-teal-200 transition">Donate Again</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+    
+    <main class="container mx-auto px-4 py-10">
+        <section id="receiptContainer" class="bg-white p-8 rounded-lg shadow-lg text-gray-800 max-w-2xl mx-auto border-t-8 border-teal-600">
+            <div class="text-center mb-6">
+                <div class="w-14 h-14 bg-teal-100 text-teal-700 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                </div>
+                <span class="bg-teal-100 text-teal-800 text-xs font-bold uppercase tracking-widest py-1 px-3 rounded-full">Official Section 25F Receipt</span>
+                <h2 class="text-3xl font-bold text-teal-900 mt-2">Thank You for Your Contribution!</h2>
+                <p class="text-gray-600 text-sm mt-1">A copy of this written acknowledgment has been sent to your email.</p>
+            </div>
+
+            <!-- IRS Compliance Receipt Box -->
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-6 space-y-3 text-sm mb-6">
+                <div class="flex justify-between border-b border-gray-200 pb-2">
+                    <span class="text-gray-500">Organization:</span>
+                    <span class="font-semibold text-gray-900">Homeroom Heroes (501(c)(3) SGO)</span>
+                </div>
+                <div class="flex justify-between border-b border-gray-200 pb-2">
+                    <span class="text-gray-500">Donor Name:</span>
+                    <span id="rec_donor_name" class="font-semibold text-gray-900">Loading...</span>
+                </div>
+                <div class="flex justify-between border-b border-gray-200 pb-2">
+                    <span class="text-gray-500">IRS Unique Donor Number:</span>
+                    <span id="rec_donor_id" class="font-mono font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded">Loading...</span>
+                </div>
+                <div class="flex justify-between border-b border-gray-200 pb-2">
+                    <span class="text-gray-500">Target State SGO Pool:</span>
+                    <span id="rec_state" class="font-semibold text-gray-900">Loading...</span>
+                </div>
+                <div class="flex justify-between border-b border-gray-200 pb-2">
+                    <span class="text-gray-500">Qualified Cash Contribution:</span>
+                    <span id="rec_amount" class="font-bold text-lg text-gray-900">$0.00</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-500">Date of Contribution:</span>
+                    <span id="rec_date" class="font-semibold text-gray-900">--</span>
+                </div>
+            </div>
+
+            <div class="bg-teal-50 border border-teal-200 rounded-lg p-4 text-xs text-teal-900 mb-6 space-y-1">
+                <p><strong>Tax Filing Instructions (IRS Form 8525):</strong> Keep this receipt for your records. When filing your federal return, report your <strong>Unique Donor Number</strong> above on Form 8525 to claim your 100% Section 25F credit.</p>
+                <p><em>Substantiation Notice:</em> No goods or services were provided in exchange for this contribution. This contribution was designated under IRC Section 25F and may not also be claimed as a Section 170 charitable deduction.</p>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-4">
+                <button onclick="window.print()" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2.5 px-4 rounded-lg transition shadow-md">
+                    Print / Save PDF Receipt
+                </button>
+                <button onclick="window.location.href='/pages/sgo_home.html'" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-2.5 px-4 rounded-lg transition shadow-md">
+                    Return to SGO Home
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Fetch Stripe session receipt details using ?session_id=... from URL
+        async function loadReceiptDetails() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const sessionId = urlParams.get('session_id');
+            if (!sessionId) return;
+
+            try {
+                const response = await fetch(`/api/sgo/receipt/${sessionId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('rec_donor_name').textContent = data.donor_name;
+                    document.getElementById('rec_donor_id').textContent = data.unique_donor_number;
+                    document.getElementById('rec_state').textContent = data.target_state;
+                    document.getElementById('rec_amount').textContent = '$' + parseFloat(data.amount).toFixed(2);
+                    document.getElementById('rec_date').textContent = data.date;
+                }
+            } catch (error) {
+                console.error('Error loading receipt:', error);
+            }
+        }
+
+        window.onload = loadReceiptDetails;
+    </script>
+</body>
+</html>

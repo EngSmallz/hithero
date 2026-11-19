@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Homeroom Heroes SGO - Admin State Buckets & Fulfillment</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="shortcut icon" type="image/x-icon" href="/static/images/favicon.ico" />
+    <link rel="stylesheet" href="/static/style.css"> 
+</head>
+<body class="bg-gray-900 text-gray-100">
+    <header class="bg-gradient-to-r from-emerald-800 to-teal-950 text-white shadow-lg py-4 md:py-6 relative">
+        <div class="container mx-auto px-4 flex justify-between items-center">
+            <div class="flex items-center">
+                <a href="/pages/homepage.html" class="flex items-center">
+                    <img src="/static/images/logo_transparent.png" alt="Homeroom Heroes Logo" class="h-16 md:h-20 mr-3">
+                </a>
+                <nav class="hidden md:flex ml-4">
+                    <ul class="flex space-x-4 md:space-x-8 text-lg">
+                        <li><a href="/pages/homepage.html" class="hover:text-teal-300 transition duration-300 ease-in-out rounded-md p-2">Home</a></li>
+                        <li><a href="/pages/index.html" class="hover:text-teal-300 transition duration-300 ease-in-out rounded-md p-2">Donate</a></li>
+                        <li><a href="/pages/sgo_home.html" class="hover:text-teal-300 transition duration-300 ease-in-out rounded-md p-2">SGO Portal</a></li>
+                        <li><a href="/pages/validation.html" class="hover:text-teal-300 transition duration-300 ease-in-out rounded-md p-2">Validation</a></li>
+                        <li><a href="/pages/about.html" class="hover:text-teal-300 transition duration-300 ease-in-out rounded-md p-2">About</a></li>
+                    </ul>
+                </nav>
+            </div>
+
+            <!-- Hamburger Menu Always Viewable -->
+            <div class="relative">
+                <button id="hamburgerButton" class="text-white text-3xl focus:outline-none" onclick="toggleMenu()">☰</button>
+
+                <div class="menu-items absolute right-0 top-full mt-2 w-48 bg-teal-900 rounded-md shadow-lg py-1 z-20 hidden" id="menuItems">
+                    <nav class="md:hidden">
+                        <ul class="flex flex-col text-base p-1">
+                            <li><a href="/pages/homepage.html" class="listButton block p-2">Home</a></li>
+                            <li><a href="/pages/index.html" class="listButton block p-2">Donate</a></li>
+                            <li><a href="/pages/sgo_home.html" class="listButton block p-2">SGO Portal</a></li>
+                            <li><a href="/pages/validation.html" class="listButton block p-2">Validation</a></li>
+                            <li><a href="/pages/about.html" class="listButton block p-2">About</a></li>
+                            <hr class="my-1 border-teal-700">
+                        </ul>
+                    </nav>
+                    
+                    <button id="loginButton" class="listButton hidden w-full text-left px-4 py-2 hover:bg-teal-800" onclick="redirectTo('/pages/login.html')">Login</button>
+                    <button id="logoutButton" class="listButton hidden w-full text-left px-4 py-2 hover:bg-teal-800" onclick="logout()">Logout</button>
+                    <button id="mypageButton" class="listButton hidden w-full text-left px-4 py-2 hover:bg-teal-800" onclick="mypage()">My Page</button>
+                    <button id="forumButton" class="listButton hidden w-full text-left px-4 py-2 hover:bg-teal-800" onclick="redirectTo('/pages/forum.html')">Forum</button>
+                    <button id="validationButton" class="listButton hidden w-full text-left px-4 py-2 hover:bg-teal-800" onclick="redirectTo('/pages/validation.html')">Validation</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8 space-y-8">
+
+        <!-- 1. STATE BUCKET ROLLING TOTALS -->
+        <section>
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-teal-300">State SGO Rolling Fund Buckets</h2>
+                <span class="text-xs text-gray-400">Funds are ring-fenced by state per IRC § 25F rules</span>
+            </div>
+            <div id="stateBucketsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-gray-800 p-5 rounded-lg border border-gray-700">
+                    <p class="text-sm text-gray-400">Loading state buckets...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. APPLICATION FILTER & QUEUE -->
+        <section class="bg-gray-800 p-6 rounded-lg shadow-md border border-gray-700">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-white">Student Tech Applications</h2>
+                    <p class="text-xs text-gray-400">Filter by state bucket to verify income and drop-ship hardware.</p>
+                </div>
+                <div class="flex gap-3">
+                    <select id="filterState" onchange="loadApplications()" class="bg-gray-700 text-white text-sm rounded-md px-3 py-2 border border-gray-600">
+                        <option value="ALL">All Approved States</option>
+                    </select>
+                    <select id="filterStatus" onchange="loadApplications()" class="bg-gray-700 text-white text-sm rounded-md px-3 py-2 border border-gray-600">
+                        <option value="pending">Pending Review</option>
+                        <option value="approved">Approved (Ready to Ship)</option>
+                        <option value="fulfilled">Fulfilled / Shipped</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="border-b border-gray-700 text-teal-300 uppercase text-xs">
+                            <th class="py-3 px-4">ID</th>
+                            <th class="py-3 px-4">State</th>
+                            <th class="py-3 px-4">Student & School</th>
+                            <th class="py-3 px-4">Household / Income</th>
+                            <th class="py-3 px-4">Hardware Needed</th>
+                            <th class="py-3 px-4">Verification Doc</th>
+                            <th class="py-3 px-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="applicationsTableBody" class="divide-y divide-gray-700">
+                        <tr>
+                            <td colspan="7" class="py-6 text-center text-gray-400">Loading applications...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <!-- FULFILLMENT & BUCKET DEDUCTION MODAL -->
+    <div id="fulfillModal" class="fixed inset-0 bg-black bg-opacity-70 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-gray-800 text-white rounded-lg shadow-xl max-w-md w-full p-6 border border-teal-600">
+            <h3 class="text-lg font-bold text-teal-300 mb-1">Fulfill & Drop-Ship Hardware</h3>
+            <p id="modalStudentSummary" class="text-xs text-gray-300 mb-4"></p>
+
+            <form id="fulfillForm" class="space-y-3" onsubmit="submitFulfillment(event)">
+                <input type="hidden" id="fulfill_app_id">
+                <input type="hidden" id="fulfill_state_code">
+
+                <div>
+                    <label class="block text-xs text-gray-300 mb-1">Vendor Name (e.g., Dell, Best Buy, Amazon):</label>
+                    <input type="text" id="vendor_name" required class="w-full px-3 py-2 rounded bg-gray-700 border border-gray-600 text-sm">
+                </div>
+
+                <div>
+                    <label class="block text-xs text-gray-300 mb-1">Vendor Order / Invoice Number:</label>
+                    <input type="text" id="vendor_order_number" required class="w-full px-3 py-2 rounded bg-gray-700 border border-gray-600 text-sm">
+                </div>
+
+                <div>
+                    <label class="block text-xs text-gray-300 mb-1">Shipping Tracking Number:</label>
+                    <input type="text" id="tracking_number" required class="w-full px-3 py-2 rounded bg-gray-700 border border-gray-600 text-sm">
+                </div>
+
+                <div>
+                    <label class="block text-xs text-teal-300 font-semibold mb-1">Exact Hardware Cost to Deduct from State Bucket ($):</label>
+                    <input type="number" step="0.01" id="hardware_cost" required placeholder="e.g. 249.99" class="w-full px-3 py-2 rounded bg-gray-700 border border-teal-500 text-sm font-bold">
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="submit" class="w-full bg-teal-600 hover:bg-teal-500 text-white font-bold py-2 rounded-lg text-sm">
+                        Confirm & Deduct from Bucket
+                    </button>
+                    <button type="button" onclick="closeFulfillModal()" class="w-full bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 rounded-lg text-sm">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function redirectTo(url) {
+            window.location.href = url;
+        }
+
+        async function checkAuthentication() {
+            const buttons = ['loginButton', 'logoutButton', 'mypageButton', 'validationButton', 'forumButton'];
+            buttons.forEach(id => {
+                const button = document.getElementById(id);
+                if (button) {
+                    button.classList.add('hidden');
+                    button.classList.remove('block');
+                }
+            });
+
+            let userRole = null;
+            try {
+                const response = await fetch('/api/profile/');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data && data.user_role) {
+                        userRole = data.user_role;
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching user profile:', error);
+            }
+
+            if (userRole === 'admin') {
+                document.getElementById('logoutButton')?.classList.remove('hidden');
+                document.getElementById('logoutButton')?.classList.add('block');
+                document.getElementById('validationButton')?.classList.remove('hidden');
+                document.getElementById('validationButton')?.classList.add('block');
+                document.getElementById('forumButton')?.classList.remove('hidden');
+                document.getElementById('forumButton')?.classList.add('block');
+            } else if (userRole === 'teacher') {
+                document.getElementById('logoutButton')?.classList.remove('hidden');
+                document.getElementById('logoutButton')?.classList.add('block');
+                document.getElementById('mypageButton')?.classList.remove('hidden');
+                document.getElementById('mypageButton')?.classList.add('block');
+                document.getElementById('forumButton')?.classList.remove('hidden');
+                document.getElementById('forumButton')?.classList.add('block');
+                document.getElementById('validationButton')?.classList.remove('hidden');
+                document.getElementById('validationButton')?.classList.add('block');
+            } else {
+                document.getElementById('loginButton')?.classList.remove('hidden');
+                document.getElementById('loginButton')?.classList.add('block');
+            }
+        }
+
+        function toggleMenu() {
+            const menuItems = document.getElementById('menuItems');
+            menuItems.classList.toggle('hidden');
+            if (!menuItems.classList.contains('hidden')) {
+                checkAuthentication();
+            }
+        }
+
+        async function logout() {
+            try {
+                await fetch(`/profile/logout/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }});
+                window.location.href = '/';
+            } catch (error) {
+                console.error('Error during logout:', error);
+            }
+        }
+
+        async function mypage() {
+            try {
+                const response = await fetch('/profile/myinfo/', { method: 'GET', headers: { 'Content-Type': 'application/json' }});
+                if (response.ok) window.location.href = '/pages/teacher.html';
+                else window.location.href = '/';
+            } catch (error) {
+                window.location.href = '/';
+            }
+        }
+
+        // STRICT ADMIN PERMISSION CHECK ON PAGE LOAD
+        async function checkAdminPermission() {
+            try {
+                const response = await fetch('/api/profile/');
+                if (!response.ok) {
+                    window.location.href = '/pages/403.html';
+                    return;
+                }
+                const data = await response.json();
+                if (data.user_role !== 'admin') {
+                    window.location.href = '/pages/403.html';
+                    return;
+                }
+                // If user is admin, load dashboard data
+                await Promise.all([loadStateBuckets(), loadApplications()]);
+            } catch (error) {
+                console.error('Error verifying admin permission:', error);
+                window.location.href = '/pages/403.html';
+            }
+        }
+
+        async function loadStateBuckets() {
+            try {
+                const res = await fetch('/api/sgo/admin/buckets/');
+                if (!res.ok) throw new Error('Failed to load buckets');
+                const buckets = await res.json();
+
+                const grid = document.getElementById('stateBucketsGrid');
+                const filterSelect = document.getElementById('filterState');
+                grid.innerHTML = '';
+
+                buckets.forEach(b => {
+                    const opt = new Option(`${b.state_name} ($${b.available_balance.toFixed(2)} avail)`, b.state_code);
+                    filterSelect.add(opt);
+
+                    grid.innerHTML += `
+                        <div class="bg-gray-800 p-5 rounded-lg border border-teal-700/60 shadow">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-lg font-bold text-white">${b.state_name} (${b.state_code})</span>
+                                <span class="bg-teal-900 text-teal-300 text-xs px-2 py-0.5 rounded-full">Active</span>
+                            </div>
+                            <p class="text-xs text-gray-400 uppercase tracking-wider">Available Bucket Balance</p>
+                            <p class="text-2xl font-extrabold text-emerald-400 my-1">$${b.available_balance.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+                            <div class="text-xs text-gray-400 flex justify-between pt-2 border-t border-gray-700 mt-2">
+                                <span>Raised: $${b.total_raised.toLocaleString()}</span>
+                                <span>Spent: $${b.total_spent.toLocaleString()}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function loadApplications() {
+            const state = document.getElementById('filterState').value;
+            const status = document.getElementById('filterStatus').value;
+            const tbody = document.getElementById('applicationsTableBody');
+
+            try {
+                const res = await fetch(`/api/sgo/admin/applications/?state=${state}&status=${status}`);
+                if (!res.ok) throw new Error('Failed to load applications');
+                const apps = await res.json();
+
+                if (apps.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="py-6 text-center text-gray-400">No applications found for this filter.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = apps.map(app => `
+                    <tr class="hover:bg-gray-750">
+                        <td class="py-3 px-4 font-mono text-xs">#${app.id}</td>
+                        <td class="py-3 px-4 font-bold text-teal-300">${app.state_code}</td>
+                        <td class="py-3 px-4">
+                            <div class="font-semibold text-white">${app.student_name} (${app.student_grade})</div>
+                            <div class="text-xs text-gray-400">${app.school_name}</div>
+                            <div class="text-xs text-gray-400">${app.shipping_street}, ${app.shipping_city} ${app.shipping_zip}</div>
+                        </td>
+                        <td class="py-3 px-4">
+                            <div>Size: ${app.household_size}</div>
+                            <div class="text-xs text-gray-400">$${app.annual_income.toLocaleString()}/yr</div>
+                        </td>
+                        <td class="py-3 px-4">${app.hardware_type}</td>
+                        <td class="py-3 px-4">
+                            <a href="${app.verification_doc_url}" target="_blank" class="text-teal-400 underline text-xs">View Proof</a>
+                        </td>
+                        <td class="py-3 px-4 text-right space-x-2">
+                            ${app.status === 'pending' ? `
+                                <button onclick="approveApplication(${app.id})" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3 py-1.5 rounded">Approve</button>
+                            ` : ''}
+                            ${app.status === 'approved' ? `
+                                <button onclick="openFulfillModal(${app.id}, '${app.state_code}', '${app.student_name}', '${app.hardware_type}')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded">Drop-Ship & Deduct</button>
+                            ` : ''}
+                            ${app.status === 'fulfilled' ? `
+                                <span class="text-xs text-emerald-400 font-semibold">Shipped ($${app.hardware_cost})</span>
+                            ` : ''}
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function approveApplication(appId) {
+            if (!confirm('Verify income eligibility and approve this student application?')) return;
+            const res = await fetch(`/api/sgo/admin/applications/${appId}/approve/`, { method: 'POST' });
+            if (res.ok) {
+                loadApplications();
+            } else {
+                alert('Error approving application.');
+            }
+        }
+
+        function openFulfillModal(appId, stateCode, studentName, hardwareType) {
+            document.getElementById('fulfill_app_id').value = appId;
+            document.getElementById('fulfill_state_code').value = stateCode;
+            document.getElementById('modalStudentSummary').textContent = `Student: ${studentName} | State Bucket: ${stateCode} | Requested: ${hardwareType}`;
+            document.getElementById('fulfillModal').classList.remove('hidden');
+        }
+
+        function closeFulfillModal() {
+            document.getElementById('fulfillModal').classList.add('hidden');
+        }
+
+        async function submitFulfillment(event) {
+            event.preventDefault();
+            const appId = document.getElementById('fulfill_app_id').value;
+            const payload = {
+                state_code: document.getElementById('fulfill_state_code').value,
+                vendor_name: document.getElementById('vendor_name').value,
+                vendor_order_number: document.getElementById('vendor_order_number').value,
+                tracking_number: document.getElementById('tracking_number').value,
+                hardware_cost: parseFloat(document.getElementById('hardware_cost').value)
+            };
+
+            const res = await fetch(`/api/sgo/admin/applications/${appId}/fulfill/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                closeFulfillModal();
+                await Promise.all([loadStateBuckets(), loadApplications()]);
+                alert('Fulfillment recorded and cost deducted from state bucket!');
+            } else {
+                const err = await res.json();
+                alert(err.detail || 'Error recording fulfillment (check if state bucket has sufficient balance).');
+            }
+        }
+
+        // Run security check on load
+        window.onload = checkAdminPermission;
+    </script>
+</body>
+</html>

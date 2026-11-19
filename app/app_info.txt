@@ -1,0 +1,23 @@
+main.py            app, middleware, mounts, error handlers, router registration
+config.py          .env loading and constants
+database.py        engine, SessionLocal, Base
+limiter.py         the shared rate limiter
+models.py          8 tables + create_all
+schemas.py         4 Pydantic models
+dependencies.py    session getters, cron-secret check
+utils.py           verify_recaptcha, model_to_dict
+__init__.py        ...it inits...what did you expect
+services/
+  emailer.py       template renderer + all email senders
+  teachers.py      random / teacher-of-the-day picking
+  jobs.py          the 4 scheduled jobs and their helpers
+routers/
+  site.py          ads.txt, sitemap, "/", contact_us          
+  internal.py      cron endpoints                             
+  auth.py          register, login, logout, passwords, /api/profile  
+  validation.py    validate, list, delete, report, emailed    
+  teachers.py      profile edits, image, TOD, teacher pages   
+  locations.py     state/county/district/school lookups       
+  forum.py         posts, comments, votes                     
+  admin.py         report PDF, delete user, create admin      
+  promo.py         /{token} and promo info, registered last   
