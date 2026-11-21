@@ -231,3 +231,36 @@ def test_delete_post_with_comments(fresh_db):
     login(admin, "admin@example.com")
     with pytest.raises(Exception, match="REFERENCE constraint"):
         admin.delete("/forum/post/1/delete")
+
+
+# Smallest valid PNG: signature, IHDR (1x1), IDAT, IEND.
+TINY_PNG = bytes.fromhex(
+    "89504e470d0a1a0a0000000d4948445200000001000000010806000000"
+    "1f15c4890000000d49444154789c6360000002000154a24f5d00000000"
+    "49454e44ae426082"
+)
+
+
+def test_update_teacher_image(fresh_db):
+    """Photo upload (fixed: it called puremagic.magic_buffer, which doesn't exist)."""
+    from app import database, models
+
+    alice = helpers.client(helpers.ALICE)
+    r = alice.post("/profile/update_teacher_image/",
+                   files={"image": ("me.png", TINY_PNG, "image/png")})
+    assert r.status_code == 200, r.text
+    assert r.json() == {"message": "Information updated."}
+
+    db = database.SessionLocal()
+    try:
+        stored = db.query(models.TeacherList.image_data).filter(
+            models.TeacherList.regUserID == helpers.ALICE["user_id"]).scalar()
+    finally:
+        db.close()
+    assert stored == TINY_PNG
+
+    # A text file claiming to be an image is rejected by its contents.
+    r = alice.post("/profile/update_teacher_image/",
+                   files={"image": ("me.png", b"not an image at all", "image/png")})
+    assert r.status_code == 400
+    assert r.json() == {"detail": "Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed."}
