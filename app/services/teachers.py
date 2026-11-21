@@ -23,20 +23,24 @@ def fetch_random_teacher():
 
 def fetch_teacher_for_tod():
     """
-    Picks the next Teacher of the Day.
+    Picks the next Teacher of the Day: a random teacher not featured in the
+    last 90 days (or never featured). If everyone was featured within 90
+    days, the teacher featured longest ago. None only when there are no
+    teachers. Does not change any data; the caller stamps last_TOD.
 
-    Repeatedly calls fetch_random_teacher() and checks the returned
-    teacher's last_TOD against a 90-day cutoff, until it finds someone
-    who either has never been featured (last_TOD is NULL) or wasn't
-    featured in the last 90 days. Does not mutate any data - the caller
-    is responsible for stamping last_TOD once the pick is finalized.
+    This used to loop "while True" over random picks, which never returned
+    once every teacher had been featured recently and hung the daily job.
     """
     cutoff = datetime.datetime.utcnow() - datetime.timedelta(days=90)
-    while True:
-        candidate = fetch_random_teacher()
-        if candidate is None:
-            # No teachers at all in teacher_list.
-            return None
-        if candidate.last_TOD is None or candidate.last_TOD < cutoff:
-            return candidate
-        # Otherwise loop and try again - candidate was featured too recently.
+    db = SessionLocal()
+    try:
+        eligible = select(TeacherList).where(
+            (TeacherList.last_TOD.is_(None)) | (TeacherList.last_TOD < cutoff)
+        ).order_by(func.newid()).limit(1)
+        teacher = db.execute(eligible).scalar_one_or_none()
+        if teacher is None:
+            oldest = select(TeacherList).order_by(TeacherList.last_TOD).limit(1)
+            teacher = db.execute(oldest).scalar_one_or_none()
+        return teacher
+    finally:
+        db.close()

@@ -20,11 +20,21 @@ import pytest
 
 from tests import helpers
 from tests.helpers import ADMIN, ALICE, ALICE_PAGE, BOB_PAGE, requires_db
+from tests import testenv
 from tests.testenv import update_golden
 
 GOLDEN_DIR = Path(__file__).parent / "golden" / "responses"
 
 SEEDED_TEACHERS = {"Alice Adams", "Bob Brown", "Carol Cruz"}
+
+
+@pytest.fixture(scope="module", autouse=True)
+def seeded_db():
+    """Golden responses assume the seed data. Write tests that ran earlier
+    (test_flows.py) leave the database changed, so reseed first."""
+    if helpers.db_dirty and testenv.use_database():
+        helpers.reseed()
+        helpers.db_dirty = False
 
 # (case name, session before the call, GET paths called in order).
 # Only the last call is recorded; earlier ones set up the session.
