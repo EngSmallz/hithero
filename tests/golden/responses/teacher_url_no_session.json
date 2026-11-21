@@ -1,0 +1,9 @@
+{
+  "body": {
+    "detail": "Internal Server Error"
+  },
+  "content_type": "application/json",
+  "location": null,
+  "session": {},
+  "status": 500
+}

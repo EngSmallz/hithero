@@ -1,0 +1,10 @@
+[
+  {
+    "sender": "DoNotReply@test.invalid",
+    "to": [
+      "pending@example.com"
+    ],
+    "subject": "Reminder: Complete Your Homeroom Heroes Validation!",
+    "plain_text": "Dear pending@example.com,\n\nThanks for signing up! We noticed you haven't been validated yet. Please reach back out to us at homeroom.heroes.contact@gmail.com to complete your validation process.\n\nBest regards,\nHomeroom Heroes Team\nhomeroom.heroes.contact@gmail.com"
+  }
+]

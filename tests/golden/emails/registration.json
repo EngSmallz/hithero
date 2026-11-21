@@ -1,0 +1,10 @@
+[
+  {
+    "sender": "DoNotReply@test.invalid",
+    "to": [
+      "new.teacher@example.com"
+    ],
+    "subject": "Registration successful",
+    "plain_text": "Dear new.teacher@example.com,\n\nThank you for registering with us! Once you are validated by a fellow teacher in your district or one of us here at Homeroom Heroes, you will be able to create your profile and start receiving support.\n\nBest regards,\nHomeroom Heroes Team\nhomeroom.heroes.contact@gmail.com\nhomeroom.heroes.contact@gmail.com"
+  }
+]

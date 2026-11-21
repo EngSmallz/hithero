@@ -1,0 +1,18 @@
+[
+  {
+    "sender": "DoNotReply@test.invalid",
+    "to": [
+      "alice@example.com"
+    ],
+    "subject": "Pending Teachers in Springfield District Need Validation",
+    "plain_text": "Dear alice@example.com,\n\nHello,\n\nThe following teachers in Springfield District are waiting to be validated:\n\n- Pat Pending (Douglas Middle)\n\nPlease log in to validate them.\n\nThank you!\n\nBest regards,\nHomeroom Heroes Team\nhomeroom.heroes.contact@gmail.com"
+  },
+  {
+    "sender": "DoNotReply@test.invalid",
+    "to": [
+      "bob@example.com"
+    ],
+    "subject": "Pending Teachers in Springfield District Need Validation",
+    "plain_text": "Dear bob@example.com,\n\nHello,\n\nThe following teachers in Springfield District are waiting to be validated:\n\n- Pat Pending (Douglas Middle)\n\nPlease log in to validate them.\n\nThank you!\n\nBest regards,\nHomeroom Heroes Team\nhomeroom.heroes.contact@gmail.com"
+  }
+]

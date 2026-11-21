@@ -1,0 +1,24 @@
+# Direct dependencies of the app. Edit this file, then regenerate the pinned
+# requirements.txt with:
+#   pip install pip-tools
+#   pip-compile requirements.in
+fastapi
+starlette
+uvicorn
+gunicorn
+python-multipart
+email-validator
+itsdangerous
+jinja2
+python-dotenv
+pydantic
+SQLAlchemy
+greenlet
+pyodbc
+passlib
+requests
+azure-communication-email
+slowapi
+bleach
+puremagic
+reportlab

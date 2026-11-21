@@ -14,6 +14,24 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    # Test database for the test suite (BE1-3). Deploy needs build, so a
+    # failing test means no deploy.
+    services:
+      db:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: "Test_Passw0rd!"
+          MSSQL_PID: "Developer"
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P 'Test_Passw0rd!' -Q 'SELECT 1' -b -o /dev/null"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 30
+          --health-start-period 10s
+
     steps:
       - uses: actions/checkout@v4
 
@@ -25,13 +43,33 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements.txt
-        
-      # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
-      # - name: Run tests
-      #   run: pytest
 
-      - name: Zip artifact for deployment
+      - name: Upload artifact source
+        # Zip before test tools and caches are added to the checkout.
         run: zip release.zip ./* -r
+
+      - name: Install test dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Install ODBC Driver 18 for SQL Server
+        run: |
+          if ! odbcinst -q -d -n "ODBC Driver 18 for SQL Server" >/dev/null 2>&1; then
+            curl -sSL -o /tmp/msprod.deb https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/packages-microsoft-prod.deb
+            sudo dpkg -i /tmp/msprod.deb
+            sudo apt-get update
+            sudo ACCEPT_EULA=Y apt-get install -y msodbcsql18
+          fi
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Seed test database
+        run: python -m tests.seed
+
+      - name: Run tests
+        env:
+          TEST_DATABASE: "1"
+        run: pytest
 
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v4 # Updated to v4
@@ -63,4 +101,4 @@ jobs:
         with:
           app-name: 'hitheroApp'
           slot-name: 'Production'
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_D27C0786100747BD90CEF73E09EF048B }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_D27C0786100747BD90CEF73E09EF048B }}

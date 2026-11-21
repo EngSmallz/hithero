@@ -1,0 +1,10 @@
+[
+  {
+    "sender": "DoNotReply@test.invalid",
+    "to": [
+      "admin@example.com"
+    ],
+    "subject": "Reminder: Complete Your Homeroom Heroes Profile!",
+    "plain_text": "Dear admin@example.com,\n\nYou're almost there! Your registration with us has been successfully validated, but you haven't created your profile yet. Please log in and complete your profile to start receiving support from our community.\nwww.HelpTeachers.net/pages/login.html\n\nIf you have any questions or need assistance, please do not hesitate to contact us.\n\nBest regards,\nHomeroom Heroes Team\nhomeroom.heroes.contact@gmail.com"
+  }
+]

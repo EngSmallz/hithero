@@ -1,0 +1,18 @@
+{
+  "body": {
+    "detail": "Internal Server Error"
+  },
+  "content_type": "application/json",
+  "location": null,
+  "session": {
+    "county": "Sangamon",
+    "district": "Springfield District",
+    "school": "Lincoln Elementary",
+    "state": "Illinois",
+    "teacher": "Bob Brown",
+    "user_email": "alice@example.com",
+    "user_id": 2,
+    "user_role": "teacher"
+  },
+  "status": 500
+}

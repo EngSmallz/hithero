@@ -1,0 +1,25 @@
+{
+  "body": {
+    "new_users": [
+      {
+        "district": "Springfield District",
+        "email": "pending@example.com",
+        "emailed": 0,
+        "name": "Pat Pending",
+        "phone_number": "5550000002",
+        "report": 0,
+        "school": "Douglas Middle",
+        "state": "Illinois"
+      }
+    ],
+    "role": "admin"
+  },
+  "content_type": "application/json",
+  "location": null,
+  "session": {
+    "user_email": "admin@example.com",
+    "user_id": 1,
+    "user_role": "admin"
+  },
+  "status": 200
+}

@@ -1,0 +1,6 @@
+# Start with checks that catch real breakage only: syntax errors and
+# undefined names. Widen the rule set as the refactor cleans up app.py.
+target-version = "py312"
+
+[lint]
+select = ["E9", "F63", "F7", "F82"]

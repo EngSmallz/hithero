@@ -1,0 +1,21 @@
+{
+  "body": {
+    "county": "Sangamon",
+    "district": "Springfield District",
+    "image_data": null,
+    "name": "Alice Adams",
+    "school": "Lincoln Elementary",
+    "state": "Illinois",
+    "url_id": "alice1234"
+  },
+  "content_type": "application/json",
+  "location": null,
+  "session": {
+    "county": "Sangamon",
+    "district": "Springfield District",
+    "school": "Lincoln Elementary",
+    "state": "Illinois",
+    "teacher": "Alice Adams"
+  },
+  "status": 200
+}

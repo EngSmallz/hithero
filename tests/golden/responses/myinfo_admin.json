@@ -1,0 +1,13 @@
+{
+  "body": {
+    "message": "Your account does not have a database listing"
+  },
+  "content_type": "application/json",
+  "location": null,
+  "session": {
+    "user_email": "admin@example.com",
+    "user_id": 1,
+    "user_role": "admin"
+  },
+  "status": 200
+}

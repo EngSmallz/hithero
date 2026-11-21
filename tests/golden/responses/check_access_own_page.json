@@ -1,0 +1,19 @@
+{
+  "body": {
+    "message": "Access granted",
+    "status": "success"
+  },
+  "content_type": "application/json",
+  "location": null,
+  "session": {
+    "county": "Sangamon",
+    "district": "Springfield District",
+    "school": "Lincoln Elementary",
+    "state": "Illinois",
+    "teacher": "Alice Adams",
+    "user_email": "alice@example.com",
+    "user_id": 2,
+    "user_role": "teacher"
+  },
+  "status": 200
+}

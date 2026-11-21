@@ -1,0 +1,10 @@
+[
+  {
+    "sender": "DoNotReply@test.invalid",
+    "to": [
+      "alice@example.com"
+    ],
+    "subject": "🎉 You're Today's Homeroom Hero!",
+    "plain_text": "Dear Alice Adams,\n\nCongratulations! You've been chosen as today's 'Teacher of the Day' at Homeroom Heroes! Your profile is now featured on our homepage, giving you extra visibility. Remember to share your unique page with your community. www.HelpTeachers.net/teacher/alice1234\n\nBest regards,\nHomeroom Heroes Team\nhomeroom.heroes.contact@gmail.com"
+  }
+]

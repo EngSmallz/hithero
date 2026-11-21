@@ -1,0 +1,20 @@
+{
+  "body": {
+    "county": "<random teacher county>",
+    "district": "<random teacher district>",
+    "image_data": null,
+    "name": "<random teacher name>",
+    "school": "<random teacher school>",
+    "state": "<random teacher state>"
+  },
+  "content_type": "application/json",
+  "location": null,
+  "session": {
+    "county": "<random teacher county>",
+    "district": "<random teacher district>",
+    "school": "<random teacher school>",
+    "state": "<random teacher state>",
+    "teacher": "<random teacher name>"
+  },
+  "status": 200
+}
