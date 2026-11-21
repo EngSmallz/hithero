@@ -1,0 +1,10 @@
+{
+  "body": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "content_type": "",
+  "location": "/pages/homepage.html",
+  "session": {
+    "promo_image_url": "/static/images/partners/1007TheWolf.png",
+    "promo_title": "Working together to serve our communities!"
+  },
+  "status": 307
+}

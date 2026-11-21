@@ -1,0 +1,15 @@
+{
+  "body": {
+    "user_email": "alice@example.com",
+    "user_id": 2,
+    "user_role": "teacher"
+  },
+  "content_type": "application/json",
+  "location": null,
+  "session": {
+    "user_email": "alice@example.com",
+    "user_id": 2,
+    "user_role": "teacher"
+  },
+  "status": 200
+}

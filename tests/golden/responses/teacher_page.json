@@ -1,0 +1,13 @@
+{
+  "body": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "content_type": "",
+  "location": "/pages/teacher.html",
+  "session": {
+    "county": "Sangamon",
+    "district": "Springfield District",
+    "school": "Lincoln Elementary",
+    "state": "Illinois",
+    "teacher": "Alice Adams"
+  },
+  "status": 307
+}

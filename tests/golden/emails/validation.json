@@ -1,0 +1,10 @@
+[
+  {
+    "sender": "DoNotReply@test.invalid",
+    "to": [
+      "new.teacher@example.com"
+    ],
+    "subject": "Validation Notification",
+    "plain_text": "Dear new.teacher@example.com,\n\nWe are pleased to inform you that your registration with us has been successfully validated! You may now log in and create your profile to start receiving support.\n\nIf you have any questions or need assistance, please do not hesitate to contact us.\n\nBest regards,\nHomeroom Heroes Team\nhomeroom.heroes.contact@gmail.com"
+  }
+]

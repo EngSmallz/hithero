@@ -1,0 +1,6 @@
+# Test and lint tools. Regenerate requirements-dev.txt with:
+#   pip-compile requirements-dev.in
+-c requirements.txt
+pytest
+httpx
+ruff

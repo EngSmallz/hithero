@@ -1,0 +1,30 @@
+{
+  "body": {
+    "new_users": [
+      {
+        "district": "Springfield District",
+        "email": "pending@example.com",
+        "emailed": 0,
+        "name": "Pat Pending",
+        "phone_number": "5550000002",
+        "report": 0,
+        "school": "Douglas Middle",
+        "state": "Illinois"
+      }
+    ],
+    "role": "teacher"
+  },
+  "content_type": "application/json",
+  "location": null,
+  "session": {
+    "county": "Sangamon",
+    "district": "Springfield District",
+    "school": "Lincoln Elementary",
+    "state": "Illinois",
+    "teacher": "Alice Adams",
+    "user_email": "alice@example.com",
+    "user_id": 2,
+    "user_role": "teacher"
+  },
+  "status": 200
+}

@@ -1,0 +1,10 @@
+[
+  {
+    "sender": "DoNotReply@test.invalid",
+    "to": [
+      "Homeroom.heroes.contact@gmail.com"
+    ],
+    "subject": "Question",
+    "plain_text": "Subject: Question\nMessage from Jo Parent (jo@example.com):\n\nHow do I donate?"
+  }
+]

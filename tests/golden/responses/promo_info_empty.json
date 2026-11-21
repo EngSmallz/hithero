@@ -1,0 +1,10 @@
+{
+  "body": {
+    "promo_image_url": null,
+    "promo_title": null
+  },
+  "content_type": "application/json",
+  "location": null,
+  "session": {},
+  "status": 200
+}

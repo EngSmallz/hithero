@@ -1,0 +1,22 @@
+{
+  "body": {
+    "about_me": "I teach 3rd grade.",
+    "county": "Sangamon",
+    "district": "Springfield District",
+    "image_data": null,
+    "name": "Alice Adams",
+    "school": "Lincoln Elementary",
+    "state": "Illinois",
+    "wishlist_url": "https://www.amazon.com/hz/wishlist/ls/ALICE1234&tag=h0mer00mher0-20"
+  },
+  "content_type": "application/json",
+  "location": null,
+  "session": {
+    "county": "Sangamon",
+    "district": "Springfield District",
+    "school": "Lincoln Elementary",
+    "state": "Illinois",
+    "teacher": "Alice Adams"
+  },
+  "status": 200
+}

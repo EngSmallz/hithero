@@ -1,0 +1,15 @@
+{
+  "body": {
+    "url": "www.HelpTeachers.net/teacher/alice1234"
+  },
+  "content_type": "application/json",
+  "location": null,
+  "session": {
+    "county": "Sangamon",
+    "district": "Springfield District",
+    "school": "Lincoln Elementary",
+    "state": "Illinois",
+    "teacher": "Alice Adams"
+  },
+  "status": 200
+}
